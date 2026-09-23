@@ -119,6 +119,35 @@
     cursor:pointer;text-align:left;
   }
   .role-btn.active{background:var(--orange-500);border-color:var(--orange-500);color:white;}
+  .staff-box{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;font-size:12px;}
+  .staff-email{color:var(--ink-muted);font-weight:600;word-break:break-all;}
+  .staff-role{color:var(--ink-faint);}
+  .staff-link{
+    background:transparent;border:1px solid var(--border);color:var(--ink-muted);
+    padding:6px 10px;border-radius:var(--radius-s);font-size:11.5px;font-weight:600;
+    cursor:pointer;text-align:left;
+  }
+  .staff-link:hover{border-color:var(--orange-500);color:var(--white);}
+  .staff-form{display:flex;flex-direction:column;gap:12px;margin-top:6px;}
+  .staff-form label{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--ink-muted);font-weight:600;}
+  .staff-form input, .staff-form select{
+    background:var(--card-bg);border:1px solid var(--border);border-radius:var(--radius-s);
+    color:var(--ink);padding:9px 10px;font-size:14px;font-family:var(--font-body);
+  }
+  .staff-submit{
+    background:var(--orange-500);border:none;color:white;font-weight:700;padding:10px 16px;
+    border-radius:var(--radius-s);cursor:pointer;font-size:13px;
+  }
+  .staff-error{color:var(--bad);font-size:12.5px;}
+  .staff-hint, .staff-alt{font-size:12px;color:var(--ink-faint);margin-top:12px;}
+  .staff-alt a{color:var(--lime);text-decoration:none;font-weight:600;}
+  .staff-divider{text-align:center;color:var(--ink-faint);font-size:11px;margin:-2px 0;}
+  .staff-google-btn{
+    display:flex;align-items:center;justify-content:center;gap:8px;
+    background:#fff;color:#3c4043;border:1px solid var(--border-strong);
+    padding:9px 14px;border-radius:var(--radius-s);font-weight:600;font-size:13px;cursor:pointer;
+  }
+  .staff-google-btn:hover{box-shadow:0 1px 3px rgba(0,0,0,.35);}
   .cat-select-wrap{margin-bottom:16px;}
   .cat-select-wrap select.cat-select{width:100%;}
   .cat-locked{
@@ -508,6 +537,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script>
   window.FIREBASE_CONFIG = {
     apiKey: "AIzaSyCnNojR9m7fXWlbOyRgEF7w63B0cmMUxKQ",
@@ -636,6 +666,8 @@ function seedPlayers(categoria){
 var STORAGE_KEY = 'jogobonito_preview_v4';
 var state = null;
 var sessionEnteredClub = null; // navegación local de esta pestaña — nunca se guarda ni se comparte
+var visitorCategoria = CATEGORIES[0]; // categoría que está mirando un visitante — tampoco se comparte
+var currentUser = null; // {email, role, categoria} según el inicio de sesión — no se guarda en el estado compartido
 
 function normalizeState(s){
   if(!s || !Array.isArray(s.players) || !s.players.length) return null;
@@ -717,7 +749,11 @@ function visibleViews(){
   return ALL_VIEWS;
 }
 function isReadOnly(){ return state.role==='visitante'; }
-function activeCategoria(){ return state.role==='profesor' ? state.profesorCategoria : state.selectedCategoria; }
+function activeCategoria(){
+  if(state.role==='profesor') return state.profesorCategoria;
+  if(state.role==='visitante') return visitorCategoria;
+  return state.selectedCategoria;
+}
 function categoryPlayers(){
   var cat = activeCategoria();
   return state.players.filter(function(p){ return p.categoria===cat; });
@@ -786,48 +822,41 @@ function computeDelta(rating, hits, quickRatings){
 
 /* ============ RENDER: CHROME (rol + categoría) ============ */
 var ROLE_LABELS = {admin:'Administrador', profesor:'Profesor', visitante:'Visitante'};
+var GOOGLE_ICON_SVG = '<svg viewBox="0 0 18 18" width="16" height="16"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.71v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.61z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.81.54-1.85.87-3.04.87-2.34 0-4.32-1.58-5.03-3.7H.98v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.97 10.73A5.4 5.4 0 0 1 3.68 9c0-.6.1-1.19.28-1.73V4.94H.98A9 9 0 0 0 0 9c0 1.45.35 2.83.98 4.06z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.9 11.43 0 9 0A9 9 0 0 0 .98 4.94l2.99 2.33C4.68 5.16 6.66 3.58 9 3.58z"/></svg>';
+function syncRoleFromUser(){
+  if(currentUser && currentUser.role){
+    state.role = currentUser.role;
+    if(currentUser.role === 'profesor' && currentUser.categoria) state.profesorCategoria = currentUser.categoria;
+  } else {
+    state.role = 'visitante';
+  }
+}
 function renderChrome(){
   var desktop = document.getElementById('chromeDesktop');
   var mobile = document.getElementById('chromeMobile');
   desktop.innerHTML = '';
   mobile.innerHTML = '';
 
-  // --- selector de rol (desktop: botones; mobile: select) ---
-  var roleSwitch = document.createElement('div');
-  roleSwitch.className = 'role-switch';
-  ['admin','profesor','visitante'].forEach(function(r){
-    var b = document.createElement('button');
-    b.className = 'role-btn' + (state.role===r ? ' active':'');
-    b.textContent = r==='profesor' ? 'Profesor de esta categoría' : ROLE_LABELS[r];
-    b.onclick = function(){
-      if(r==='profesor') state.profesorCategoria = state.selectedCategoria;
-      state.role = r;
-      var vv = visibleViews();
-      if(!vv.some(function(v){return v.id===currentView;})) currentView = vv[0].id;
-      persist();
-      render();
-    };
-    roleSwitch.appendChild(b);
+  // --- acceso staff (login / usuario actual) ---
+  var staffHtml =
+    (currentUser
+      ? ('<span class="staff-email" title="' + currentUser.email + '">' + currentUser.email + '</span>' +
+         '<span class="staff-role">' + (currentUser.role ? ROLE_LABELS[currentUser.role] : 'Sin permisos asignados') + '</span>' +
+         (currentUser.role==='admin' ? '<button class="staff-link" data-act="panel">Administradores</button>' : '') +
+         '<button class="staff-link" data-act="logout">Cerrar sesión</button>')
+      : '<button class="staff-link" data-act="login">Acceso staff</button>');
+  [desktop, mobile].forEach(function(target){
+    var box = document.createElement('div');
+    box.className = 'staff-box';
+    box.innerHTML = staffHtml;
+    var loginBtn = box.querySelector('[data-act="login"]');
+    if(loginBtn) loginBtn.onclick = openLoginModal;
+    var logoutBtn = box.querySelector('[data-act="logout"]');
+    if(logoutBtn) logoutBtn.onclick = function(){ auth.signOut(); };
+    var panelBtn = box.querySelector('[data-act="panel"]');
+    if(panelBtn) panelBtn.onclick = openStaffPanel;
+    target.appendChild(box);
   });
-  desktop.appendChild(roleSwitch);
-
-  var mobRoleSel = document.createElement('select');
-  mobRoleSel.className = 'cat-select';
-  ['admin','profesor','visitante'].forEach(function(r){
-    var o = document.createElement('option');
-    o.value = r; o.textContent = r==='profesor' ? 'Profesor' : ROLE_LABELS[r];
-    if(state.role===r) o.selected = true;
-    mobRoleSel.appendChild(o);
-  });
-  mobRoleSel.onchange = function(){
-    if(mobRoleSel.value==='profesor') state.profesorCategoria = state.selectedCategoria;
-    state.role = mobRoleSel.value;
-    var vv2 = visibleViews();
-    if(!vv2.some(function(v){return v.id===currentView;})) currentView = vv2[0].id;
-    persist();
-    render();
-  };
-  mobile.appendChild(mobRoleSel);
 
   // --- selector de categoría ---
   if(state.role==='profesor'){
@@ -843,10 +872,13 @@ function renderChrome(){
       CATEGORIES.forEach(function(cat){
         var o = document.createElement('option');
         o.value = cat; o.textContent = cat;
-        if(state.selectedCategoria===cat) o.selected = true;
+        if(activeCategoria()===cat) o.selected = true;
         sel.appendChild(o);
       });
-      sel.onchange = function(){ state.selectedCategoria = sel.value; persist(); render(); };
+      sel.onchange = function(){
+        if(state.role==='visitante'){ visitorCategoria = sel.value; render(); }
+        else { state.selectedCategoria = sel.value; persist(); render(); }
+      };
       if(wrap){ wrap.className='cat-select-wrap'; wrap.appendChild(sel); target.appendChild(wrap); }
       else target.appendChild(sel);
     });
@@ -1785,6 +1817,7 @@ function render(){
   }
   document.getElementById('landingRoot').style.display = 'none';
   document.getElementById('appRoot').style.display = '';
+  syncRoleFromUser();
 
   var vv = visibleViews();
   if(!vv.some(function(v){return v.id===currentView;})) currentView = vv[0].id;
@@ -1809,6 +1842,197 @@ function render(){
   if(backSidebar) backSidebar.onclick = goToLanding;
 }
 
+function openLoginModal(){
+  var overlay = document.getElementById('modalOverlay');
+  var body = document.getElementById('modalBody');
+  body.innerHTML =
+    '<button class="modal-close" id="closeModal">✕</button>' +
+    '<h2>Acceso staff</h2>' +
+    '<div class="sub">Inicia sesión con el correo y la clave que te dio el administrador.</div>' +
+    '<div class="staff-form">' +
+      '<label>Correo<input type="email" id="loginEmail" autocomplete="username" /></label>' +
+      '<label>Clave<input type="password" id="loginPass" autocomplete="current-password" /></label>' +
+      '<div class="staff-error" id="loginError" style="display:none;"></div>' +
+      '<button class="staff-submit" id="loginSubmit">Entrar</button>' +
+      '<div class="staff-divider">o</div>' +
+      '<button class="staff-google-btn" id="loginGoogle" type="button">' + GOOGLE_ICON_SVG + ' Continuar con Google</button>' +
+    '</div>' +
+    '<div class="staff-alt" id="loginAltWrap"></div>';
+  var altWrap = body.querySelector('#loginAltWrap');
+  if(window.db){
+    db.collection('staff').limit(1).get().then(function(snap){
+      if(snap.empty){
+        altWrap.innerHTML = '<div class="staff-hint">Todavía no hay ningún administrador configurado. <a href="#" id="linkBootstrap">Regístrate como el primer administrador</a>.</div>';
+        altWrap.querySelector('#linkBootstrap').onclick = function(e){ e.preventDefault(); openBootstrapModal(); };
+      }
+    }).catch(function(){});
+  }
+  body.querySelector('#loginSubmit').onclick = function(){
+    var email = body.querySelector('#loginEmail').value.trim();
+    var pass = body.querySelector('#loginPass').value;
+    var errBox = body.querySelector('#loginError');
+    errBox.style.display = 'none';
+    auth.signInWithEmailAndPassword(email, pass).then(function(){
+      overlay.classList.remove('show');
+    }).catch(function(err){
+      errBox.textContent = 'No se pudo entrar: ' + (err && err.message ? err.message : 'revisa tu correo y clave.');
+      errBox.style.display = 'block';
+    });
+  };
+  body.querySelector('#loginGoogle').onclick = function(){
+    var errBox = body.querySelector('#loginError');
+    errBox.style.display = 'none';
+    auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).then(function(){
+      overlay.classList.remove('show');
+    }).catch(function(err){
+      errBox.textContent = 'No se pudo entrar con Google: ' + (err && err.message ? err.message : '');
+      errBox.style.display = 'block';
+    });
+  };
+  overlay.classList.add('show');
+  body.querySelector('#closeModal').onclick = function(){ overlay.classList.remove('show'); };
+  overlay.onclick = function(e){ if(e.target===overlay) overlay.classList.remove('show'); };
+}
+
+function openBootstrapModal(){
+  var overlay = document.getElementById('modalOverlay');
+  var body = document.getElementById('modalBody');
+  body.innerHTML =
+    '<button class="modal-close" id="closeModal">✕</button>' +
+    '<h2>Primer administrador</h2>' +
+    '<div class="sub">Este correo y esta clave quedarán como el primer administrador de la plataforma.</div>' +
+    '<div class="staff-form">' +
+      '<label>Correo<input type="email" id="bsEmail" autocomplete="username" /></label>' +
+      '<label>Clave (mínimo 6 caracteres)<input type="password" id="bsPass" autocomplete="new-password" /></label>' +
+      '<div class="staff-error" id="bsError" style="display:none;"></div>' +
+      '<button class="staff-submit" id="bsSubmit">Crear administrador</button>' +
+      '<div class="staff-divider">o</div>' +
+      '<button class="staff-google-btn" id="bsGoogle" type="button">' + GOOGLE_ICON_SVG + ' Registrarme con Google</button>' +
+    '</div>';
+  body.querySelector('#bsSubmit').onclick = function(){
+    var email = body.querySelector('#bsEmail').value.trim();
+    var pass = body.querySelector('#bsPass').value;
+    var errBox = body.querySelector('#bsError');
+    errBox.style.display = 'none';
+    if(!email || pass.length < 6){
+      errBox.textContent = 'Escribe un correo y una clave de al menos 6 caracteres.';
+      errBox.style.display = 'block';
+      return;
+    }
+    auth.createUserWithEmailAndPassword(email, pass).then(function(){
+      return db.collection('staff').doc(email.toLowerCase()).set({role:'admin'});
+    }).then(function(){
+      overlay.classList.remove('show');
+    }).catch(function(err){
+      errBox.textContent = 'No se pudo crear la cuenta: ' + (err && err.message ? err.message : '');
+      errBox.style.display = 'block';
+    });
+  };
+  body.querySelector('#bsGoogle').onclick = function(){
+    var errBox = body.querySelector('#bsError');
+    errBox.style.display = 'none';
+    auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).then(function(cred){
+      return db.collection('staff').doc(cred.user.email.toLowerCase()).set({role:'admin'});
+    }).then(function(){
+      overlay.classList.remove('show');
+    }).catch(function(err){
+      errBox.textContent = 'No se pudo registrar con Google: ' + (err && err.message ? err.message : '');
+      errBox.style.display = 'block';
+    });
+  };
+  overlay.classList.add('show');
+  body.querySelector('#closeModal').onclick = function(){ overlay.classList.remove('show'); };
+  overlay.onclick = function(e){ if(e.target===overlay) overlay.classList.remove('show'); };
+}
+
+function openStaffPanel(){
+  var overlay = document.getElementById('modalOverlay');
+  var body = document.getElementById('modalBody');
+  body.innerHTML =
+    '<button class="modal-close" id="closeModal">✕</button>' +
+    '<h2>Administradores y profesores</h2>' +
+    '<div class="sub">Crea el acceso de un nuevo administrador o profesor.</div>' +
+    '<div class="staff-form">' +
+      '<label>Correo<input type="email" id="staffEmail" autocomplete="off" /></label>' +
+      '<label>Cómo va a entrar' +
+        '<select id="staffMode">' +
+          '<option value="password">Le creo un correo y una clave</option>' +
+          '<option value="google">Va a entrar con su propia cuenta de Google</option>' +
+        '</select>' +
+      '</label>' +
+      '<label id="staffPassWrap">Clave (mínimo 6 caracteres)<input type="password" id="staffPass" autocomplete="new-password" /></label>' +
+      '<label>Rol' +
+        '<select id="staffRole">' +
+          '<option value="profesor">Profesor</option>' +
+          '<option value="admin">Administrador</option>' +
+        '</select>' +
+      '</label>' +
+      '<label id="staffCatWrap">Categoría asignada' +
+        '<select id="staffCat">' + CATEGORIES.map(function(c){return '<option value="' + c + '">' + c + '</option>';}).join('') + '</select>' +
+      '</label>' +
+      '<div class="staff-error" id="staffError" style="display:none;"></div>' +
+      '<button class="staff-submit" id="staffSubmit">Crear acceso</button>' +
+    '</div>';
+  var roleSel = body.querySelector('#staffRole');
+  var catWrap = body.querySelector('#staffCatWrap');
+  function syncCatVisibility(){ catWrap.style.display = roleSel.value==='profesor' ? '' : 'none'; }
+  roleSel.onchange = syncCatVisibility;
+  syncCatVisibility();
+
+  var modeSel = body.querySelector('#staffMode');
+  var passWrap = body.querySelector('#staffPassWrap');
+  function syncModeVisibility(){ passWrap.style.display = modeSel.value==='password' ? '' : 'none'; }
+  modeSel.onchange = syncModeVisibility;
+  syncModeVisibility();
+
+  body.querySelector('#staffSubmit').onclick = function(){
+    var email = body.querySelector('#staffEmail').value.trim();
+    var mode = modeSel.value;
+    var pass = body.querySelector('#staffPass').value;
+    var role = roleSel.value;
+    var cat = body.querySelector('#staffCat').value;
+    var errBox = body.querySelector('#staffError');
+    errBox.style.display = 'none';
+    if(!email){
+      errBox.textContent = 'Escribe un correo.';
+      errBox.style.display = 'block';
+      return;
+    }
+    if(mode==='password' && pass.length < 6){
+      errBox.textContent = 'Escribe una clave de al menos 6 caracteres.';
+      errBox.style.display = 'block';
+      return;
+    }
+    var doc = {role: role};
+    if(role==='profesor') doc.categoria = cat;
+    if(mode==='google'){
+      db.collection('staff').doc(email.toLowerCase()).set(doc).then(function(){
+        overlay.classList.remove('show');
+      }).catch(function(err){
+        errBox.textContent = 'No se pudo guardar el acceso: ' + (err && err.message ? err.message : '');
+        errBox.style.display = 'block';
+      });
+      return;
+    }
+    var secondary = firebase.apps.some(function(a){return a.name==='secondary';})
+      ? firebase.app('secondary')
+      : firebase.initializeApp(window.FIREBASE_CONFIG, 'secondary');
+    secondary.auth().createUserWithEmailAndPassword(email, pass).then(function(){
+      return secondary.auth().signOut();
+    }).then(function(){
+      return db.collection('staff').doc(email.toLowerCase()).set(doc);
+    }).then(function(){
+      overlay.classList.remove('show');
+    }).catch(function(err){
+      errBox.textContent = 'No se pudo crear el acceso: ' + (err && err.message ? err.message : '');
+      errBox.style.display = 'block';
+    });
+  };
+  overlay.classList.add('show');
+  body.querySelector('#closeModal').onclick = function(){ overlay.classList.remove('show'); };
+  overlay.onclick = function(e){ if(e.target===overlay) overlay.classList.remove('show'); };
+}
+
 function showBrokenDataScreen(){
   try{ localStorage.removeItem(STORAGE_KEY); }catch(e2){}
   document.getElementById('mainView').innerHTML =
@@ -1828,8 +2052,23 @@ if(window.firebase && window.FIREBASE_CONFIG){
   try{
     firebase.initializeApp(window.FIREBASE_CONFIG);
     window.db = firebase.firestore();
+    window.auth = firebase.auth();
     window.STATE_DOC_REF = db.collection('appState').doc('perfilJugador');
 
+    auth.onAuthStateChanged(function(user){
+      if(user){
+        db.collection('staff').doc(user.email.toLowerCase()).get().then(function(doc){
+          currentUser = {email:user.email, role: doc.exists ? doc.data().role : null, categoria: doc.exists ? doc.data().categoria : null};
+          if(state) safeRender();
+        }).catch(function(){
+          currentUser = {email:user.email, role:null, categoria:null};
+          if(state) safeRender();
+        });
+      } else {
+        currentUser = null;
+        if(state) safeRender();
+      }
+    });
     STATE_DOC_REF.get().then(function(doc){
       if(doc.exists){
         state = normalizeState(doc.data()) || freshState();
