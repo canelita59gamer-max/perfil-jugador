@@ -135,8 +135,9 @@
 
   /* ---------- Landing (Arena Sports) ---------- */
   .landing{min-height:100vh;display:flex;flex-direction:column;background:
-    radial-gradient(900px 500px at 85% -10%, rgba(193,248,7,.08), transparent 60%),
-    radial-gradient(1200px 800px at 15% -10%, #142055 0%, var(--navy-950) 55%), var(--navy-950);
+    radial-gradient(1000px 560px at 82% -12%, rgba(193,248,7,.13), transparent 60%),
+    radial-gradient(700px 500px at 8% 105%, rgba(193,248,7,.06), transparent 55%),
+    linear-gradient(180deg, #0a0a0a 0%, #050505 100%);
   }
   .landing-hero{
     display:flex;flex-direction:column;align-items:center;
@@ -170,10 +171,10 @@
     margin:0 0 16px;
   }
   .club-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px;}
-  .club-card{
+  .landing .club-card{
     position:relative;overflow:hidden;
-    background:linear-gradient(155deg,var(--card-bg-raised),var(--card-bg) 70%);
-    border:1px solid var(--border);border-radius:var(--radius-l);
+    background:linear-gradient(155deg,#171717,#0c0c0c 70%);
+    border:1px solid rgba(255,255,255,.08);border-radius:var(--radius-l);
     padding:28px 26px;display:flex;align-items:center;gap:18px;cursor:pointer;
     transition:transform .18s ease, border-color .18s ease, box-shadow .18s ease;
   }
@@ -190,11 +191,12 @@
     margin-left:auto;flex-shrink:0;font-size:12px;font-weight:700;color:var(--navy-950);
     background:var(--lime);padding:8px 14px;border-radius:100px;white-space:nowrap;
   }
-  .club-card-add{
-    border:1.5px dashed var(--border-strong);background:transparent;border-radius:var(--radius-l);
+  .landing .club-card-add{
+    border:1.5px dashed rgba(255,255,255,.16);background:transparent;border-radius:var(--radius-l);
     padding:28px;display:flex;flex-direction:column;align-items:center;justify-content:center;
-    text-align:center;gap:6px;color:var(--ink-faint);
+    text-align:center;gap:6px;color:var(--ink-faint);transition:border-color .18s ease;
   }
+  .landing .club-card-add:hover{border-color:rgba(193,248,7,.5);}
   .club-card-add b{color:var(--ink-muted);font-size:14px;}
   .club-card-add a{color:var(--lime);text-decoration:none;font-size:12.5px;font-weight:600;}
   .landing-foot{
@@ -580,7 +582,11 @@ var CLUBS = [
 ];
 var ARENA_LOGO_SRC = 'arena-logo.png';
 var SOCIALS = [
-  {name:'Instagram', url:'https://instagram.com/arenasportsco_', icon:'<path d="M12 2c2.7 0 3.05.01 4.12.06 1.07.05 1.79.22 2.43.46.66.26 1.22.6 1.77 1.15.55.55.89 1.11 1.15 1.77.24.64.41 1.36.46 2.43.05 1.07.06 1.42.06 4.12s-.01 3.05-.06 4.12c-.05 1.07-.22 1.79-.46 2.43a4.9 4.9 0 0 1-1.15 1.77 4.9 4.9 0 0 1-1.77 1.15c-.64.24-1.36.41-2.43.46-1.07.05-1.42.06-4.12.06s-3.05-.01-4.12-.06c-1.07-.05-1.79-.22-2.43-.46a4.9 4.9 0 0 1-1.77-1.15 4.9 4.9 0 0 1-1.15-1.77c-.24-.64-.41-1.36-.46-2.43C2.01 15.05 2 14.7 2 12s.01-3.05.06-4.12c.05-1.07.22-1.79.46-2.43.26-.66.6-1.22 1.15-1.77A4.9 4.9 0 0 1 5.44 2.53c.64-.24 1.36-.41 2.43-.46C8.94 2.01 9.3 2 12 2zm0 1.8c-2.65 0-2.97.01-4.02.06-.87.04-1.34.18-1.66.3-.42.16-.72.36-1.03.67-.31.31-.51.61-.67 1.03-.12.32-.26.79-.3 1.66-.05 1.05-.06 1.37-.06 4.02s.01 2.97.06 4.02c.04.87.18 1.34.3 1.66.16.42.36.72.67 1.03.31.31.61.51 1.03.67.32.12.79.26 1.66.3 1.05.05 1.37.06 4.02.06s2.97-.01 4.02-.06c.87-.04 1.34-.18 1.66-.3.42-.16.72-.36 1.03-.67.31-.31.51-.61.67-1.03.12-.32.26-.79.3-1.66.05-1.05.06-1.37.06-4.02s-.01-2.97-.06-4.02c-.04-.87-.18-1.34-.3-1.66a2.7 2.7 0 0 0-.67-1.03 2.7 2.7 0 0 0-1.03-.67c-.32-.12-.79-.26-1.66-.3-1.05-.05-1.37-.06-4.02-.06zm0 3.7a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9zm0 1.8a2.7 2.7 0 1 0 0 5.4 2.7 2.7 0 0 0 0-5.4zm4.7-1.98a1.05 1.05 0 1 1-2.1 0 1.05 1.05 0 0 1 2.1 0z"/>'}
+  {name:'Instagram', url:'https://instagram.com/arenasportsco_', icon:'<path d="M12 2c2.7 0 3.05.01 4.12.06 1.07.05 1.79.22 2.43.46.66.26 1.22.6 1.77 1.15.55.55.89 1.11 1.15 1.77.24.64.41 1.36.46 2.43.05 1.07.06 1.42.06 4.12s-.01 3.05-.06 4.12c-.05 1.07-.22 1.79-.46 2.43a4.9 4.9 0 0 1-1.15 1.77 4.9 4.9 0 0 1-1.77 1.15c-.64.24-1.36.41-2.43.46-1.07.05-1.42.06-4.12.06s-3.05-.01-4.12-.06c-1.07-.05-1.79-.22-2.43-.46a4.9 4.9 0 0 1-1.77-1.15 4.9 4.9 0 0 1-1.15-1.77c-.24-.64-.41-1.36-.46-2.43C2.01 15.05 2 14.7 2 12s.01-3.05.06-4.12c.05-1.07.22-1.79.46-2.43.26-.66.6-1.22 1.15-1.77A4.9 4.9 0 0 1 5.44 2.53c.64-.24 1.36-.41 2.43-.46C8.94 2.01 9.3 2 12 2zm0 1.8c-2.65 0-2.97.01-4.02.06-.87.04-1.34.18-1.66.3-.42.16-.72.36-1.03.67-.31.31-.51.61-.67 1.03-.12.32-.26.79-.3 1.66-.05 1.05-.06 1.37-.06 4.02s.01 2.97.06 4.02c.04.87.18 1.34.3 1.66.16.42.36.72.67 1.03.31.31.61.51 1.03.67.32.12.79.26 1.66.3 1.05.05 1.37.06 4.02.06s2.97-.01 4.02-.06c.87-.04 1.34-.18 1.66-.3.42-.16.72-.36 1.03-.67.31-.31.51-.61.67-1.03.12-.32.26-.79.3-1.66.05-1.05.06-1.37.06-4.02s-.01-2.97-.06-4.02c-.04-.87-.18-1.34-.3-1.66a2.7 2.7 0 0 0-.67-1.03 2.7 2.7 0 0 0-1.03-.67c-.32-.12-.79-.26-1.66-.3-1.05-.05-1.37-.06-4.02-.06zm0 3.7a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9zm0 1.8a2.7 2.7 0 1 0 0 5.4 2.7 2.7 0 0 0 0-5.4zm4.7-1.98a1.05 1.05 0 1 1-2.1 0 1.05 1.05 0 0 1 2.1 0z"/>'},
+  {name:'TikTok', url:'https://www.tiktok.com/@arenasportsco_', icon:'<path d="M16.6 5.82a4.28 4.28 0 0 1-4.28-4.11h-3.1v14.2a2.6 2.6 0 1 1-1.83-2.48V10.2a5.6 5.6 0 1 0 4.93 5.56V9.42a7.26 7.26 0 0 0 4.28 1.38V7.7a4.28 4.28 0 0 1-4.28-4.11z"/>'},
+  {name:'Facebook', url:'https://www.facebook.com/share/19YH5N7aiq/?mibextid=wwXIfr', icon:'<path d="M22 12a10 10 0 1 0-11.56 9.88v-6.99H7.9V12h2.54V9.8c0-2.5 1.49-3.89 3.77-3.89 1.09 0 2.23.2 2.23.2v2.45h-1.26c-1.24 0-1.62.77-1.62 1.56V12h2.76l-.44 2.89h-2.32v6.99A10 10 0 0 0 22 12z"/>'},
+  {name:'WhatsApp', url:'https://wa.me/573222462392', icon:'<path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5.1-1.34A10 10 0 1 0 12 2zm5.78 14.2c-.24.68-1.4 1.3-1.96 1.38-.5.08-1.13.11-1.83-.12-.42-.13-.96-.31-1.65-.6-2.92-1.26-4.82-4.24-4.97-4.44-.15-.2-1.19-1.58-1.19-3.01s.75-2.14 1.02-2.43c.26-.29.58-.36.77-.36l.55.01c.18 0 .41-.07.64.49.24.57.81 1.97.88 2.11.07.15.12.32.02.51-.09.2-.14.32-.28.49-.14.17-.29.38-.42.51-.14.14-.28.29-.12.57.16.28.72 1.19 1.55 1.93 1.06.95 1.96 1.24 2.24 1.38.28.14.44.12.61-.07.17-.19.71-.83.9-1.11.19-.28.38-.24.63-.14.26.09 1.63.77 1.91.91.28.14.46.21.53.33.07.12.07.68-.17 1.36z"/>'},
+  {name:'YouTube', url:'https://www.youtube.com/@ArenaSportsCo', icon:'<path d="M21.6 7.7s-.2-1.5-.8-2.1c-.8-.8-1.7-.9-2.1-.9C15.9 4.5 12 4.5 12 4.5s-3.9 0-6.7.2c-.4 0-1.3.1-2.1.9-.6.6-.8 2.1-.8 2.1S2.2 9.5 2.2 11.2v1.6c0 1.7.2 3.5.2 3.5s.2 1.5.8 2.1c.8.8 1.9.8 2.4.9 1.7.2 7.4.2 7.4.2s3.9 0 6.7-.2c.4 0 1.3-.1 2.1-.9.6-.6.8-2.1.8-2.1s.2-1.8.2-3.5v-1.6c0-1.7-.2-3.5-.2-3.5zM9.9 15.1V8.9l5.7 3.1-5.7 3.1z"/>'}
 ];
 
 function seedPlayers(categoria){
@@ -629,6 +635,7 @@ function seedPlayers(categoria){
 
 var STORAGE_KEY = 'jogobonito_preview_v4';
 var state = null;
+var sessionEnteredClub = null; // navegación local de esta pestaña — nunca se guarda ni se comparte
 
 function normalizeState(s){
   if(!s || !Array.isArray(s.players) || !s.players.length) return null;
@@ -1711,14 +1718,12 @@ function renderInforme(){
 
 /* ============ MAIN RENDER ============ */
 function goToLanding(){
-  state.enteredClub = null;
-  persist();
+  sessionEnteredClub = null;
   render();
 }
 function enterClub(clubId){
-  state.enteredClub = clubId;
+  sessionEnteredClub = clubId;
   currentView = 'entrenamiento';
-  persist();
   render();
 }
 
@@ -1738,7 +1743,6 @@ function renderLanding(){
       '</div>' +
       '<div class="landing-foot">' +
         '<div class="social-row" id="socialRow"></div>' +
-        '<div>¿Tu club quiere sumarse? <a href="mailto:contacto@arenasports.co" style="color:var(--lime);font-weight:600;text-decoration:none;">Escríbenos</a></div>' +
         '<div>Arena Sports — sistema de cartas y entrenamientos</div>' +
       '</div>' +
     '</div>';
@@ -1758,6 +1762,11 @@ function renderLanding(){
     grid.appendChild(card);
   });
 
+  var addCard = document.createElement('div');
+  addCard.className = 'club-card-add';
+  addCard.innerHTML = '<b>¿Quieres hacer parte?</b><a href="mailto:contacto@arenasports.co">Contáctanos</a>';
+  grid.appendChild(addCard);
+
   var socialRow = root.querySelector('#socialRow');
   SOCIALS.forEach(function(s){
     var a = document.createElement('a');
@@ -1768,7 +1777,7 @@ function renderLanding(){
 }
 
 function render(){
-  if(!state.enteredClub){
+  if(!sessionEnteredClub){
     document.getElementById('appRoot').style.display = 'none';
     document.getElementById('landingRoot').style.display = 'block';
     renderLanding();
