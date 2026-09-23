@@ -138,18 +138,12 @@
     radial-gradient(900px 500px at 85% -10%, rgba(193,248,7,.08), transparent 60%),
     radial-gradient(1200px 800px at 15% -10%, #142055 0%, var(--navy-950) 55%), var(--navy-950);
   }
-  .landing-nav{
-    display:flex;align-items:center;justify-content:space-between;
-    padding:22px 40px;max-width:1180px;margin:0 auto;width:100%;
-  }
-  .landing-nav .brand-mark{display:flex;align-items:center;gap:10px;}
-  .landing-nav .brand-mark img{height:26px;width:auto;}
   .landing-hero{
     display:flex;flex-direction:column;align-items:center;
-    text-align:center;padding:18px 24px 30px;max-width:680px;margin:0 auto;
+    text-align:center;padding:34px 24px 22px;max-width:680px;margin:0 auto;
   }
   .landing-hero .hero-logo{
-    width:150px;height:auto;margin-bottom:18px;
+    width:128px;height:auto;margin-bottom:14px;
     filter:drop-shadow(0 0 26px rgba(193,248,7,.25));
     opacity:0;transform:scale(.9) translateY(8px);
     animation:heroReveal .7s cubic-bezier(.2,.8,.2,1) .1s forwards;
@@ -169,7 +163,7 @@
     font-size:15px;color:var(--ink-muted);line-height:1.6;max-width:50ch;margin:0 auto;
   }
   .landing-clubs{
-    padding:10px 24px 60px;max-width:1180px;margin:0 auto;width:100%;
+    padding:4px 24px 56px;max-width:1180px;margin:0 auto;width:100%;
   }
   .landing-clubs h2{
     font-family:var(--font-display);font-size:13px;font-weight:600;color:var(--ink-faint);
@@ -583,6 +577,10 @@ var NAMES = ['Jugador 01','Jugador 02','Jugador 03','Jugador 04','Jugador 05','J
 var CATEGORIES = ['Sub-13','Sub-15','Sub-17'];
 var CLUBS = [
   {id:'jogo-bonito', name:'Club Deportivo Jogo Bonito', tagline:'Fútbol formativo · Bucaramanga', categories: CATEGORIES}
+];
+var ARENA_LOGO_SRC = 'arena-logo.png';
+var SOCIALS = [
+  {name:'Instagram', url:'https://instagram.com/arenasportsco_', icon:'<path d="M12 2c2.7 0 3.05.01 4.12.06 1.07.05 1.79.22 2.43.46.66.26 1.22.6 1.77 1.15.55.55.89 1.11 1.15 1.77.24.64.41 1.36.46 2.43.05 1.07.06 1.42.06 4.12s-.01 3.05-.06 4.12c-.05 1.07-.22 1.79-.46 2.43a4.9 4.9 0 0 1-1.15 1.77 4.9 4.9 0 0 1-1.77 1.15c-.64.24-1.36.41-2.43.46-1.07.05-1.42.06-4.12.06s-3.05-.01-4.12-.06c-1.07-.05-1.79-.22-2.43-.46a4.9 4.9 0 0 1-1.77-1.15 4.9 4.9 0 0 1-1.15-1.77c-.24-.64-.41-1.36-.46-2.43C2.01 15.05 2 14.7 2 12s.01-3.05.06-4.12c.05-1.07.22-1.79.46-2.43.26-.66.6-1.22 1.15-1.77A4.9 4.9 0 0 1 5.44 2.53c.64-.24 1.36-.41 2.43-.46C8.94 2.01 9.3 2 12 2zm0 1.8c-2.65 0-2.97.01-4.02.06-.87.04-1.34.18-1.66.3-.42.16-.72.36-1.03.67-.31.31-.51.61-.67 1.03-.12.32-.26.79-.3 1.66-.05 1.05-.06 1.37-.06 4.02s.01 2.97.06 4.02c.04.87.18 1.34.3 1.66.16.42.36.72.67 1.03.31.31.61.51 1.03.67.32.12.79.26 1.66.3 1.05.05 1.37.06 4.02.06s2.97-.01 4.02-.06c.87-.04 1.34-.18 1.66-.3.42-.16.72-.36 1.03-.67.31-.31.51-.61.67-1.03.12-.32.26-.79.3-1.66.05-1.05.06-1.37.06-4.02s-.01-2.97-.06-4.02c-.04-.87-.18-1.34-.3-1.66a2.7 2.7 0 0 0-.67-1.03 2.7 2.7 0 0 0-1.03-.67c-.32-.12-.79-.26-1.66-.3-1.05-.05-1.37-.06-4.02-.06zm0 3.7a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9zm0 1.8a2.7 2.7 0 1 0 0 5.4 2.7 2.7 0 0 0 0-5.4zm4.7-1.98a1.05 1.05 0 1 1-2.1 0 1.05 1.05 0 0 1 2.1 0z"/>'}
 ];
 
 function seedPlayers(categoria){
@@ -1728,7 +1726,6 @@ function renderLanding(){
   var root = document.getElementById('landingRoot');
   root.innerHTML =
     '<div class="landing">' +
-      '<div class="landing-nav"><div class="brand-mark"><img src="' + ARENA_LOGO_SRC + '" alt="Arena Sports" /></div></div>' +
       '<div class="landing-hero">' +
         '<img class="hero-logo" src="' + ARENA_LOGO_SRC + '" alt="Arena Sports" />' +
         '<div class="eyebrow">Plataforma de cartas deportivas</div>' +
