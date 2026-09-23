@@ -16,6 +16,8 @@
     --orange-500:#f65334;
     --orange-600:#d63f22;
     --orange-100:#ffd9cc;
+    --lime:#c1f807;
+    --lime-dim:#7ea800;
     --white:#ffffff;
     --ink:#eef0fa;
     --ink-muted:#93a0c9;
@@ -131,57 +133,87 @@
   main{flex:1;min-width:0;padding:30px 34px 80px;}
   .main-inner{max-width:1080px;margin:0 auto;}
 
-  /* ---------- Landing ---------- */
-  .landing{min-height:100vh;display:flex;flex-direction:column;}
+  /* ---------- Landing (Arena Sports) ---------- */
+  .landing{min-height:100vh;display:flex;flex-direction:column;background:
+    radial-gradient(900px 500px at 85% -10%, rgba(193,248,7,.08), transparent 60%),
+    radial-gradient(1200px 800px at 15% -10%, #142055 0%, var(--navy-950) 55%), var(--navy-950);
+  }
   .landing-nav{
     display:flex;align-items:center;justify-content:space-between;
     padding:22px 40px;max-width:1180px;margin:0 auto;width:100%;
   }
-  .landing-nav .brand-mark{display:flex;align-items:center;gap:10px;font-family:var(--font-display);font-size:14px;letter-spacing:.02em;color:var(--ink-muted);}
-  .landing-nav .brand-mark b{color:var(--white);font-weight:600;}
+  .landing-nav .brand-mark{display:flex;align-items:center;gap:10px;}
+  .landing-nav .brand-mark img{height:26px;width:auto;}
   .landing-hero{
-    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
-    text-align:center;padding:40px 24px 60px;max-width:720px;margin:0 auto;
+    display:flex;flex-direction:column;align-items:center;
+    text-align:center;padding:18px 24px 30px;max-width:680px;margin:0 auto;
+  }
+  .landing-hero .hero-logo{
+    width:150px;height:auto;margin-bottom:18px;
+    filter:drop-shadow(0 0 26px rgba(193,248,7,.25));
+    opacity:0;transform:scale(.9) translateY(8px);
+    animation:heroReveal .7s cubic-bezier(.2,.8,.2,1) .1s forwards;
+  }
+  @keyframes heroReveal{ to{ opacity:1; transform:scale(1) translateY(0); } }
+  @media (prefers-reduced-motion: reduce){
+    .landing-hero .hero-logo{ animation:none; opacity:1; transform:none; }
   }
   .landing-hero .eyebrow{
-    font-size:13px;color:var(--orange-500);font-weight:600;margin-bottom:14px;
+    font-size:12.5px;color:var(--lime);font-weight:600;margin-bottom:10px;letter-spacing:.01em;
   }
   .landing-hero h1{
-    font-family:var(--font-display);font-size:clamp(32px,5vw,52px);line-height:1.08;
-    margin:0 0 20px;font-weight:600;
+    font-family:var(--font-display);font-size:clamp(28px,4.2vw,42px);line-height:1.1;
+    margin:0 0 14px;font-weight:600;
   }
   .landing-hero p{
-    font-size:16px;color:var(--ink-muted);line-height:1.6;max-width:52ch;margin:0 auto;
+    font-size:15px;color:var(--ink-muted);line-height:1.6;max-width:50ch;margin:0 auto;
   }
   .landing-clubs{
-    padding:0 24px 70px;max-width:1180px;margin:0 auto;width:100%;
+    padding:10px 24px 60px;max-width:1180px;margin:0 auto;width:100%;
   }
   .landing-clubs h2{
-    font-family:var(--font-display);font-size:14px;font-weight:600;color:var(--ink-faint);
-    margin:0 0 18px;
+    font-family:var(--font-display);font-size:13px;font-weight:600;color:var(--ink-faint);
+    margin:0 0 16px;
   }
-  .club-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:18px;}
+  .club-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px;}
   .club-card{
-    background:linear-gradient(160deg,var(--card-bg-raised),var(--card-bg) 75%);
+    position:relative;overflow:hidden;
+    background:linear-gradient(155deg,var(--card-bg-raised),var(--card-bg) 70%);
     border:1px solid var(--border);border-radius:var(--radius-l);
-    padding:26px;display:flex;align-items:center;gap:16px;cursor:pointer;
-    transition:transform .15s ease, border-color .15s ease;
+    padding:28px 26px;display:flex;align-items:center;gap:18px;cursor:pointer;
+    transition:transform .18s ease, border-color .18s ease, box-shadow .18s ease;
   }
-  .club-card:hover{transform:translateY(-2px);border-color:var(--border-strong);}
-  .club-card img{width:56px;height:56px;border-radius:50%;box-shadow:0 0 0 2px var(--orange-500);flex-shrink:0;}
-  .club-card .name{font-family:var(--font-display);font-size:17px;margin-bottom:3px;}
+  .club-card::before{
+    content:'';position:absolute;top:0;left:0;bottom:0;width:5px;
+    background:linear-gradient(var(--lime),var(--lime-dim));
+    transform:skewX(-8deg);transform-origin:top left;
+  }
+  .club-card:hover{transform:translateY(-3px);border-color:rgba(193,248,7,.35);box-shadow:0 14px 32px rgba(0,0,0,.35);}
+  .club-card img{width:64px;height:64px;border-radius:50%;box-shadow:0 0 0 2px var(--lime);flex-shrink:0;background:#0b1330;}
+  .club-card .name{font-family:var(--font-display);font-size:19px;margin-bottom:4px;}
   .club-card .meta{font-size:12.5px;color:var(--ink-faint);}
+  .club-card .enter{
+    margin-left:auto;flex-shrink:0;font-size:12px;font-weight:700;color:var(--navy-950);
+    background:var(--lime);padding:8px 14px;border-radius:100px;white-space:nowrap;
+  }
   .club-card-add{
     border:1.5px dashed var(--border-strong);background:transparent;border-radius:var(--radius-l);
-    padding:26px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:28px;display:flex;flex-direction:column;align-items:center;justify-content:center;
     text-align:center;gap:6px;color:var(--ink-faint);
   }
   .club-card-add b{color:var(--ink-muted);font-size:14px;}
-  .club-card-add a{color:var(--orange-500);text-decoration:none;font-size:12.5px;font-weight:600;}
+  .club-card-add a{color:var(--lime);text-decoration:none;font-size:12.5px;font-weight:600;}
   .landing-foot{
-    text-align:center;padding:24px;font-size:11.5px;color:var(--ink-faint);
-    border-top:1px solid var(--border);
+    text-align:center;padding:26px 24px;font-size:11.5px;color:var(--ink-faint);
+    border-top:1px solid var(--border);display:flex;flex-direction:column;gap:12px;align-items:center;
   }
+  .social-row{display:flex;gap:14px;}
+  .social-row a{
+    display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;
+    border:1px solid var(--border-strong);color:var(--ink-muted);transition:color .15s ease, border-color .15s ease;
+  }
+  .social-row a:hover{color:var(--lime);border-color:var(--lime);}
+  .social-row svg{width:16px;height:16px;fill:currentColor;}
   .view-head{
     display:flex;justify-content:space-between;align-items:flex-end;gap:16px;
     margin-bottom:22px;flex-wrap:wrap;
@@ -1696,8 +1728,9 @@ function renderLanding(){
   var root = document.getElementById('landingRoot');
   root.innerHTML =
     '<div class="landing">' +
-      '<div class="landing-nav"><div class="brand-mark"><b>Arena Sports</b> · Perfil de Jugador</div></div>' +
+      '<div class="landing-nav"><div class="brand-mark"><img src="' + ARENA_LOGO_SRC + '" alt="Arena Sports" /></div></div>' +
       '<div class="landing-hero">' +
+        '<img class="hero-logo" src="' + ARENA_LOGO_SRC + '" alt="Arena Sports" />' +
         '<div class="eyebrow">Plataforma de cartas deportivas</div>' +
         '<h1>Cada jugador, con su propia carta</h1>' +
         '<p>Cada club lleva el control de entrenamientos y partidos de sus jugadores, y cada jugador tiene una carta que sube o baja según su desempeño real — no una foto fija, algo vivo.</p>' +
@@ -1706,7 +1739,11 @@ function renderLanding(){
         '<h2>Clubes afiliados</h2>' +
         '<div class="club-grid" id="clubGrid"></div>' +
       '</div>' +
-      '<div class="landing-foot">Arena Sports — sistema de cartas y entrenamientos</div>' +
+      '<div class="landing-foot">' +
+        '<div class="social-row" id="socialRow"></div>' +
+        '<div>¿Tu club quiere sumarse? <a href="mailto:contacto@arenasports.co" style="color:var(--lime);font-weight:600;text-decoration:none;">Escríbenos</a></div>' +
+        '<div>Arena Sports — sistema de cartas y entrenamientos</div>' +
+      '</div>' +
     '</div>';
 
   var grid = root.querySelector('#clubGrid');
@@ -1717,16 +1754,20 @@ function renderLanding(){
     card.className = 'club-card';
     card.innerHTML =
       '<img alt="' + club.name + '" />' +
-      '<div><div class="name">' + club.name + '</div><div class="meta">' + club.tagline + ' · ' + club.categories.length + ' categorías</div></div>';
+      '<div><div class="name">' + club.name + '</div><div class="meta">' + club.tagline + ' · ' + club.categories.length + ' categorías</div></div>' +
+      '<div class="enter">Entrar →</div>';
     card.querySelector('img').src = logoSrc;
     card.onclick = function(){ enterClub(club.id); };
     grid.appendChild(card);
   });
 
-  var addCard = document.createElement('div');
-  addCard.className = 'club-card-add';
-  addCard.innerHTML = '<b>¿Tu club quiere sumarse?</b><a href="mailto:contacto@arenasports.co">Escríbenos</a>';
-  grid.appendChild(addCard);
+  var socialRow = root.querySelector('#socialRow');
+  SOCIALS.forEach(function(s){
+    var a = document.createElement('a');
+    a.href = s.url; a.target = '_blank'; a.rel = 'noopener'; a.title = s.name;
+    a.innerHTML = '<svg viewBox="0 0 24 24">' + s.icon + '</svg>';
+    socialRow.appendChild(a);
+  });
 }
 
 function render(){
