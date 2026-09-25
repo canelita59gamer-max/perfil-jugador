@@ -408,6 +408,24 @@
   .card-stats{display:flex;gap:14px;margin-top:12px;font-size:12px;color:var(--ink-muted);}
   .card-stats span b{color:var(--ink);font-size:13px;}
   .spark{margin-top:12px;height:26px;}
+  .avatar{overflow:hidden;}
+  .avatar img, .card-photo img, .modal-photo img, .pl-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+  .card-top{display:flex;gap:12px;align-items:center;margin-bottom:4px;}
+  .card-top .card-name{margin:3px 0 0;}
+  .card-photo, .modal-photo, .pl-thumb{
+    flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(145deg,var(--navy-700),var(--navy-800));border:1px solid var(--border-strong);
+    font-family:var(--font-display);color:var(--orange-500);
+  }
+  .card-photo{width:58px;height:58px;border-radius:14px;font-size:19px;}
+  .modal-photo{width:76px;height:76px;border-radius:18px;font-size:24px;}
+  .pl-thumb{width:36px;height:36px;border-radius:9px;font-size:12px;}
+  .modal-head{display:flex;gap:14px;align-items:center;margin-bottom:10px;}
+  .xp{margin-top:10px;}
+  .xp-bar{height:6px;border-radius:6px;background:rgba(255,255,255,.08);overflow:hidden;}
+  .xp-bar i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,var(--orange-500),var(--lime));}
+  .xp-txt{font-size:11px;color:var(--ink-faint);margin-top:4px;}
+  .modal .xp{margin:0 0 16px;}
 
   /* ---------- Modal ---------- */
   .modal-overlay{
@@ -768,6 +786,8 @@ function normalizeState(s){
     if(!s.selectedCategoria || s.categories.indexOf(s.selectedCategoria)===-1) s.selectedCategoria = s.categories[0];
     if(!s.profesorCategoria || s.categories.indexOf(s.profesorCategoria)===-1) s.profesorCategoria = s.categories[0];
     if(typeof s.enteredClub === 'undefined') s.enteredClub = null;
+    if(!s.categoryLevels || typeof s.categoryLevels !== 'object') s.categoryLevels = {};
+    s.players.forEach(function(p){ recomputeRating(p, s.categoryLevels); });
     syncCategories(s.categories);
     return s;
   }catch(e){ return null; }
@@ -777,9 +797,11 @@ function freshState(){
   var cats = ['Sub-13','Sub-15','Sub-17'];
   var allPlayers = [];
   cats.forEach(function(cat){ allPlayers = allPlayers.concat(seedPlayers(cat)); });
+  allPlayers.forEach(function(p){ recomputeRating(p, {}); });
   syncCategories(cats);
   return {
     categories: cats.slice(),
+    categoryLevels: {},
     players: allPlayers,
     profiles: JSON.parse(JSON.stringify(DEFAULT_PROFILES)),
     activePos:'MCO',
@@ -804,6 +826,7 @@ function bootFromLocalOrFresh(){
 // Firestore: una sola fuente de verdad compartida por todos los que abran esta página.
 // db y STATE_DOC_REF se declaran más abajo, justo antes de usarlos, para no depender del orden de carga del SDK.
 function persist(){
+  recomputeAllRatings();
   try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){}
   try{
     if(window.STATE_DOC_REF) window.STATE_DOC_REF.set(state).catch(function(err){ console.error('No se pudo guardar en Firestore', err); });
@@ -816,12 +839,11 @@ var ALL_VIEWS = [
   {id:'cartas', label:'Cartas de jugadores', icon:'●'},
   {id:'perfil', label:'Perfil de exigencia', icon:'●'},
   {id:'informe', label:'Informe semestral', icon:'●'},
-  {id:'plantel', label:'Plantel y categorías', icon:'●'}
+  {id:'plantel', label:'Plantel', icon:'●'}
 ];
 function visibleViews(){
   if(state.role==='visitante') return ALL_VIEWS.filter(function(v){return v.id==='cartas';});
-  if(state.role==='admin') return ALL_VIEWS;
-  return ALL_VIEWS.filter(function(v){return v.id!=='plantel';});
+  return ALL_VIEWS;
 }
 function isReadOnly(){ return state.role==='visitante'; }
 function activeCategoria(){
@@ -1062,8 +1084,8 @@ function renderEntrenamiento(){
       rosterBox.innerHTML =
         '<div class="focus-title">Jugadores registrados este día (' + entries.length + ')</div>' +
         (entries.length ? entries.map(function(e){
-          var deltaTxt = (e.h.delta>=0?'+':'') + e.h.delta;
-          return '<div class="tl-item"><div class="tl-date"><b>' + e.p.name + '</b> · ' + posName(e.p.pos) + ' · Calificación ' + e.h.rating + '/10 · <span class="tl-delta ' + (e.h.delta>=0?'up':'down') + '">' + deltaTxt + '</span></div>' +
+          var deltaTxt = (sessionXp(e.h)>=0?'+':'') + sessionXp(e.h) + ' progreso';
+          return '<div class="tl-item"><div class="tl-date"><b>' + e.p.name + '</b> · ' + posName(e.p.pos) + ' · Calificación ' + e.h.rating + '/10 · <span class="tl-delta ' + (sessionXp(e.h)>=0?'up':'down') + '">' + deltaTxt + '</span></div>' +
             (e.h.comment ? '<div class="tl-comment">' + e.h.comment + '</div>' : '') + '</div>';
         }).join('') : '<div style="font-size:12.5px;color:var(--ink-faint);">Nadie quedó registrado con calificación este día.</div>') +
         '<div class="save-row" style="margin-top:14px;"><button class="btn-save-player" id="reopenBtn" style="background:var(--navy-700);">Reabrir edición</button></div>';
@@ -1145,7 +1167,7 @@ function renderTrainingRow(p, dateStr, day){
   var row = document.createElement('div');
   row.className = 'player-row' + (existingEntry ? ' done' : '');
 
-  var initials = p.name.replace('Jugador ', '#');
+  var initials = avatarInner(p);
 
   row.innerHTML =
     '<div class="player-row-top">' +
@@ -1340,7 +1362,7 @@ function renderMatchRow(p, dateStr){
   var row = document.createElement('div');
   row.className = 'player-row' + (existingEntry ? ' done' : '');
 
-  var initials = p.name.replace('Jugador ', '#');
+  var initials = avatarInner(p);
 
   row.innerHTML =
     '<div class="player-row-top">' +
@@ -1549,9 +1571,9 @@ function renderCartas(){
       ? '<div class="card-val-row"><span class="card-val">' + p.valoracion + '</span><span class="card-val-max">valoración</span></div><span class="pill" style="margin-top:6px;">' + formBadge(p.historial).label + '</span>'
       : '<div class="card-val-row"><span class="card-val">' + p.valoracion + '</span><span class="card-val-max">valoración</span></div>';
     c.innerHTML =
-      '<div class="card-pos">' + posName(p.pos) + '</div>' +
-      '<div class="card-name">' + p.name + '</div>' +
-      valBlock +
+      '<div class="card-top"><div class="card-photo">' + avatarInner(p) + '</div><div><div class="card-pos">' + posName(p.pos) + '</div>' +
+      '<div class="card-name">' + escHtml(p.name) + '</div></div></div>' +
+      valBlock + xpBar(p) +
       '<svg class="spark" viewBox="0 0 200 26" preserveAspectRatio="none"><polyline points="' + pts + '" fill="none" stroke="#f65334" stroke-width="2.5"/></svg>' +
       '<div class="card-stats"><span><b>' + p.goles + '</b> goles</span><span><b>' + p.asistencias + '</b> asist.</span>' + (publicMode ? (best ? '<span><b>' + best.label + '</b></span>' : '') : '<span><b>' + p.historial.length + '</b> registros</span>') + '</div>';
     c.onclick = function(){ publicMode ? openPublicModal(p) : openPlayerModal(p); };
@@ -1568,8 +1590,8 @@ function openPublicModal(p){
   var highlight = recentHighlight(p.historial);
   body.innerHTML =
     '<button class="modal-close" id="closeModal">✕</button>' +
-    '<h2>' + p.name + '</h2>' +
-    '<div class="sub">' + posName(p.pos) + ' · ' + p.categoria + ' · Club Deportivo Jogo Bonito</div>' +
+    '<div class="modal-head"><div class="modal-photo">' + avatarInner(p) + '</div><div><h2>' + escHtml(p.name) + '</h2>' +
+    '<div class="sub">' + posName(p.pos) + ' · ' + p.categoria + ' · Club Deportivo Jogo Bonito</div></div></div>' + xpBar(p) +
     '<div class="modal-stats">' +
       '<div><b>' + p.valoracion + '</b>Valoración</div>' +
       '<div><b>' + p.goles + '</b>Goles</div>' +
@@ -1589,8 +1611,8 @@ function openPlayerModal(p){
   var asistidos = p.historial.filter(function(h){return h.asistio;}).length;
   body.innerHTML =
     '<button class="modal-close" id="closeModal">✕</button>' +
-    '<h2>' + p.name + '</h2>' +
-    '<div class="sub">' + posName(p.pos) + ' · ' + p.categoria + ' · Club Deportivo Jogo Bonito</div>' +
+    '<div class="modal-head"><div class="modal-photo">' + avatarInner(p) + '</div><div><h2>' + escHtml(p.name) + '</h2>' +
+    '<div class="sub">' + posName(p.pos) + ' · ' + p.categoria + ' · Club Deportivo Jogo Bonito</div></div></div>' + xpBar(p) +
     '<div class="modal-stats">' +
       '<div><b>' + p.valoracion + '</b>Valoración</div>' +
       '<div><b>' + p.goles + '</b>Goles</div>' +
@@ -1603,12 +1625,12 @@ function openPlayerModal(p){
   p.historial.forEach(function(h){
     var item = document.createElement('div');
     item.className = 'tl-item';
-    var deltaCls = h.delta>=0?'up':'down';
-    var deltaTxt = (h.delta>=0?'+':'') + h.delta;
+    var deltaCls = sessionXp(h)>=0?'up':'down';
+    var deltaTxt = (sessionXp(h)>=0?'+':'') + sessionXp(h);
     var tipoLabel = h.type==='partido' ? 'Partido' : 'Entrenamiento';
     var golesTxt = h.type==='partido' ? ' · ' + (h.goles||0) + ' gol(es), ' + (h.asistencias||0) + ' asist.' : '';
     item.innerHTML =
-      '<div class="tl-date"><b>' + tipoLabel + '</b> · ' + fmtDate(h.date) + ' · Calificación ' + h.rating + '/10' + golesTxt + ' · <span class="tl-delta ' + deltaCls + '">' + deltaTxt + ' valoración</span></div>' +
+      '<div class="tl-date"><b>' + tipoLabel + '</b> · ' + fmtDate(h.date) + ' · Calificación ' + h.rating + '/10' + golesTxt + ' · <span class="tl-delta ' + deltaCls + '">' + deltaTxt + ' progreso</span></div>' +
       '<div class="tl-comment">' + h.comment + '</div>' +
       (h.attrsHit && h.attrsHit.length ? '<div style="margin-top:5px;">' + h.attrsHit.map(function(a){return '<span class="attr-chip">' + a + '</span>';}).join('') + '</div>' : '');
     tl.appendChild(item);
@@ -1729,7 +1751,7 @@ function renderInforme(){
     pct = Math.max(0, Math.min(100, pct)); // nunca puede pasarse de 100%, así el dato de origen esté incompleto
     var promedio = hist.length ? (hist.reduce(function(s,h){return s+h.rating;},0)/hist.length).toFixed(1) : '—';
     var mejorSesion = hist.slice().sort(function(a,b){return b.delta-a.delta;})[0];
-    var startVal = p.valoracion - hist.reduce(function(s,h){return s+h.delta;},0);
+    var startVal = hist.length ? ratingBefore(p, hist.reduce(function(m,h){ return h.date<m ? h.date : m; }, hist[0].date)) : p.valoracion;
 
     var mentionCount = {};
     hist.forEach(function(h){ (h.attrsHit||[]).forEach(function(a){ mentionCount[a] = (mentionCount[a]||0)+1; }); });
@@ -1770,12 +1792,12 @@ function renderInforme(){
     function fullTimelineHtml(){
       if(!hist.length) return '<div style="font-size:12.5px;color:var(--ink-faint);">Todavía no hay entrenamientos ni partidos registrados.</div>';
       return hist.map(function(h){
-        var deltaCls = h.delta>=0?'up':'down';
-        var deltaTxt = (h.delta>=0?'+':'') + h.delta;
+        var deltaCls = sessionXp(h)>=0?'up':'down';
+        var deltaTxt = (sessionXp(h)>=0?'+':'') + sessionXp(h);
         var tipoLabel = h.type==='partido' ? 'Partido' : 'Entrenamiento';
         var golesTxt = h.type==='partido' ? ' · ' + (h.goles||0) + ' gol(es), ' + (h.asistencias||0) + ' asist.' : '';
         return '<div class="tl-item">' +
-          '<div class="tl-date"><b>' + tipoLabel + '</b> · ' + fmtDate(h.date) + ' · Calificación ' + h.rating + '/10' + golesTxt + ' · <span class="tl-delta ' + deltaCls + '">' + deltaTxt + ' valoración</span></div>' +
+          '<div class="tl-date"><b>' + tipoLabel + '</b> · ' + fmtDate(h.date) + ' · Calificación ' + h.rating + '/10' + golesTxt + ' · <span class="tl-delta ' + deltaCls + '">' + deltaTxt + ' progreso</span></div>' +
           '<div class="tl-comment">' + h.comment + '</div>' +
           (h.attrsHit && h.attrsHit.length ? '<div style="margin-top:5px;">' + h.attrsHit.map(function(a){return '<span class="attr-chip">' + a + '</span>';}).join('') + '</div>' : '') +
         '</div>';
@@ -1918,6 +1940,107 @@ function render(){
   if(backSidebar) backSidebar.onclick = goToLanding;
 }
 
+/* ============ VALORACIÓN CON BARRA DE PROGRESO ============ */
+// Todos arrancan en 50 y el máximo es 99. Cada sesión da progreso (asistir ya suma algo, jugar bien suma más);
+// llenar la barra sube 1 punto y cada tramo de 10 cuesta más. La exigencia depende de la categoría.
+// Calibrado para que en un semestre un jugador promedio llegue a ~80 y uno muy bueno pueda llegar a 99 en el año.
+var VAL_MIN = 50, VAL_MAX = 99;
+var XP_BASE = 10, XP_PER_DELTA = 8;        // progreso de una sesión = 10 + 8 × puntaje de la sesión
+var LEVEL_COSTS = [20, 28, 37, 70, 133];    // progreso para subir 1 punto en los 50s, 60s, 70s, 80s y 90s (nivel medio)
+var LEVELS = {
+  infantil:    {label:'Infantil',    mult:0.7},
+  medio:       {label:'Medio',       mult:1},
+  competitivo: {label:'Competitivo', mult:1.35},
+  maxima:      {label:'Máxima',      mult:1.8}
+};
+function defaultLevel(cat){
+  var m = String(cat||'').match(/^sub-(\d+)$/i);
+  if(!m) return 'medio';
+  var n = +m[1];
+  return n<=8 ? 'infantil' : (n<=12 ? 'medio' : 'competitivo');
+}
+function categoryLevel(cat, levels){
+  levels = levels || (state && state.categoryLevels) || {};
+  return LEVELS[levels[cat]] ? levels[cat] : defaultLevel(cat);
+}
+function levelMult(cat, levels){ return LEVELS[categoryLevel(cat, levels)].mult; }
+function levelCost(v, mult){ return Math.round(LEVEL_COSTS[Math.max(0, Math.min(4, Math.floor((v-50)/10)))] * (mult||1)); }
+function sessionXp(h){ if(!h || h.asistio===false) return 0; return XP_BASE + (h.delta||0) * XP_PER_DELTA; }
+function replayRating(entries, mult){
+  var v = VAL_MIN, xp = 0;
+  entries.slice().sort(function(a,b){ return a.date<b.date ? -1 : (a.date>b.date ? 1 : 0); }).forEach(function(h){
+    xp += sessionXp(h);
+    while(v<VAL_MAX && xp>=levelCost(v, mult)){ xp -= levelCost(v, mult); v++; }
+    while(xp<0){ if(v<=VAL_MIN){ xp = 0; break; } v--; xp += levelCost(v, mult); }
+  });
+  if(v>=VAL_MAX){ v = VAL_MAX; xp = 0; }
+  return {valoracion:v, xp:xp, cost:levelCost(v, mult)};
+}
+// la valoración siempre se recalcula desde el historial: editar, reabrir o borrar un registro queda bien solo
+function recomputeRating(p, levels){ var r = replayRating(p.historial||[], levelMult(p.categoria, levels)); p.valoracion = r.valoracion; p.xp = r.xp; p.xpCost = r.cost; }
+function recomputeAllRatings(){ if(state && Array.isArray(state.players)) state.players.forEach(function(p){ recomputeRating(p, state.categoryLevels); }); }
+function ratingBefore(p, dateStr){ return replayRating((p.historial||[]).filter(function(h){ return h.date < dateStr; }), levelMult(p.categoria)).valoracion; }
+function xpBar(p){
+  if(p.valoracion>=VAL_MAX) return '<div class="xp"><div class="xp-bar"><i style="width:100%"></i></div><div class="xp-txt">Valoración máxima</div></div>';
+  var pct = Math.max(0, Math.min(100, Math.floor((p.xp||0) / (p.xpCost||levelCost(p.valoracion, levelMult(p.categoria))) * 100)));
+  return '<div class="xp"><div class="xp-bar"><i style="width:' + pct + '%"></i></div><div class="xp-txt">' + pct + '% hacia ' + (p.valoracion+1) + '</div></div>';
+}
+
+/* ============ FOTOS DE JUGADORES ============ */
+// Cada foto va en su propio documento (colección fotosJugadores/{id del jugador}), comprimida a 320x320,
+// así no engorda el documento principal ni hace falta Firebase Storage.
+var photoMap = {};
+function initialsOf(name){
+  var n = String(name||'').trim();
+  if(/^Jugador \d+$/.test(n)) return '#' + n.split(' ')[1];
+  var w = n.split(/\s+/);
+  return (((w[0]||'')[0]||'') + ((w[1]||'')[0]||'')).toUpperCase();
+}
+function avatarInner(p){ var src = photoMap[p.id]; return src ? '<img src="' + src + '" alt="" />' : escHtml(initialsOf(p.name)); }
+function compressPhoto(file, size){
+  size = size || 320;
+  return new Promise(function(resolve, reject){
+    var url = URL.createObjectURL(file);
+    var img = new Image();
+    img.onload = function(){
+      var s = Math.min(img.naturalWidth, img.naturalHeight);
+      var sx = (img.naturalWidth - s) / 2;
+      var sy = (img.naturalHeight - s) / 2 * 0.5; // en fotos verticales recorta más abajo que arriba, para no cortar la cabeza
+      var c = document.createElement('canvas'); c.width = size; c.height = size;
+      c.getContext('2d').drawImage(img, sx, sy, s, s, 0, 0, size, size);
+      URL.revokeObjectURL(url);
+      resolve(c.toDataURL('image/jpeg', 0.82));
+    };
+    img.onerror = function(){ URL.revokeObjectURL(url); reject(new Error('No se pudo abrir la imagen')); };
+    img.src = url;
+  });
+}
+function savePhoto(playerId, dataUrl){
+  photoMap[playerId] = dataUrl;
+  if(window.db) return db.collection('fotosJugadores').doc(playerId).set({data:dataUrl, actualizada:Date.now()});
+  return Promise.resolve();
+}
+function deletePhoto(playerId){
+  delete photoMap[playerId];
+  if(window.db) db.collection('fotosJugadores').doc(playerId).delete().catch(function(){});
+}
+// "juan-esteban-ortiz.jpg", "Ortiz Juan.png" o "umbria.jpeg" -> el jugador que corresponde (o null si hay duda)
+function matchPhotoToPlayer(fileName, players){
+  var tokens = nameKey(String(fileName).replace(/\.[^.]+$/,'').replace(/[_\-.]+/g,' ')).split(' ')
+    .filter(function(t){ return t.length>1 && !/^\d+$/.test(t) && ['img','foto','wa','jpg','jpeg','png'].indexOf(t)===-1; });
+  if(!tokens.length) return null;
+  var best = null, bestScore = 0, tie = false;
+  players.forEach(function(p){
+    var pt = nameKey(p.name).split(' ');
+    var score = tokens.filter(function(t){ return pt.indexOf(t)!==-1; }).length;
+    if(score > bestScore){ best = p; bestScore = score; tie = false; }
+    else if(score && score===bestScore){ tie = true; }
+  });
+  if(tie || !best) return null;
+  if(bestScore>=2 || (bestScore===1 && tokens.length===1)) return best;
+  return null;
+}
+
 /* ============ RENDER: PLANTEL Y CATEGORÍAS (solo administrador) ============ */
 function escHtml(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 function toTitleName(raw){
@@ -1935,7 +2058,7 @@ function normalizeCategoryName(raw){
 function nameKey(n){ return String(n||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim(); }
 function newPlayerId(){ return 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 function makePlayer(name, pos, categoria){
-  return {id:newPlayerId(), name:name, categoria:categoria, pos:pos, goles:0, asistencias:0, valoracion:60, historial:[]};
+  return {id:newPlayerId(), name:name, categoria:categoria, pos:pos, goles:0, asistencias:0, valoracion:VAL_MIN, xp:0, xpCost:levelCost(VAL_MIN, levelMult(categoria)), historial:[]};
 }
 function posOrder(code){ var i = POSITIONS.map(function(p){return p.code;}).indexOf(code); return i===-1 ? 99 : i; }
 function posOptions(selected, withEmpty){
@@ -1984,6 +2107,7 @@ function renameCategory(oldName, newName){
   var i = state.categories.indexOf(oldName);
   if(i===-1) return;
   state.categories[i] = newName;
+  if(state.categoryLevels && state.categoryLevels[oldName]){ state.categoryLevels[newName] = state.categoryLevels[oldName]; delete state.categoryLevels[oldName]; }
   state.players.forEach(function(p){ if(p.categoria===oldName) p.categoria = newName; });
   Object.keys(state.trainingDays).forEach(function(k){
     if(k.indexOf(oldName+'::')===0){ state.trainingDays[newName + k.slice(oldName.length)] = state.trainingDays[k]; delete state.trainingDays[k]; }
@@ -1999,6 +2123,8 @@ function renameCategory(oldName, newName){
   }
 }
 function deleteCategory(name){
+  if(state.categoryLevels) delete state.categoryLevels[name];
+  state.players.forEach(function(p){ if(p.categoria===name) deletePhoto(p.id); });
   state.categories = state.categories.filter(function(c){ return c!==name; });
   state.players = state.players.filter(function(p){ return p.categoria!==name; });
   Object.keys(state.trainingDays).forEach(function(k){ if(k.indexOf(name+'::')===0) delete state.trainingDays[k]; });
@@ -2014,12 +2140,16 @@ function commitPlantel(){ state.categories = sortCategories(state.categories); s
 var plantelUi = {cat:null, preview:null, msg:null, msgErr:false, pasted:''};
 function renderPlantel(){
   var el = document.createElement('div');
-  if(!plantelUi.cat || state.categories.indexOf(plantelUi.cat)===-1) plantelUi.cat = state.categories[0] || null;
-  var testCount = state.players.filter(function(p){ return /^Jugador \d+$/.test(p.name); }).length;
+  var isAdmin = state.role==='admin';
+  // el profesor solo ve y edita su propia categoría; el administrador ve todas
+  if(!isAdmin) plantelUi.cat = state.profesorCategoria;
+  else if(!plantelUi.cat || state.categories.indexOf(plantelUi.cat)===-1) plantelUi.cat = state.categories[0] || null;
+  var myCats = isAdmin ? state.categories : [state.profesorCategoria];
+  var testCount = isAdmin ? state.players.filter(function(p){ return /^Jugador \d+$/.test(p.name); }).length : 0;
 
   el.innerHTML =
-    '<div class="view-head"><div><h1>Plantel y categorías</h1>' +
-      '<p>Crea las categorías del club, importa la lista que te manda cada profesor y corrige nombres o posiciones. Esta sección solo la ve el administrador.</p></div></div>' +
+    '<div class="view-head"><div><h1>' + (isAdmin ? 'Plantel y categorías' : 'Plantel · ' + escHtml(plantelUi.cat)) + '</h1>' +
+      '<p>' + (isAdmin ? 'Crea las categorías del club, importa la lista de cada profesor y corrige nombres o posiciones.' : 'Importa o agrega a tus jugadores, corrige nombres y posiciones, sube sus fotos y ajusta la exigencia de tu categoría.') + '</p></div></div>' +
 
     '<section class="pl-card"><h3>Importar jugadores</h3>' +
       '<p class="pl-help">Pega la lista tal como llega por WhatsApp — un jugador por línea con la posición entre paréntesis, por ejemplo <code>JUAN ESTEBAN ORTIZ (PT)</code>. Si arriba dice <code>SUB 11</code>, se usa esa categoría. También puedes subir un Excel o CSV con las columnas Nombre, Posición y (opcional) Categoría.</p>' +
@@ -2033,15 +2163,18 @@ function renderPlantel(){
       (plantelUi.msg ? '<div class="pl-msg' + (plantelUi.msgErr?' err':'') + '">' + escHtml(plantelUi.msg) + '</div>' : '') +
     '</section>' +
 
-    '<section class="pl-card"><h3>Categorías</h3>' +
+    '<section class="pl-card"><h3>' + (isAdmin ? 'Categorías' : 'Exigencia de mi categoría') + '</h3>' +
       '<div id="plCats"></div>' +
-      '<div class="pl-inline"><input id="plNewCat" placeholder="Nueva categoría, ej. Sub-11" /><button class="pl-btn" id="plAddCat">Agregar categoría</button></div>' +
+      '<p class="pl-help" style="margin-top:10px;">Exigencia de la barra de progreso: <b>Infantil</b> sube más fácil, <b>Medio</b> es el punto intermedio, <b>Competitivo</b> pide más y <b>Máxima</b> es para grupos de alto nivel. Por defecto se asigna por edad (hasta Sub-8 Infantil, Sub-9 a Sub-12 Medio, Sub-13 en adelante Competitivo), pero ' + (isAdmin ? 'el administrador o el profesor de cada categoría la pueden cambiar' : 'la puedes cambiar cuando quieras') + '; la valoración de todos se recalcula al instante.</p>' +
+      (isAdmin ? '<div class="pl-inline"><input id="plNewCat" placeholder="Nueva categoría, ej. Sub-11" /><button class="pl-btn" id="plAddCat">Agregar categoría</button></div>' : '') +
       (testCount ? '<div class="pl-inline"><button class="pl-btn danger" id="plDelTest">Eliminar los ' + testCount + ' jugadores de prueba</button><span class="pl-count">Los “Jugador 01, 02…” que venían de ejemplo.</span></div>' : '') +
     '</section>' +
 
     '<section class="pl-card"><h3>Jugadores por categoría</h3>' +
       '<div class="pl-inline" style="margin-top:0;"><select id="plCatSel"></select><span class="pl-count" id="plCount"></span></div>' +
       '<div class="pl-inline"><input id="plOneName" placeholder="Nombre del jugador" style="flex:1;min-width:160px;" /><select id="plOnePos">' + posOptions('', true) + '</select><button class="pl-btn" id="plAddOne">Agregar</button></div>' +
+      '<div class="pl-inline"><label class="pl-file">Subir varias fotos<input type="file" id="plPhotos" accept="image/*" multiple /></label><span class="pl-count">Si cada archivo se llama como el jugador (ej. <b>oscar-umbria.jpg</b>) se asignan solas; si no, eliges a quién va cada una. También puedes tocar la foto de un jugador para cambiarla.</span></div>' +
+      '<div id="plPhotoPreview"></div>' +
       '<div class="pl-wrap" id="plRoster"></div>' +
     '</section>';
 
@@ -2051,13 +2184,20 @@ function renderPlantel(){
 
   // ---------- categorías ----------
   var catsBox = el.querySelector('#plCats');
-  state.categories.forEach(function(cat){
+  myCats.forEach(function(cat){
     var n = state.players.filter(function(p){ return p.categoria===cat; }).length;
     var row = document.createElement('div');
     row.className = 'pl-cat-row';
     row.innerHTML = '<span class="nm">' + escHtml(cat) + '</span><span class="ct">' + n + ' jugador' + (n===1?'':'es') + '</span>' +
-      '<button class="pl-btn ghost small" data-a="ren">Renombrar</button><button class="pl-btn danger small" data-a="del">Eliminar</button>';
-    row.querySelector('[data-a="ren"]').onclick = function(){
+      '<select data-a="lvl" title="Exigencia de la barra de progreso">' + Object.keys(LEVELS).map(function(k){ return '<option value="' + k + '"' + (categoryLevel(cat)===k?' selected':'') + '>' + LEVELS[k].label + (k===defaultLevel(cat)?' (por edad)':'') + '</option>'; }).join('') + '</select>' +
+      (isAdmin ? '<button class="pl-btn ghost small" data-a="ren">Renombrar</button><button class="pl-btn danger small" data-a="del">Eliminar</button>' : '');
+    row.querySelector('[data-a="lvl"]').onchange = function(e){
+      state.categoryLevels = state.categoryLevels || {};
+      state.categoryLevels[cat] = e.target.value;
+      commitPlantel();
+    };
+    var renBtn = row.querySelector('[data-a="ren"]');
+    if(renBtn) renBtn.onclick = function(){
       var nv = window.prompt('Nuevo nombre para ' + cat + ':', cat);
       if(nv===null) return;
       nv = normalizeCategoryName(nv);
@@ -2067,7 +2207,8 @@ function renderPlantel(){
       if(plantelUi.cat===cat) plantelUi.cat = nv;
       commitPlantel();
     };
-    row.querySelector('[data-a="del"]').onclick = function(){
+    var delBtn = row.querySelector('[data-a="del"]');
+    if(delBtn) delBtn.onclick = function(){
       if(state.categories.length<=1){ window.alert('El club necesita al menos una categoría.'); return; }
       var ok = window.confirm('¿Eliminar la categoría ' + cat + '?' + (n ? ' También se borran sus ' + n + ' jugadores y todo su historial de entrenamientos y partidos. Esto no se puede deshacer.' : ''));
       if(!ok) return;
@@ -2076,7 +2217,8 @@ function renderPlantel(){
     };
     catsBox.appendChild(row);
   });
-  el.querySelector('#plAddCat').onclick = function(){
+  var addCatBtn = el.querySelector('#plAddCat');
+  if(addCatBtn) addCatBtn.onclick = function(){
     var nv = normalizeCategoryName(el.querySelector('#plNewCat').value);
     if(!nv) return;
     if(state.categories.indexOf(nv)!==-1){ window.alert('Esa categoría ya existe.'); return; }
@@ -2095,7 +2237,8 @@ function renderPlantel(){
   var previewBox = el.querySelector('#plPreview');
   function showPreview(parsed){
     plantelUi.msg = null;
-    var detected = parsed.categoria;
+    if(!isAdmin) parsed.rows.forEach(function(r){ r.categoria = null; }); // el profesor siempre importa a su categoría
+    var detected = isAdmin ? parsed.categoria : null;
     var target = detected || plantelUi.cat || state.categories[0] || 'Sub-11';
     var rows = parsed.rows.map(function(r){
       var cat = r.categoria || target;
@@ -2109,7 +2252,7 @@ function renderPlantel(){
     var pv = plantelUi.preview;
     if(!pv){ previewBox.innerHTML = ''; return; }
     if(!pv.rows.length){ previewBox.innerHTML = '<div class="pl-msg err">No encontré jugadores en ese texto o archivo.</div>'; return; }
-    var catChoices = state.categories.slice();
+    var catChoices = isAdmin ? state.categories.slice() : [plantelUi.cat];
     if(catChoices.indexOf(pv.target)===-1) catChoices.push(pv.target);
     var html =
       (pv.perRowCat ? '<div class="pl-summary">El archivo trae la categoría de cada jugador; las que no existan se crean automáticamente.</div>' :
@@ -2207,7 +2350,7 @@ function renderPlantel(){
 
   // ---------- jugadores de la categoría ----------
   var catSel = el.querySelector('#plCatSel');
-  catSel.innerHTML = state.categories.map(function(c){ return '<option value="' + escHtml(c) + '"' + (c===plantelUi.cat?' selected':'') + '>' + escHtml(c) + '</option>'; }).join('');
+  catSel.innerHTML = myCats.map(function(c){ return '<option value="' + escHtml(c) + '"' + (c===plantelUi.cat?' selected':'') + '>' + escHtml(c) + '</option>'; }).join('');
   catSel.onchange = function(){ plantelUi.cat = catSel.value; drawRoster(); };
   el.querySelector('#plAddOne').onclick = function(){
     var nm = toTitleName(el.querySelector('#plOneName').value);
@@ -2222,9 +2365,9 @@ function renderPlantel(){
       .sort(function(a,b){ return posOrder(a.pos)-posOrder(b.pos) || a.name.localeCompare(b.name); });
     el.querySelector('#plCount').textContent = list.length + ' jugador' + (list.length===1?'':'es');
     if(!list.length){ rosterBox.innerHTML = '<div class="pl-summary">Todavía no hay jugadores en esta categoría.</div>'; return; }
-    rosterBox.innerHTML = '<table class="pl-table"><thead><tr><th>Nombre</th><th>Posición</th><th>Registros</th><th></th></tr></thead><tbody>' +
+    rosterBox.innerHTML = '<table class="pl-table"><thead><tr><th>Foto</th><th>Nombre</th><th>Posición</th><th>Registros</th><th></th></tr></thead><tbody>' +
       list.map(function(p){
-        return '<tr data-id="' + escHtml(p.id) + '"><td><input data-f="name" value="' + escHtml(p.name) + '" /></td>' +
+        return '<tr data-id="' + escHtml(p.id) + '"><td><label class="pl-thumb" title="Subir o cambiar foto" style="cursor:pointer;">' + avatarInner(p) + '<input type="file" accept="image/*" data-f="photo" style="display:none;" /></label></td><td><input data-f="name" value="' + escHtml(p.name) + '" /></td>' +
           '<td><select data-f="pos">' + posOptions(p.pos, false) + '</select></td>' +
           '<td class="pl-count">' + p.historial.length + '</td>' +
           '<td><button class="pl-btn danger small" data-f="del">Quitar</button></td></tr>';
@@ -2238,14 +2381,82 @@ function renderPlantel(){
         p.name = nm; e.target.value = nm; persist();
       };
       tr.querySelector('[data-f="pos"]').onchange = function(e){ p.pos = e.target.value; persist(); };
+      tr.querySelector('[data-f="photo"]').onchange = function(e){
+        var f = e.target.files && e.target.files[0];
+        if(!f) return;
+        compressPhoto(f).then(function(url){ return savePhoto(id, url); }).then(function(){ drawRoster(); })
+          .catch(function(err){ window.alert('No se pudo guardar la foto (' + (err && err.message ? err.message : 'error') + '). Si es una foto de iPhone en formato HEIC, mándatela por WhatsApp y descárgala de ahí, que llega como JPG.'); });
+      };
       tr.querySelector('[data-f="del"]').onclick = function(){
         if(!window.confirm('¿Quitar a ' + p.name + ' del plantel?' + (p.historial.length ? ' Se borran también sus ' + p.historial.length + ' registros.' : ''))) return;
         state.players = state.players.filter(function(x){ return x.id!==id; });
+        deletePhoto(id);
         persist(); drawRoster();
       };
     });
   }
   drawRoster();
+
+  // ---------- fotos en lote ----------
+  var photoPrev = el.querySelector('#plPhotoPreview');
+  el.querySelector('#plPhotos').onchange = function(e){
+    var files = Array.prototype.slice.call(e.target.files || []);
+    e.target.value = '';
+    if(!files.length) return;
+    var players = state.players.filter(function(p){ return p.categoria===plantelUi.cat; });
+    photoPrev.innerHTML = '<div class="pl-summary">Preparando ' + files.length + ' foto' + (files.length===1?'':'s') + '…</div>';
+    var items = [];
+    files.reduce(function(chain, f){
+      return chain.then(function(){
+        return compressPhoto(f).then(function(url){
+          var m = matchPhotoToPlayer(f.name, players);
+          items.push({file:f.name, url:url, playerId: m ? m.id : '', auto: !!m});
+        }).catch(function(){ items.push({file:f.name, url:null, playerId:'', auto:false}); });
+      });
+    }, Promise.resolve()).then(function(){
+      var used = {}; // si dos fotos apuntan al mismo jugador, solo la primera queda asignada
+      items.forEach(function(it){ if(it.playerId){ if(used[it.playerId]){ it.playerId = ''; it.auto = false; } else used[it.playerId] = true; } });
+      drawPhotoPreview(items, players);
+    });
+  };
+  function drawPhotoPreview(items, players){
+    var sorted = players.slice().sort(function(a,b){ return a.name.localeCompare(b.name); });
+    function opts(sel){
+      return '<option value="">— no asignar —</option>' + sorted.map(function(p){
+        return '<option value="' + escHtml(p.id) + '"' + (p.id===sel?' selected':'') + '>' + escHtml(p.name) + (photoMap[p.id]?' (ya tiene foto)':'') + '</option>';
+      }).join('');
+    }
+    photoPrev.innerHTML = '<table class="pl-table"><thead><tr><th>Foto</th><th>Archivo</th><th>Jugador de ' + escHtml(plantelUi.cat) + '</th></tr></thead><tbody>' +
+      items.map(function(it, i){
+        return '<tr data-i="' + i + '"><td><div class="pl-thumb">' + (it.url ? '<img src="' + it.url + '" alt="" />' : '?') + '</div></td>' +
+          '<td class="pl-count">' + escHtml(it.file) + ' ' + (it.url ? (it.auto ? '<span class="pl-status ok">asignada sola</span>' : '<span class="pl-status warn">elige el jugador</span>') : '<span class="pl-status warn">no se pudo abrir</span>') + '</td>' +
+          '<td>' + (it.url ? '<select data-f="pl">' + opts(it.playerId) + '</select>' : '') + '</td></tr>';
+      }).join('') + '</tbody></table>' +
+      '<div class="pl-inline"><button class="pl-btn" id="plSavePhotos"></button><button class="pl-btn ghost" id="plCancelPhotos">Cancelar</button></div>';
+    function refresh(){
+      var n = items.filter(function(it){ return it.url && it.playerId; }).length;
+      var b = photoPrev.querySelector('#plSavePhotos');
+      b.textContent = 'Guardar ' + n + ' foto' + (n===1?'':'s');
+      b.disabled = !n;
+    }
+    photoPrev.querySelectorAll('select[data-f="pl"]').forEach(function(sel){
+      sel.onchange = function(){ items[+sel.closest('tr').getAttribute('data-i')].playerId = sel.value; refresh(); };
+    });
+    photoPrev.querySelector('#plCancelPhotos').onclick = function(){ photoPrev.innerHTML = ''; };
+    photoPrev.querySelector('#plSavePhotos').onclick = function(){
+      var todo = items.filter(function(it){ return it.url && it.playerId; });
+      var btn = photoPrev.querySelector('#plSavePhotos');
+      btn.disabled = true; btn.textContent = 'Guardando…';
+      Promise.all(todo.map(function(it){ return savePhoto(it.playerId, it.url); })).then(function(){
+        photoPrev.innerHTML = '<div class="pl-msg">Listo: se guardaron ' + todo.length + ' foto' + (todo.length===1?'':'s') + '.</div>';
+        drawRoster();
+      }).catch(function(err){
+        photoPrev.insertAdjacentHTML('beforeend', '<div class="pl-msg err">No se pudieron guardar todas: ' + escHtml(err && err.message) + '</div>');
+        btn.disabled = false; btn.textContent = 'Reintentar';
+      });
+    };
+    refresh();
+  }
   return el;
 }
 
@@ -2476,6 +2687,15 @@ if(window.firebase && window.FIREBASE_CONFIG){
         if(state) safeRender();
       }
     });
+    db.collection('fotosJugadores').onSnapshot(function(snap){
+      var m = {};
+      snap.forEach(function(d){ var v = d.data(); if(v && v.data) m[d.id] = v.data; });
+      photoMap = m;
+      var a = document.activeElement;
+      var typing = a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.type!=='file';
+      var pp = document.getElementById('plPhotoPreview');
+      if(state && !typing && !(pp && pp.innerHTML)) safeRender();
+    }, function(err){ console.error('No se pudieron leer las fotos', err); });
     STATE_DOC_REF.get().then(function(doc){
       if(doc.exists){
         state = normalizeState(doc.data()) || freshState();
