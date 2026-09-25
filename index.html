@@ -787,6 +787,8 @@ function normalizeState(s){
     if(!s.profesorCategoria || s.categories.indexOf(s.profesorCategoria)===-1) s.profesorCategoria = s.categories[0];
     if(typeof s.enteredClub === 'undefined') s.enteredClub = null;
     if(!s.categoryLevels || typeof s.categoryLevels !== 'object') s.categoryLevels = {};
+    if(!s.categoryProfiles || typeof s.categoryProfiles !== 'object') s.categoryProfiles = {};
+    if(!s.trainingSchedules || typeof s.trainingSchedules !== 'object') s.trainingSchedules = {};
     s.players.forEach(function(p){ recomputeRating(p, s.categoryLevels); });
     syncCategories(s.categories);
     return s;
@@ -802,6 +804,8 @@ function freshState(){
   return {
     categories: cats.slice(),
     categoryLevels: {},
+    categoryProfiles: {},
+    trainingSchedules: {},
     players: allPlayers,
     profiles: JSON.parse(JSON.stringify(DEFAULT_PROFILES)),
     activePos:'MCO',
@@ -823,14 +827,163 @@ function bootFromLocalOrFresh(){
   state = loaded || freshState();
 }
 
-// Firestore: una sola fuente de verdad compartida por todos los que abran esta página.
-// db y STATE_DOC_REF se declaran más abajo, justo antes de usarlos, para no depender del orden de carga del SDK.
+/* ============ GUARDADO SEGURO EN FIRESTORE ============ */
+// Los datos se guardan en piezas separadas, cada una con su propio permiso en las reglas de Firebase:
+//   club/general            categorías y perfil de exigencia predeterminado — lo lee cualquiera, lo edita solo el administrador
+//   categorias/{categoría}  todo lo privado de una categoría (comentarios, asistencia, horario, exigencia, perfil propio)
+//                           — solo lo leen y editan el administrador y el profesor de esa categoría
+//   publico/{categoría}     lo que muestran las cartas públicas, sin comentarios privados — lo lee cualquiera
+var remote = {general:null, generalMissing:false, pub:{}, priv:{}, privReady:false, privUnsub:null};
+var syncedJson = {};      // lo que creemos que ya está guardado, para escribir solo lo que cambió
+var pendingRebuild = false, migrating = false;
+function cleanJson(o){ return JSON.parse(JSON.stringify(o)); }
+function publicPlayer(p){
+  var hl = recentHighlight(p.historial||[]); // el único comentario que se publica es el destacado positivo que ya se mostraba
+  return {id:p.id, name:p.name, categoria:p.categoria, pos:p.pos, goles:p.goles||0, asistencias:p.asistencias||0,
+    historial:(p.historial||[]).map(function(h){
+      return {type:h.type, date:h.date, delta:h.delta, rating:h.rating, asistio:h.asistio, quickValues:h.quickValues||{},
+        attrsHit:h.attrsHit||[], goles:h.goles||0, asistencias:h.asistencias||0,
+        feedback: h===hl ? (h.feedback||'') : '', comment: h===hl ? (h.comment||'') : ''};
+    })};
+}
+function buildDocs(s){
+  var docs = {};
+  docs['club/general'] = cleanJson({categories:s.categories, profiles:s.profiles, v:2});
+  s.categories.forEach(function(cat){
+    var players = s.players.filter(function(p){ return p.categoria===cat; });
+    var td = {};
+    Object.keys(s.trainingDays||{}).forEach(function(k){ if(k.indexOf(cat+'::')===0) td[k.slice(cat.length+2)] = s.trainingDays[k]; });
+    var level = (s.categoryLevels||{})[cat] || null;
+    docs['categorias/'+cat] = cleanJson({nombre:cat, players:players, trainingDays:td, level:level,
+      profile:(s.categoryProfiles||{})[cat] || {}, schedule:(s.trainingSchedules||{})[cat] || null});
+    docs['publico/'+cat] = cleanJson({nombre:cat, level:level, players:players.map(publicPlayer)});
+  });
+  return docs;
+}
+function canWriteDoc(path){
+  if(!currentUser || !currentUser.role) return false;
+  if(currentUser.role==='admin') return path==='club/general' || remote.privReady;
+  if(currentUser.role==='profesor' && currentUser.categoria){
+    return remote.privReady && (path==='categorias/'+currentUser.categoria || path==='publico/'+currentUser.categoria);
+  }
+  return false;
+}
+function syncToFirestore(){
+  if(!window.db || !state) return;
+  var docs = buildDocs(state);
+  var batch = db.batch(), n = 0;
+  Object.keys(docs).forEach(function(path){
+    var js = JSON.stringify(docs[path]);
+    if(syncedJson[path]===js || !canWriteDoc(path)) return;
+    batch.set(db.doc(path), docs[path]); syncedJson[path] = js; n++;
+  });
+  if(currentUser && currentUser.role==='admin' && remote.privReady){
+    Object.keys(syncedJson).forEach(function(path){ // categorías borradas o renombradas
+      if(!docs[path] && /^(categorias|publico)\//.test(path)){ batch.delete(db.doc(path)); delete syncedJson[path]; n++; }
+    });
+  }
+  if(n) batch.commit().catch(function(err){ console.error('No se pudo guardar', err); showToast('No se pudo guardar el último cambio (sin permiso o sin conexión). Recarga la página.'); });
+}
+function showToast(msg){
+  var t = document.createElement('div');
+  t.textContent = msg;
+  t.style.cssText = 'position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#2a0d0d;color:#ffd7d7;border:1px solid rgba(239,106,106,.5);padding:10px 16px;border-radius:10px;font-size:13px;z-index:9999;max-width:90vw;';
+  document.body.appendChild(t);
+  setTimeout(function(){ t.remove(); }, 6000);
+}
+function isTyping(){ var a = document.activeElement; return !!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.type!=='file'); }
+function scheduleRebuild(){
+  if(isTyping()){ // no reemplazar los datos mientras alguien escribe o mueve una barra; se aplica al salir del campo
+    if(!pendingRebuild){
+      pendingRebuild = true;
+      document.addEventListener('focusout', function h(){ document.removeEventListener('focusout', h); setTimeout(function(){ pendingRebuild = false; rebuildFromRemote(); }, 0); });
+    }
+    return;
+  }
+  rebuildFromRemote();
+}
+function rebuildFromRemote(){
+  if(!remote.general){ if(remote.generalMissing) tryMigrate(); return; }
+  var g = remote.general, old = state || {};
+  var s = {categories:(g.categories||[]).slice(), profiles:cleanJson(g.profiles||{}), players:[], trainingDays:{},
+    categoryLevels:{}, categoryProfiles:{}, trainingSchedules:{},
+    activePos:old.activePos, selectedCategoria:old.selectedCategoria, profesorCategoria:old.profesorCategoria, role:old.role, enteredClub:null};
+  s.categories.forEach(function(cat){
+    var priv = remote.priv[cat], src = priv || remote.pub[cat];
+    if(!src) return;
+    s.players = s.players.concat(cleanJson(src.players||[]));
+    if(src.level) s.categoryLevels[cat] = src.level;
+    if(priv){
+      Object.keys(priv.trainingDays||{}).forEach(function(d){ s.trainingDays[cat+'::'+d] = cleanJson(priv.trainingDays[d]); });
+      if(priv.profile && Object.keys(priv.profile).length) s.categoryProfiles[cat] = cleanJson(priv.profile);
+      if(Array.isArray(priv.schedule)) s.trainingSchedules[cat] = priv.schedule.slice();
+    }
+  });
+  var n = normalizeState(s);
+  if(!n) return;
+  state = n;
+  var docs = buildDocs(state);
+  syncedJson = {};
+  Object.keys(docs).forEach(function(path){
+    var cat = path.split('/')[1];
+    var exists = path==='club/general' || (path.indexOf('categorias/')===0 ? !!remote.priv[cat] : !!remote.pub[cat]);
+    if(exists) syncedJson[path] = JSON.stringify(docs[path]);
+  });
+  safeRender();
+}
+// Primera vez con la estructura nueva: el administrador pasa los datos del documento único anterior a las piezas separadas
+function tryMigrate(){
+  if(migrating || !remote.generalMissing) return;
+  if(!currentUser || currentUser.role!=='admin'){
+    if(!state){ state = normalizeState({players:[], categories:[]}); safeRender(); }
+    return;
+  }
+  migrating = true;
+  db.collection('appState').doc('perfilJugador').get().then(function(doc){
+    var s = doc.exists ? normalizeState(doc.data()) : null;
+    if(!s){ s = freshState(); s.players = []; }
+    if(Array.isArray(s.trainingSchedule)) s.categories.forEach(function(c){ if(!Array.isArray(s.trainingSchedules[c])) s.trainingSchedules[c] = s.trainingSchedule.slice(); });
+    state = s;
+    remote.privReady = true;
+    syncedJson = {};
+    syncToFirestore();
+    Object.keys(photoMap).forEach(function(id){ // las fotos anotan a qué categoría pertenecen, para sus permisos
+      var p = state.players.find(function(x){ return x.id===id; });
+      if(p) db.collection('fotosJugadores').doc(id).set({categoria:p.categoria}, {merge:true}).catch(function(){});
+    });
+    migrating = false;
+    safeRender();
+  }).catch(function(err){ migrating = false; console.error('No se pudo migrar', err); showToast('No se pudieron pasar los datos a la nueva estructura. Recarga la página.'); });
+}
+function detachPrivate(){
+  if(remote.privUnsub) remote.privUnsub();
+  remote.privUnsub = null; remote.priv = {}; remote.privReady = false;
+}
+function attachPrivate(){
+  detachPrivate();
+  if(!currentUser || !currentUser.role) return;
+  var onErr = function(err){ console.error('Sin acceso a los datos privados', err); showToast('Tu cuenta no tiene acceso a estos datos. Pide al administrador que revise tu registro.'); };
+  if(currentUser.role==='admin'){
+    remote.privUnsub = db.collection('categorias').onSnapshot(function(snap){
+      remote.priv = {};
+      snap.forEach(function(d){ remote.priv[d.id] = d.data(); });
+      var first = !remote.privReady; remote.privReady = true;
+      if(first || !snap.metadata.hasPendingWrites) scheduleRebuild();
+    }, onErr);
+  } else if(currentUser.role==='profesor' && currentUser.categoria){
+    var cat = currentUser.categoria;
+    remote.privUnsub = db.collection('categorias').doc(cat).onSnapshot(function(d){
+      remote.priv = {};
+      if(d.exists) remote.priv[cat] = d.data();
+      var first = !remote.privReady; remote.privReady = true;
+      if(first || !d.metadata.hasPendingWrites) scheduleRebuild();
+    }, onErr);
+  }
+}
 function persist(){
   recomputeAllRatings();
-  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){}
-  try{
-    if(window.STATE_DOC_REF) window.STATE_DOC_REF.set(state).catch(function(err){ console.error('No se pudo guardar en Firestore', err); });
-  }catch(e){}
+  if(window.db){ syncToFirestore(); return; }
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){} // solo sin Firebase (vista previa)
 }
 
 var ALL_VIEWS = [
@@ -878,8 +1031,18 @@ function fmtDate(iso){
   var d = new Date(iso+'T00:00:00');
   return d.toLocaleDateString('es-CO', {day:'2-digit', month:'short'});
 }
+// El perfil de exigencia y el horario son de cada categoría. Si el profesor no ha tocado una posición, se usa la del club.
+function profileFor(cat, posCode){
+  var ov = state.categoryProfiles && state.categoryProfiles[cat] && state.categoryProfiles[cat][posCode];
+  return ov || state.profiles[posCode];
+}
+function scheduleFor(cat){
+  state.trainingSchedules = state.trainingSchedules || {};
+  if(!Array.isArray(state.trainingSchedules[cat])) state.trainingSchedules[cat] = (Array.isArray(state.trainingSchedule) ? state.trainingSchedule : [1,3,5]).slice();
+  return state.trainingSchedules[cat];
+}
 function quickAttrsFor(posCode, focus){
-  var profile = state.profiles[posCode];
+  var profile = profileFor(activeCategoria(), posCode);
   return ATTRS.filter(function(a){
     if(profile[a.key] < QUICK_THRESHOLD) return false;
     if(focus && !focus[a.key]) return false; // no se trabajó ese día / no aplica
@@ -887,7 +1050,7 @@ function quickAttrsFor(posCode, focus){
   }).sort(function(a,b){ return profile[b.key]-profile[a.key]; });
 }
 function analyzeFeedback(text, posCode, skipKeys){
-  var profile = state.profiles[posCode];
+  var profile = profileFor(activeCategoria(), posCode);
   var lower = text.toLowerCase();
   var hits = [];
   ATTRS.forEach(function(a){
@@ -1008,7 +1171,7 @@ function renderEntrenamiento(){
   var el = document.createElement('div');
   var day = getTrainingDay(trainingDate);
   var wd = weekdayOf(trainingDate);
-  var programado = state.trainingSchedule.indexOf(wd) !== -1;
+  var programado = scheduleFor(activeCategoria()).indexOf(wd) !== -1;
 
   el.innerHTML =
     '<div class="view-head">' +
@@ -1033,11 +1196,12 @@ function renderEntrenamiento(){
   var schedWrap = el.querySelector('#scheduleChips');
   WEEKDAYS.forEach(function(label, idx){
     var chip = document.createElement('button');
-    chip.className = 'focus-chip' + (state.trainingSchedule.indexOf(idx)!==-1 ? ' on':'');
+    chip.className = 'focus-chip' + (scheduleFor(activeCategoria()).indexOf(idx)!==-1 ? ' on':'');
     chip.textContent = label;
     chip.onclick = function(){
-      var pos = state.trainingSchedule.indexOf(idx);
-      if(pos===-1) state.trainingSchedule.push(idx); else state.trainingSchedule.splice(pos,1);
+      var sched = scheduleFor(activeCategoria());
+      var pos = sched.indexOf(idx);
+      if(pos===-1) sched.push(idx); else sched.splice(pos,1);
       persist();
       render();
     };
@@ -1261,7 +1425,7 @@ function renderTrainingRow(p, dateStr, day){
       if(draft.rating==null){ return; }
       var quickKeys = Object.keys(draft.quick);
       var quickRatings = quickKeys.map(function(k){
-        return {key:k, value:draft.quick[k], weight:state.profiles[p.pos][k]};
+        return {key:k, value:draft.quick[k], weight:profileFor(p.categoria, p.pos)[k]};
       });
       var hits = analyzeFeedback(draft.feedback||'', p.pos, quickKeys);
       var newDelta = computeDelta(draft.rating, hits, quickRatings);
@@ -1466,7 +1630,7 @@ function renderMatchRow(p, dateStr){
       if(draft.rating==null){ return; }
       var quickKeys = Object.keys(draft.quick);
       var quickRatings = quickKeys.map(function(k){
-        return {key:k, value:draft.quick[k], weight:state.profiles[p.pos][k]};
+        return {key:k, value:draft.quick[k], weight:profileFor(p.categoria, p.pos)[k]};
       });
       var hits = analyzeFeedback(draft.feedback||'', p.pos, quickKeys);
       var newDelta = computeDelta(draft.rating, hits, quickRatings);
@@ -1642,23 +1806,42 @@ function openPlayerModal(p){
 }
 
 /* ============ RENDER: PERFIL DE EXIGENCIA ============ */
+var perfilUi = {scope:'club'};
 function renderPerfil(){
   var el = document.createElement('div');
+  var isAdmin = state.role==='admin';
+  var scope = isAdmin ? perfilUi.scope : state.profesorCategoria;
+  if(isAdmin && scope!=='club' && state.categories.indexOf(scope)===-1) scope = perfilUi.scope = 'club';
+  // el administrador edita el predeterminado del club y ve el de cada categoría; cada profesor edita solo el suyo
+  var editable = isAdmin ? scope==='club' : true;
+  function overrides(){ return scope==='club' ? {} : ((state.categoryProfiles||{})[scope] || {}); }
   el.innerHTML =
     '<div class="view-head"><div>' +
       '<h1>Perfil de exigencia por posición</h1>' +
-      '<p>Defina, una sola vez por posición, qué tanto le importa cada cualidad. El sistema usa esto para leer las retroalimentaciones automáticamente.</p>' +
-    '</div></div>' +
+      '<p>' + (isAdmin
+        ? (scope==='club'
+            ? 'Este es el perfil predeterminado del club. Cada categoría arranca con él y su profesor lo ajusta a su manera.'
+            : 'Así tiene configurado su perfil ' + escHtml(scope) + '. Solo su profesor lo edita; aquí lo ves como referencia.')
+        : 'Este es el perfil de ' + escHtml(scope) + '. Arranca igual al del club y lo puedes ajustar posición por posición: tus cambios solo afectan a tu categoría.') + '</p>' +
+    '</div>' +
+    (isAdmin ? '<div><select class="cat-select" id="perfilScope"><option value="club"' + (scope==='club'?' selected':'') + '>Predeterminado del club</option>' +
+      state.categories.map(function(c){
+        var n = Object.keys((state.categoryProfiles||{})[c] || {}).length;
+        return '<option value="' + escHtml(c) + '"' + (c===scope?' selected':'') + '>' + escHtml(c) + (n ? ' · ' + n + (n===1?' posición personalizada':' posiciones personalizadas') : ' · igual al club') + '</option>';
+      }).join('') + '</select></div>' : '') +
+    '</div>' +
     '<div class="perfil-layout">' +
       '<div class="pos-list" id="posList"></div>' +
       '<div class="perfil-panel" id="perfilPanel"></div>' +
     '</div>';
+  var scopeSel = el.querySelector('#perfilScope');
+  if(scopeSel) scopeSel.onchange = function(){ perfilUi.scope = scopeSel.value; render(); };
 
   var posList = el.querySelector('#posList');
   POSITIONS.forEach(function(pos){
     var item = document.createElement('div');
     item.className = 'pos-item' + (state.activePos===pos.code?' active':'');
-    item.innerHTML = pos.name + '<small>' + pos.short + '</small>';
+    item.innerHTML = pos.name + '<small>' + (overrides()[pos.code] ? 'Personalizado' : pos.short) + '</small>';
     item.onclick = function(){ state.activePos = pos.code; renderPerfilPanel(); posList.querySelectorAll('.pos-item').forEach(function(x){x.classList.remove('active');}); item.classList.add('active'); };
     posList.appendChild(item);
   });
@@ -1666,17 +1849,29 @@ function renderPerfil(){
   var panel = el.querySelector('#perfilPanel');
   function renderPerfilPanel(){
     var pos = POSITIONS.find(function(p){return p.code===state.activePos;});
-    var profile = state.profiles[pos.code];
-    panel.innerHTML = '<h3>' + pos.name + '</h3><div class="desc">' + pos.short + ' — mueva cada barra de 0 a 10 según qué tanto le exige a un jugador en este puesto. Desde ' + QUICK_THRESHOLD + '/10, esa cualidad le aparece al profesor como pregunta rápida durante el entrenamiento, sin que tenga que escribir nada.</div>';
+    var custom = !!overrides()[pos.code];
+    var profile = scope==='club' ? state.profiles[pos.code] : profileFor(scope, pos.code);
+    panel.innerHTML = '<h3>' + pos.name + '</h3>' +
+      (scope!=='club' ? '<span class="pill" style="margin-bottom:10px;">' + (custom ? 'Personalizado para ' + escHtml(scope) : 'Igual al predeterminado del club') + '</span>' : '') +
+      '<div class="desc">' + pos.short + ' — ' + (editable ? 'mueva cada barra de 0 a 10 según qué tanto le exige a un jugador en este puesto.' : 'solo lectura.') + ' Desde ' + QUICK_THRESHOLD + '/10, esa cualidad le aparece al profesor como pregunta rápida durante el entrenamiento, sin que tenga que escribir nada.</div>';
     ATTRS.forEach(function(a){
       var row = document.createElement('div');
       row.className = 'attr-row';
       row.innerHTML =
         '<div class="attr-row-top"><span class="name">' + a.label + '</span><span class="val">' + profile[a.key] + '/10</span></div>' +
-        '<input type="range" min="0" max="10" step="1" value="' + profile[a.key] + '" />';
+        '<input type="range" min="0" max="10" step="1" value="' + profile[a.key] + '"' + (editable?'':' disabled') + ' />';
       var input = row.querySelector('input');
       var valSpan = row.querySelector('.val');
       input.oninput = function(){
+        if(!editable) return;
+        if(scope!=='club' && !custom){
+          // primer cambio en esta posición: la categoría se queda con su propia copia
+          state.categoryProfiles = state.categoryProfiles || {};
+          state.categoryProfiles[scope] = state.categoryProfiles[scope] || {};
+          state.categoryProfiles[scope][pos.code] = Object.assign({}, profile);
+          profile = state.categoryProfiles[scope][pos.code];
+          custom = true;
+        }
         profile[a.key] = parseInt(input.value,10);
         valSpan.textContent = profile[a.key] + '/10';
         persist();
@@ -1687,6 +1882,17 @@ function renderPerfil(){
     var summary = document.createElement('div');
     summary.className = 'summary-box';
     panel.appendChild(summary);
+    if(scope!=='club' && editable){
+      var resetRow = document.createElement('div');
+      resetRow.className = 'save-row';
+      resetRow.innerHTML = '<button class="pl-btn ghost small">Volver al predeterminado del club</button>';
+      resetRow.querySelector('button').onclick = function(){
+        if(!overrides()[pos.code]) return;
+        delete state.categoryProfiles[scope][pos.code];
+        persist(); render();
+      };
+      panel.appendChild(resetRow);
+    }
     function updateSummary(){
       var sorted = ATTRS.slice().sort(function(x,y){ return profile[y.key]-profile[x.key]; });
       var quick = sorted.filter(function(a){ return profile[a.key] >= QUICK_THRESHOLD; });
@@ -2017,7 +2223,8 @@ function compressPhoto(file, size){
 }
 function savePhoto(playerId, dataUrl){
   photoMap[playerId] = dataUrl;
-  if(window.db) return db.collection('fotosJugadores').doc(playerId).set({data:dataUrl, actualizada:Date.now()});
+  var owner = state && state.players.find(function(x){ return x.id===playerId; });
+  if(window.db) return db.collection('fotosJugadores').doc(playerId).set({data:dataUrl, categoria: owner ? owner.categoria : '', actualizada:Date.now()});
   return Promise.resolve();
 }
 function deletePhoto(playerId){
@@ -2051,7 +2258,7 @@ function toTitleName(raw){
   }).join(' ');
 }
 function normalizeCategoryName(raw){
-  var t = String(raw||'').trim().replace(/\s+/g,' ');
+  var t = String(raw||'').trim().replace(/\//g,'-').replace(/\s+/g,' ');
   var m = t.match(/^sub[\s\-_]*(\d{1,2})$/i);
   return m ? 'Sub-' + m[1] : t;
 }
@@ -2538,7 +2745,7 @@ function openBootstrapModal(){
       return;
     }
     auth.createUserWithEmailAndPassword(email, pass).then(function(){
-      return db.collection('staff').doc(email.toLowerCase()).set({role:'admin'});
+      return db.collection('staff').doc(email.toLowerCase()).set({role:'admin', modo:'password'});
     }).then(function(){
       overlay.classList.remove('show');
     }).catch(function(err){
@@ -2550,7 +2757,7 @@ function openBootstrapModal(){
     var errBox = body.querySelector('#bsError');
     errBox.style.display = 'none';
     auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).then(function(cred){
-      return db.collection('staff').doc(cred.user.email.toLowerCase()).set({role:'admin'});
+      return db.collection('staff').doc(cred.user.email.toLowerCase()).set({role:'admin', modo:'google.com'});
     }).then(function(){
       overlay.classList.remove('show');
     }).catch(function(err){
@@ -2621,7 +2828,7 @@ function openStaffPanel(){
       errBox.style.display = 'block';
       return;
     }
-    var doc = {role: role};
+    var doc = {role: role, modo: mode==='google' ? 'google.com' : 'password'};
     if(role==='profesor') doc.categoria = cat;
     if(mode==='google'){
       db.collection('staff').doc(email.toLowerCase()).set(doc).then(function(){
@@ -2671,12 +2878,32 @@ if(window.firebase && window.FIREBASE_CONFIG){
     firebase.initializeApp(window.FIREBASE_CONFIG);
     window.db = firebase.firestore();
     window.auth = firebase.auth();
-    window.STATE_DOC_REF = db.collection('appState').doc('perfilJugador');
+    try{ localStorage.removeItem(STORAGE_KEY); }catch(e){} // con Firebase no se guardan copias locales de datos privados
+
+    db.doc('club/general').onSnapshot(function(d){
+      if(d.exists){ remote.general = d.data(); remote.generalMissing = false; }
+      else { remote.general = null; remote.generalMissing = true; }
+      if(!d.metadata.hasPendingWrites) scheduleRebuild();
+    }, function(err){
+      console.error('No se pudo leer el club', err);
+      if(!state){ state = normalizeState({players:[], categories:[]}); safeRender(); }
+    });
+    db.collection('publico').onSnapshot(function(snap){
+      remote.pub = {};
+      snap.forEach(function(d){ remote.pub[d.id] = d.data(); });
+      if(!snap.metadata.hasPendingWrites) scheduleRebuild();
+    }, function(err){ console.error('No se pudieron leer las cartas públicas', err); });
 
     auth.onAuthStateChanged(function(user){
+      detachPrivate();
       if(user){
+        var prov = (user.providerData && user.providerData[0] && user.providerData[0].providerId) || 'password';
         db.collection('staff').doc(user.email.toLowerCase()).get().then(function(doc){
-          currentUser = {email:user.email, role: doc.exists ? doc.data().role : null, categoria: doc.exists ? doc.data().categoria : null};
+          var d = doc.exists ? doc.data() : null;
+          currentUser = {email:user.email, role: d ? d.role : null, categoria: d ? d.categoria : null};
+          if(d && !d.modo) doc.ref.update({modo:prov}).catch(function(){}); // cuentas anteriores: anotar con qué método entran
+          attachPrivate();
+          if(remote.generalMissing) tryMigrate();
           if(state) safeRender();
         }).catch(function(){
           currentUser = {email:user.email, role:null, categoria:null};
@@ -2684,7 +2911,7 @@ if(window.firebase && window.FIREBASE_CONFIG){
         });
       } else {
         currentUser = null;
-        if(state) safeRender();
+        scheduleRebuild(); // vuelve a mostrar solo lo público
       }
     });
     db.collection('fotosJugadores').onSnapshot(function(snap){
@@ -2696,26 +2923,6 @@ if(window.firebase && window.FIREBASE_CONFIG){
       var pp = document.getElementById('plPhotoPreview');
       if(state && !typing && !(pp && pp.innerHTML)) safeRender();
     }, function(err){ console.error('No se pudieron leer las fotos', err); });
-    STATE_DOC_REF.get().then(function(doc){
-      if(doc.exists){
-        state = normalizeState(doc.data()) || freshState();
-      } else {
-        bootFromLocalOrFresh();
-        persist(); // siembra el documento en Firestore la primera vez
-      }
-    }).catch(function(err){
-      console.error('No se pudo leer Firestore, usando datos locales', err);
-      bootFromLocalOrFresh();
-    }).then(function(){
-      safeRender();
-      STATE_DOC_REF.onSnapshot({includeMetadataChanges:true}, function(snap){
-        if(snap.metadata.hasPendingWrites) return; // eco de nuestra propia escritura, ya se renderizó
-        if(snap.exists){
-          var normalized = normalizeState(snap.data());
-          if(normalized){ state = normalized; safeRender(); }
-        }
-      });
-    });
   }catch(e){
     console.error('Firebase no se pudo inicializar, usando solo almacenamiento local', e);
     bootFromLocalOrFresh();

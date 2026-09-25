@@ -1,0 +1,78 @@
+rules_version = '2';
+
+// Reglas de seguridad — Perfil de Jugador (Arena Sports)
+// Pegar completas en Firebase Console → Firestore Database → Reglas → Publicar.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- quién es quién ----------
+    function signedIn() {
+      return request.auth != null && request.auth.token.email != null;
+    }
+    function myEmail() { return request.auth.token.email.lower(); }
+    function provider() { return request.auth.token.firebase.sign_in_provider; }
+    function staffPath() { return /databases/$(database)/documents/staff/$(myEmail()); }
+    function staff() { return get(staffPath()).data; }
+
+    // Es staff si su correo está registrado por el administrador Y entró con el método con el que se registró.
+    // Así nadie puede crear una cuenta con clave usando el Gmail de un profesor que entra con Google.
+    function isStaff() {
+      return signedIn()
+        && exists(staffPath())
+        && (provider() == 'password' || (provider() == 'google.com' && request.auth.token.email_verified == true))
+        && (!('modo' in staff()) || staff().modo == provider());
+    }
+    function isAdmin() { return isStaff() && staff().role == 'admin'; }
+    function isProfeDe(cat) { return isStaff() && staff().role == 'profesor' && staff().categoria == cat; }
+
+    // ---------- datos del club ----------
+    // Categorías y perfil predeterminado: los ve cualquiera (la página los necesita), solo el administrador los cambia.
+    match /club/general {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Todo lo privado de una categoría (comentarios de los profesores, asistencia, horario, exigencia):
+    // solo el administrador y el profesor de ESA categoría.
+    match /categorias/{cat} {
+      allow read, write: if isAdmin() || isProfeDe(cat);
+    }
+
+    // Lo que muestran las cartas públicas (sin comentarios privados): lo ve cualquiera.
+    match /publico/{cat} {
+      allow read: if true;
+      allow write: if isAdmin() || isProfeDe(cat);
+    }
+
+    // Fotos: se ven en las cartas públicas; solo el administrador o el profesor de la categoría del jugador las suben o borran.
+    match /fotosJugadores/{jugador} {
+      allow read: if true;
+      allow create, update: if (isAdmin() || isProfeDe(request.resource.data.categoria))
+        && request.resource.data.keys().hasOnly(['data', 'categoria', 'actualizada'])
+        && (!('data' in request.resource.data) || (request.resource.data.data is string && request.resource.data.data.size() < 400000));
+      allow delete: if isAdmin() || (('categoria' in resource.data) && isProfeDe(resource.data.categoria));
+    }
+
+    // ---------- cuentas del staff ----------
+    match /staff/{email} {
+      // cada quien puede leer su propio registro; el administrador ve todos
+      allow read: if isAdmin() || (signedIn() && email == myEmail());
+      allow create, update: if isAdmin()
+        && request.resource.data.role in ['admin', 'profesor']
+        && request.resource.data.keys().hasOnly(['role', 'categoria', 'modo']);
+      allow delete: if isAdmin();
+      // cuentas creadas antes de estas reglas: anotan una sola vez con qué método entran
+      allow update: if signedIn() && email == myEmail()
+        && !('modo' in resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['modo'])
+        && request.resource.data.modo == provider();
+    }
+
+    // Documento único de la versión anterior: solo el administrador (para pasar los datos a la estructura nueva).
+    match /appState/{doc} {
+      allow read, write: if isAdmin();
+    }
+
+    // Todo lo demás: cerrado.
+  }
+}
