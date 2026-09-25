@@ -142,6 +142,40 @@
   .staff-hint, .staff-alt{font-size:12px;color:var(--ink-faint);margin-top:12px;}
   .staff-alt a{color:var(--lime);text-decoration:none;font-weight:600;}
   .staff-divider{text-align:center;color:var(--ink-faint);font-size:11px;margin:-2px 0;}
+  /* ---- Plantel y categorías ---- */
+  .pl-card{background:var(--card-bg);border:1px solid var(--border);border-radius:var(--radius-l);padding:18px 20px;margin-bottom:18px;}
+  .pl-card h3{font-family:var(--font-display);font-size:17px;font-weight:600;margin:0 0 12px;letter-spacing:.02em;}
+  .pl-help{font-size:12.5px;color:var(--ink-muted);margin:0 0 10px;line-height:1.5;}
+  .pl-help code{background:rgba(255,255,255,.07);padding:1px 6px;border-radius:4px;font-size:12px;}
+  .pl-inline{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px;}
+  .pl-card input, .pl-card textarea, .pl-card select{
+    background:var(--navy-950);border:1px solid var(--border-strong);color:var(--ink);
+    border-radius:var(--radius-s);padding:8px 10px;font-size:13.5px;font-family:var(--font-body);
+  }
+  .pl-card input[type=checkbox]{width:16px;height:16px;padding:0;accent-color:var(--orange-500);}
+  .pl-card textarea{width:100%;box-sizing:border-box;resize:vertical;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;}
+  .pl-btn{background:var(--orange-500);border:none;color:#fff;font-weight:600;font-size:13px;padding:8px 14px;border-radius:var(--radius-s);cursor:pointer;font-family:var(--font-body);}
+  .pl-btn:disabled{opacity:.4;cursor:not-allowed;}
+  .pl-btn.ghost, .pl-file{background:transparent;border:1px solid var(--border-strong);color:var(--ink-muted);}
+  .pl-btn.danger{background:transparent;border:1px solid rgba(239,106,106,.45);color:var(--bad);}
+  .pl-btn.small{padding:5px 10px;font-size:12px;}
+  .pl-file{font-weight:600;font-size:13px;padding:8px 14px;border-radius:var(--radius-s);cursor:pointer;}
+  .pl-file input{display:none;}
+  .pl-cat-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;}
+  .pl-cat-row .nm{font-weight:600;flex:1;min-width:90px;}
+  .pl-cat-row .ct{color:var(--ink-faint);font-size:12px;}
+  .pl-wrap{overflow-x:auto;}
+  .pl-table{width:100%;border-collapse:collapse;margin-top:12px;font-size:13px;min-width:520px;}
+  .pl-table th{text-align:left;color:var(--ink-faint);font-weight:600;font-size:11.5px;padding:6px;border-bottom:1px solid var(--border);}
+  .pl-table td{padding:6px;border-bottom:1px solid var(--border);vertical-align:middle;}
+  .pl-table td input:not([type=checkbox]){width:100%;box-sizing:border-box;}
+  .pl-status{font-size:11.5px;white-space:nowrap;}
+  .pl-status.ok{color:var(--good);}
+  .pl-status.warn{color:#f0b429;}
+  .pl-summary{margin-top:12px;font-size:13px;color:var(--ink-muted);}
+  .pl-msg{margin-top:10px;font-size:12.5px;color:var(--good);}
+  .pl-msg.err{color:var(--bad);}
+  .pl-count{font-size:12px;color:var(--ink-faint);}
   .staff-google-btn{
     display:flex;align-items:center;justify-content:center;gap:8px;
     background:#fff;color:#3c4043;border:1px solid var(--border-strong);
@@ -538,6 +572,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
   window.FIREBASE_CONFIG = {
     apiKey: "AIzaSyCnNojR9m7fXWlbOyRgEF7w63B0cmMUxKQ",
@@ -579,29 +614,52 @@ var KEYWORDS = {
 
 var POSITIONS = [
   {code:'POR', name:'Portero', short:'Bajo palos'},
+  {code:'DFC', name:'Defensa Central', short:'Eje de la defensa'},
   {code:'LD',  name:'Lateral Derecho', short:'Banda derecha, defensa'},
-  {code:'DFC1',name:'Central (Zaguero) 1', short:'Eje de la defensa'},
-  {code:'DFC2',name:'Central (Zaguero) 2', short:'Eje de la defensa'},
   {code:'LI',  name:'Lateral Izquierdo', short:'Banda izquierda, defensa'},
   {code:'MCD', name:'Volante de Contención', short:'Primera línea de marca'},
   {code:'MC',  name:'Mediocampista Mixto', short:'Equilibrio de la mitad de cancha'},
   {code:'MCO', name:'Mediocampista Ofensivo', short:'Motor creativo'},
-  {code:'ED',  name:'Extremo Derecho', short:'Banda derecha, ataque'},
-  {code:'EI',  name:'Extremo Izquierdo', short:'Banda izquierda, ataque'},
+  {code:'EXT', name:'Extremo', short:'Bandas, ataque'},
   {code:'DC',  name:'Delantero Centro', short:'Referencia de ataque'}
 ];
+// abreviaturas que usan los profesores (y códigos viejos de esta app) -> código interno
+var POSITION_ALIASES = {
+  PT:'POR', POR:'POR', ARQ:'POR', AR:'POR', GK:'POR',
+  DF:'DFC', DFC:'DFC', DFC1:'DFC', DFC2:'DFC', CT:'DFC', DEF:'DFC', DC1:'DFC',
+  LD:'LD', LI:'LI',
+  MCD:'MCD', VC:'MCD', MC:'MC', MED:'MC', MCO:'MCO', MP:'MCO',
+  EX:'EXT', EXT:'EXT', ED:'EXT', EI:'EXT',
+  DC:'DC', DEL:'DC', DL:'DC', CF:'DC'
+};
+function normalizePos(raw){
+  var s = String(raw||'').trim();
+  if(!s) return null;
+  var up = s.toUpperCase();
+  if(POSITION_ALIASES[up]) return POSITION_ALIASES[up];
+  var low = s.toLowerCase();
+  for(var i=0;i<POSITIONS.length;i++){ if(POSITIONS[i].name.toLowerCase()===low) return POSITIONS[i].code; }
+  if(/portero|arquero/.test(low)) return 'POR';
+  if(/lateral.*der/.test(low)) return 'LD';
+  if(/lateral.*izq/.test(low)) return 'LI';
+  if(/central|defens|zaguero/.test(low)) return 'DFC';
+  if(/conten/.test(low)) return 'MCD';
+  if(/ofensiv|enganche|mediapunta/.test(low)) return 'MCO';
+  if(/extremo/.test(low)) return 'EXT';
+  if(/delantero/.test(low)) return 'DC';
+  if(/volante|medio|mixto/.test(low)) return 'MC';
+  return null;
+}
 
 var DEFAULT_PROFILES = {
   POR:  {resistencia:4, pase:5, tiro:1, recuperacion:6, defensa:3,  atajadas:10, actitud:8, velocidad:4},
   LD:   {resistencia:8, pase:7, tiro:2, recuperacion:8, defensa:8,  atajadas:0,  actitud:7, velocidad:8},
-  DFC1: {resistencia:6, pase:6, tiro:2, recuperacion:9, defensa:10, atajadas:0,  actitud:9, velocidad:5},
-  DFC2: {resistencia:6, pase:6, tiro:2, recuperacion:9, defensa:10, atajadas:0,  actitud:9, velocidad:5},
+  DFC:  {resistencia:6, pase:6, tiro:2, recuperacion:9, defensa:10, atajadas:0,  actitud:9, velocidad:5},
   LI:   {resistencia:8, pase:7, tiro:2, recuperacion:8, defensa:8,  atajadas:0,  actitud:7, velocidad:8},
   MCD:  {resistencia:9, pase:7, tiro:2, recuperacion:9, defensa:7,  atajadas:0,  actitud:8, velocidad:6},
   MC:   {resistencia:8, pase:8, tiro:4, recuperacion:7, defensa:5,  atajadas:0,  actitud:7, velocidad:6},
   MCO:  {resistencia:10,pase:10,tiro:5, recuperacion:4, defensa:2,  atajadas:0,  actitud:7, velocidad:7},
-  ED:   {resistencia:7, pase:6, tiro:7, recuperacion:4, defensa:2,  atajadas:0,  actitud:6, velocidad:10},
-  EI:   {resistencia:7, pase:6, tiro:7, recuperacion:4, defensa:2,  atajadas:0,  actitud:6, velocidad:10},
+  EXT:  {resistencia:7, pase:6, tiro:7, recuperacion:4, defensa:2,  atajadas:0,  actitud:6, velocidad:10},
   DC:   {resistencia:6, pase:5, tiro:10,recuperacion:3, defensa:1,  atajadas:0,  actitud:7, velocidad:8}
 };
 
@@ -669,12 +727,22 @@ var sessionEnteredClub = null; // navegación local de esta pestaña — nunca s
 var visitorCategoria = CATEGORIES[0]; // categoría que está mirando un visitante — tampoco se comparte
 var currentUser = null; // {email, role, categoria} según el inicio de sesión — no se guarda en el estado compartido
 
+// CATEGORIES es el mismo arreglo que usa CLUBS: se actualiza en sitio con lo que haya en la base de datos
+function syncCategories(list){
+  CATEGORIES.length = 0;
+  (list||[]).forEach(function(c){ CATEGORIES.push(c); });
+  if(CATEGORIES.indexOf(visitorCategoria)===-1) visitorCategoria = CATEGORIES[0];
+}
+
 function normalizeState(s){
-  if(!s || !Array.isArray(s.players) || !s.players.length) return null;
+  if(!s || !Array.isArray(s.players)) return null;
   try{
-    var ok = true;
+    if(!Array.isArray(s.categories) || !s.categories.length) s.categories = ['Sub-13','Sub-15','Sub-17'];
     s.players.forEach(function(p){
-      if(!p.categoria || CATEGORIES.indexOf(p.categoria)===-1) ok = false;
+      if(!p.categoria) p.categoria = s.categories[0];
+      if(s.categories.indexOf(p.categoria)===-1) s.categories.push(p.categoria); // nunca se borra un jugador por tener una categoría desconocida
+      p.pos = normalizePos(p.pos) || 'MC';
+      if(typeof p.valoracion !== 'number') p.valoracion = 60;
       if(typeof p.goles !== 'number') p.goles = 0;
       if(typeof p.asistencias !== 'number') p.asistencias = 0;
       if(!Array.isArray(p.historial)) p.historial = [];
@@ -684,29 +752,34 @@ function normalizeState(s){
         if(typeof h.feedback !== 'string') h.feedback = (h.comment && h.comment.indexOf('(')!==0) ? h.comment : '';
       });
     });
-    if(!ok) return null; // esquema de categorías nuevo — mejor volver a sembrar que adivinar a cuál pertenece cada jugador
     if(!s.profiles) s.profiles = {};
+    if(!s.profiles.DFC && s.profiles.DFC1) s.profiles.DFC = s.profiles.DFC1;
+    if(!s.profiles.EXT && s.profiles.ED) s.profiles.EXT = s.profiles.ED;
     POSITIONS.forEach(function(pos){
       var def = DEFAULT_PROFILES[pos.code];
       var cur = s.profiles[pos.code] || {};
       ATTRS.forEach(function(a){ if(typeof cur[a.key] !== 'number') cur[a.key] = def[a.key]; });
       s.profiles[pos.code] = cur;
     });
-    if(!s.activePos) s.activePos = 'MCO';
+    s.activePos = normalizePos(s.activePos) || 'MCO';
     if(!Array.isArray(s.trainingSchedule)) s.trainingSchedule = [1,3,5]; // lun, mié, vie por defecto
     if(!s.trainingDays || typeof s.trainingDays !== 'object') s.trainingDays = {};
     if(['admin','profesor','visitante'].indexOf(s.role)===-1) s.role = 'admin';
-    if(!s.selectedCategoria || CATEGORIES.indexOf(s.selectedCategoria)===-1) s.selectedCategoria = CATEGORIES[0];
-    if(!s.profesorCategoria || CATEGORIES.indexOf(s.profesorCategoria)===-1) s.profesorCategoria = CATEGORIES[0];
+    if(!s.selectedCategoria || s.categories.indexOf(s.selectedCategoria)===-1) s.selectedCategoria = s.categories[0];
+    if(!s.profesorCategoria || s.categories.indexOf(s.profesorCategoria)===-1) s.profesorCategoria = s.categories[0];
     if(typeof s.enteredClub === 'undefined') s.enteredClub = null;
+    syncCategories(s.categories);
     return s;
   }catch(e){ return null; }
 }
 
 function freshState(){
+  var cats = ['Sub-13','Sub-15','Sub-17'];
   var allPlayers = [];
-  CATEGORIES.forEach(function(cat){ allPlayers = allPlayers.concat(seedPlayers(cat)); });
+  cats.forEach(function(cat){ allPlayers = allPlayers.concat(seedPlayers(cat)); });
+  syncCategories(cats);
   return {
+    categories: cats.slice(),
     players: allPlayers,
     profiles: JSON.parse(JSON.stringify(DEFAULT_PROFILES)),
     activePos:'MCO',
@@ -742,11 +815,13 @@ var ALL_VIEWS = [
   {id:'partido', label:'Partido del día', icon:'●'},
   {id:'cartas', label:'Cartas de jugadores', icon:'●'},
   {id:'perfil', label:'Perfil de exigencia', icon:'●'},
-  {id:'informe', label:'Informe semestral', icon:'●'}
+  {id:'informe', label:'Informe semestral', icon:'●'},
+  {id:'plantel', label:'Plantel y categorías', icon:'●'}
 ];
 function visibleViews(){
   if(state.role==='visitante') return ALL_VIEWS.filter(function(v){return v.id==='cartas';});
-  return ALL_VIEWS;
+  if(state.role==='admin') return ALL_VIEWS;
+  return ALL_VIEWS.filter(function(v){return v.id!=='plantel';});
 }
 function isReadOnly(){ return state.role==='visitante'; }
 function activeCategoria(){
@@ -1833,6 +1908,7 @@ function render(){
   else if(currentView==='partido') view = renderPartido();
   else if(currentView==='cartas') view = renderCartas();
   else if(currentView==='perfil') view = renderPerfil();
+  else if(currentView==='plantel') view = renderPlantel();
   else view = renderInforme();
   inner.appendChild(view);
 
@@ -1840,6 +1916,337 @@ function render(){
   var backSidebar = document.querySelector('.brand');
   if(backTopbar) backTopbar.onclick = goToLanding;
   if(backSidebar) backSidebar.onclick = goToLanding;
+}
+
+/* ============ RENDER: PLANTEL Y CATEGORÍAS (solo administrador) ============ */
+function escHtml(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function toTitleName(raw){
+  var small = ['de','del','la','las','los','y'];
+  return String(raw||'').trim().replace(/\s+/g,' ').toLowerCase().split(' ').map(function(w,i){
+    if(i>0 && small.indexOf(w)!==-1) return w;
+    return w.charAt(0).toUpperCase() + w.slice(1);
+  }).join(' ');
+}
+function normalizeCategoryName(raw){
+  var t = String(raw||'').trim().replace(/\s+/g,' ');
+  var m = t.match(/^sub[\s\-_]*(\d{1,2})$/i);
+  return m ? 'Sub-' + m[1] : t;
+}
+function nameKey(n){ return String(n||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim(); }
+function newPlayerId(){ return 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function makePlayer(name, pos, categoria){
+  return {id:newPlayerId(), name:name, categoria:categoria, pos:pos, goles:0, asistencias:0, valoracion:60, historial:[]};
+}
+function posOrder(code){ var i = POSITIONS.map(function(p){return p.code;}).indexOf(code); return i===-1 ? 99 : i; }
+function posOptions(selected, withEmpty){
+  return (withEmpty ? '<option value=""' + (selected?'':' selected') + '>— elegir —</option>' : '') +
+    POSITIONS.map(function(p){ return '<option value="' + p.code + '"' + (p.code===selected?' selected':'') + '>' + p.name + '</option>'; }).join('');
+}
+
+// Texto como llega por WhatsApp: "SUB 11" como encabezado y "• NOMBRE (PT)" por jugador
+function parseRosterText(text){
+  var out = {categoria:null, rows:[]};
+  String(text||'').split(/\r?\n/).forEach(function(line){
+    var l = line.replace(/^[\s\u2022\u00b7\-\*\u2013\u2014]+/, '').replace(/^\d+\s*[\.\)\-]\s*/, '').trim();
+    if(!l) return;
+    var catM = l.match(/^sub[\s\-_]*(\d{1,2})\s*:?$/i);
+    if(catM){ out.categoria = 'Sub-' + catM[1]; return; }
+    var m = l.match(/^(.*?)\s*[\(\[]\s*([^\)\]]{1,20})\s*[\)\]]\s*$/) || l.match(/^(.*?)\s+[\-\u2013\u2014:]\s+([A-Za-z\u00c0-\u017f ]{1,20})$/);
+    var name = (m ? m[1] : l).replace(/[\s\-\u2013\u2014:,]+$/,'').trim();
+    var posRaw = m ? m[2].trim() : '';
+    if(!name) return;
+    out.rows.push({name: toTitleName(name), posRaw: posRaw, pos: normalizePos(posRaw), categoria: null});
+  });
+  return out;
+}
+// Filas de Excel/CSV: columnas Nombre (o Jugador), Posición y, opcional, Categoría
+function parseRosterSheet(rows){
+  var out = {categoria:null, rows:[]};
+  rows.forEach(function(r){
+    var keys = Object.keys(r);
+    function pick(prefixes){
+      for(var i=0;i<keys.length;i++){
+        var k = nameKey(keys[i]);
+        if(prefixes.some(function(p){ return k.indexOf(p)===0; })) return r[keys[i]];
+      }
+      return '';
+    }
+    var name = String(pick(['nombre','jugador','name'])||'').trim();
+    if(!name) return;
+    var posRaw = String(pick(['pos'])||'').trim();
+    var cat = String(pick(['categ'])||'').trim();
+    out.rows.push({name: toTitleName(name), posRaw: posRaw, pos: normalizePos(posRaw), categoria: cat ? normalizeCategoryName(cat) : null});
+  });
+  return out;
+}
+
+function renameCategory(oldName, newName){
+  var i = state.categories.indexOf(oldName);
+  if(i===-1) return;
+  state.categories[i] = newName;
+  state.players.forEach(function(p){ if(p.categoria===oldName) p.categoria = newName; });
+  Object.keys(state.trainingDays).forEach(function(k){
+    if(k.indexOf(oldName+'::')===0){ state.trainingDays[newName + k.slice(oldName.length)] = state.trainingDays[k]; delete state.trainingDays[k]; }
+  });
+  if(state.selectedCategoria===oldName) state.selectedCategoria = newName;
+  if(state.profesorCategoria===oldName) state.profesorCategoria = newName;
+  if(visitorCategoria===oldName) visitorCategoria = newName;
+  // los profesores asignados a esa categoría la siguen teniendo con el nombre nuevo
+  if(window.db){
+    db.collection('staff').where('categoria','==',oldName).get().then(function(snap){
+      snap.forEach(function(d){ d.ref.update({categoria:newName}); });
+    }).catch(function(){});
+  }
+}
+function deleteCategory(name){
+  state.categories = state.categories.filter(function(c){ return c!==name; });
+  state.players = state.players.filter(function(p){ return p.categoria!==name; });
+  Object.keys(state.trainingDays).forEach(function(k){ if(k.indexOf(name+'::')===0) delete state.trainingDays[k]; });
+  if(state.selectedCategoria===name) state.selectedCategoria = state.categories[0];
+  if(state.profesorCategoria===name) state.profesorCategoria = state.categories[0];
+}
+function sortCategories(list){
+  function num(c){ var m = String(c).match(/^sub-(\d+)$/i); return m ? +m[1] : 999; }
+  return list.slice().sort(function(a,b){ return num(a)-num(b) || a.localeCompare(b); });
+}
+function commitPlantel(){ state.categories = sortCategories(state.categories); syncCategories(state.categories); persist(); render(); }
+
+var plantelUi = {cat:null, preview:null, msg:null, msgErr:false, pasted:''};
+function renderPlantel(){
+  var el = document.createElement('div');
+  if(!plantelUi.cat || state.categories.indexOf(plantelUi.cat)===-1) plantelUi.cat = state.categories[0] || null;
+  var testCount = state.players.filter(function(p){ return /^Jugador \d+$/.test(p.name); }).length;
+
+  el.innerHTML =
+    '<div class="view-head"><div><h1>Plantel y categorías</h1>' +
+      '<p>Crea las categorías del club, importa la lista que te manda cada profesor y corrige nombres o posiciones. Esta sección solo la ve el administrador.</p></div></div>' +
+
+    '<section class="pl-card"><h3>Importar jugadores</h3>' +
+      '<p class="pl-help">Pega la lista tal como llega por WhatsApp — un jugador por línea con la posición entre paréntesis, por ejemplo <code>JUAN ESTEBAN ORTIZ (PT)</code>. Si arriba dice <code>SUB 11</code>, se usa esa categoría. También puedes subir un Excel o CSV con las columnas Nombre, Posición y (opcional) Categoría.</p>' +
+      '<textarea id="plPaste" rows="8" placeholder="SUB 11&#10;• JUAN ESTEBAN ORTIZ (PT)&#10;• MATÍAS CACERES (DF)"></textarea>' +
+      '<div class="pl-inline">' +
+        '<button class="pl-btn" id="plReview">Revisar lista</button>' +
+        '<label class="pl-file">Subir Excel o CSV<input type="file" id="plFile" accept=".xlsx,.xls,.csv" /></label>' +
+        '<button class="pl-btn ghost" id="plTemplate">Descargar plantilla</button>' +
+      '</div>' +
+      '<div id="plPreview"></div>' +
+      (plantelUi.msg ? '<div class="pl-msg' + (plantelUi.msgErr?' err':'') + '">' + escHtml(plantelUi.msg) + '</div>' : '') +
+    '</section>' +
+
+    '<section class="pl-card"><h3>Categorías</h3>' +
+      '<div id="plCats"></div>' +
+      '<div class="pl-inline"><input id="plNewCat" placeholder="Nueva categoría, ej. Sub-11" /><button class="pl-btn" id="plAddCat">Agregar categoría</button></div>' +
+      (testCount ? '<div class="pl-inline"><button class="pl-btn danger" id="plDelTest">Eliminar los ' + testCount + ' jugadores de prueba</button><span class="pl-count">Los “Jugador 01, 02…” que venían de ejemplo.</span></div>' : '') +
+    '</section>' +
+
+    '<section class="pl-card"><h3>Jugadores por categoría</h3>' +
+      '<div class="pl-inline" style="margin-top:0;"><select id="plCatSel"></select><span class="pl-count" id="plCount"></span></div>' +
+      '<div class="pl-inline"><input id="plOneName" placeholder="Nombre del jugador" style="flex:1;min-width:160px;" /><select id="plOnePos">' + posOptions('', true) + '</select><button class="pl-btn" id="plAddOne">Agregar</button></div>' +
+      '<div class="pl-wrap" id="plRoster"></div>' +
+    '</section>';
+
+  var pasteBox = el.querySelector('#plPaste');
+  pasteBox.value = plantelUi.pasted;
+  pasteBox.oninput = function(){ plantelUi.pasted = pasteBox.value; };
+
+  // ---------- categorías ----------
+  var catsBox = el.querySelector('#plCats');
+  state.categories.forEach(function(cat){
+    var n = state.players.filter(function(p){ return p.categoria===cat; }).length;
+    var row = document.createElement('div');
+    row.className = 'pl-cat-row';
+    row.innerHTML = '<span class="nm">' + escHtml(cat) + '</span><span class="ct">' + n + ' jugador' + (n===1?'':'es') + '</span>' +
+      '<button class="pl-btn ghost small" data-a="ren">Renombrar</button><button class="pl-btn danger small" data-a="del">Eliminar</button>';
+    row.querySelector('[data-a="ren"]').onclick = function(){
+      var nv = window.prompt('Nuevo nombre para ' + cat + ':', cat);
+      if(nv===null) return;
+      nv = normalizeCategoryName(nv);
+      if(!nv || nv===cat) return;
+      if(state.categories.indexOf(nv)!==-1){ window.alert('Ya existe una categoría llamada ' + nv + '.'); return; }
+      renameCategory(cat, nv);
+      if(plantelUi.cat===cat) plantelUi.cat = nv;
+      commitPlantel();
+    };
+    row.querySelector('[data-a="del"]').onclick = function(){
+      if(state.categories.length<=1){ window.alert('El club necesita al menos una categoría.'); return; }
+      var ok = window.confirm('¿Eliminar la categoría ' + cat + '?' + (n ? ' También se borran sus ' + n + ' jugadores y todo su historial de entrenamientos y partidos. Esto no se puede deshacer.' : ''));
+      if(!ok) return;
+      deleteCategory(cat);
+      commitPlantel();
+    };
+    catsBox.appendChild(row);
+  });
+  el.querySelector('#plAddCat').onclick = function(){
+    var nv = normalizeCategoryName(el.querySelector('#plNewCat').value);
+    if(!nv) return;
+    if(state.categories.indexOf(nv)!==-1){ window.alert('Esa categoría ya existe.'); return; }
+    state.categories.push(nv);
+    plantelUi.cat = nv;
+    commitPlantel();
+  };
+  var delTest = el.querySelector('#plDelTest');
+  if(delTest) delTest.onclick = function(){
+    if(!window.confirm('¿Eliminar los ' + testCount + ' jugadores de ejemplo (“Jugador 01, 02…”) de todas las categorías? Los jugadores reales no se tocan.')) return;
+    state.players = state.players.filter(function(p){ return !/^Jugador \d+$/.test(p.name); });
+    commitPlantel();
+  };
+
+  // ---------- importar ----------
+  var previewBox = el.querySelector('#plPreview');
+  function showPreview(parsed){
+    plantelUi.msg = null;
+    var detected = parsed.categoria;
+    var target = detected || plantelUi.cat || state.categories[0] || 'Sub-11';
+    var rows = parsed.rows.map(function(r){
+      var cat = r.categoria || target;
+      var dup = state.players.some(function(p){ return p.categoria===cat && nameKey(p.name)===nameKey(r.name); });
+      return {name:r.name, posRaw:r.posRaw, pos:r.pos, categoria:r.categoria, dup:dup, include: !!r.pos && !dup};
+    });
+    plantelUi.preview = {target:target, perRowCat: rows.some(function(r){return r.categoria;}), rows:rows};
+    drawPreview();
+  }
+  function drawPreview(){
+    var pv = plantelUi.preview;
+    if(!pv){ previewBox.innerHTML = ''; return; }
+    if(!pv.rows.length){ previewBox.innerHTML = '<div class="pl-msg err">No encontré jugadores en ese texto o archivo.</div>'; return; }
+    var catChoices = state.categories.slice();
+    if(catChoices.indexOf(pv.target)===-1) catChoices.push(pv.target);
+    var html =
+      (pv.perRowCat ? '<div class="pl-summary">El archivo trae la categoría de cada jugador; las que no existan se crean automáticamente.</div>' :
+        '<div class="pl-inline"><span class="pl-count">Agregar a la categoría</span><select id="plTarget">' +
+          catChoices.map(function(c){ return '<option value="' + escHtml(c) + '"' + (c===pv.target?' selected':'') + '>' + escHtml(c) + (state.categories.indexOf(c)===-1?' (nueva)':'') + '</option>'; }).join('') +
+        '</select></div>') +
+      '<table class="pl-table"><thead><tr><th></th><th>Nombre</th><th>Posición</th>' + (pv.perRowCat?'<th>Categoría</th>':'') + '<th></th></tr></thead><tbody>' +
+      pv.rows.map(function(r, i){
+        var status = r.dup ? '<span class="pl-status warn">Ya está en la categoría</span>' :
+          (!r.pos ? '<span class="pl-status warn">' + (r.posRaw ? 'No reconocí “' + escHtml(r.posRaw) + '”' : 'Sin posición') + '</span>' : '<span class="pl-status ok">' + (r.posRaw ? escHtml(r.posRaw) + ' → ' : '') + escHtml(posName(r.pos)) + '</span>');
+        return '<tr data-i="' + i + '"><td><input type="checkbox" data-f="inc"' + (r.include?' checked':'') + ' /></td>' +
+          '<td><input data-f="name" value="' + escHtml(r.name) + '" /></td>' +
+          '<td><select data-f="pos">' + posOptions(r.pos, !r.pos) + '</select></td>' +
+          (pv.perRowCat ? '<td>' + escHtml(r.categoria || pv.target) + '</td>' : '') +
+          '<td>' + status + '</td></tr>';
+      }).join('') +
+      '</tbody></table>' +
+      '<div class="pl-inline"><button class="pl-btn" id="plConfirm"></button><button class="pl-btn ghost" id="plCancel">Cancelar</button></div>';
+    previewBox.innerHTML = html;
+
+    function refreshCount(){
+      var n = pv.rows.filter(function(r){ return r.include && r.pos && r.name.trim(); }).length;
+      var btn = previewBox.querySelector('#plConfirm');
+      btn.textContent = 'Agregar ' + n + ' jugador' + (n===1?'':'es');
+      btn.disabled = n===0;
+    }
+    previewBox.querySelectorAll('tr[data-i]').forEach(function(tr){
+      var r = pv.rows[+tr.getAttribute('data-i')];
+      tr.querySelector('[data-f="inc"]').onchange = function(e){ r.include = e.target.checked; refreshCount(); };
+      tr.querySelector('[data-f="name"]').oninput = function(e){ r.name = e.target.value; refreshCount(); };
+      tr.querySelector('[data-f="pos"]').onchange = function(e){
+        r.pos = e.target.value || null;
+        if(r.pos){ r.include = true; tr.querySelector('[data-f="inc"]').checked = true; }
+        refreshCount();
+      };
+    });
+    var tSel = previewBox.querySelector('#plTarget');
+    if(tSel) tSel.onchange = function(){
+      pv.target = tSel.value;
+      pv.rows.forEach(function(r){
+        var wasDup = r.dup;
+        r.dup = state.players.some(function(p){ return p.categoria===pv.target && nameKey(p.name)===nameKey(r.name); });
+        if(r.dup) r.include = false; else if(wasDup && r.pos) r.include = true;
+      });
+      drawPreview();
+    };
+    previewBox.querySelector('#plCancel').onclick = function(){ plantelUi.preview = null; drawPreview(); };
+    previewBox.querySelector('#plConfirm').onclick = function(){
+      var added = 0, cats = {};
+      pv.rows.forEach(function(r){
+        var nm = toTitleName(r.name);
+        if(!r.include || !r.pos || !nm) return;
+        var cat = r.categoria || pv.target;
+        if(state.categories.indexOf(cat)===-1) state.categories.push(cat);
+        state.players.push(makePlayer(nm, r.pos, cat));
+        cats[cat] = true; added++;
+      });
+      var catList = Object.keys(cats);
+      plantelUi.preview = null;
+      plantelUi.pasted = '';
+      plantelUi.cat = catList[0] || plantelUi.cat;
+      plantelUi.msg = 'Listo: se agregaron ' + added + ' jugador' + (added===1?'':'es') + (catList.length ? ' a ' + catList.join(', ') : '') + '.';
+      plantelUi.msgErr = false;
+      commitPlantel();
+    };
+    refreshCount();
+  }
+  el.querySelector('#plReview').onclick = function(){ showPreview(parseRosterText(pasteBox.value)); };
+  el.querySelector('#plFile').onchange = function(e){
+    var file = e.target.files && e.target.files[0];
+    if(!file) return;
+    if(!window.XLSX){ plantelUi.preview = null; previewBox.innerHTML = '<div class="pl-msg err">No se pudo cargar el lector de Excel. Revisa tu conexión y recarga la página, o pega la lista como texto.</div>'; return; }
+    var reader = new FileReader();
+    reader.onload = function(ev){
+      try{
+        var wb = XLSX.read(new Uint8Array(ev.target.result), {type:'array'});
+        var sheet = wb.Sheets[wb.SheetNames[0]];
+        showPreview(parseRosterSheet(XLSX.utils.sheet_to_json(sheet, {defval:''})));
+      }catch(err){
+        previewBox.innerHTML = '<div class="pl-msg err">No pude leer ese archivo. Asegúrate de que la primera fila tenga los títulos Nombre y Posición.</div>';
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    e.target.value = '';
+  };
+  el.querySelector('#plTemplate').onclick = function(){
+    var csv = '\uFEFFNombre,Posición,Categoría\nJuan Esteban Ortiz,PT,Sub-11\nMatías Caceres,DF,Sub-11\n';
+    var blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'plantilla-jugadores.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+  };
+  drawPreview();
+
+  // ---------- jugadores de la categoría ----------
+  var catSel = el.querySelector('#plCatSel');
+  catSel.innerHTML = state.categories.map(function(c){ return '<option value="' + escHtml(c) + '"' + (c===plantelUi.cat?' selected':'') + '>' + escHtml(c) + '</option>'; }).join('');
+  catSel.onchange = function(){ plantelUi.cat = catSel.value; drawRoster(); };
+  el.querySelector('#plAddOne').onclick = function(){
+    var nm = toTitleName(el.querySelector('#plOneName').value);
+    var pos = el.querySelector('#plOnePos').value;
+    if(!nm || !pos || !plantelUi.cat){ window.alert('Escribe el nombre y elige la posición.'); return; }
+    state.players.push(makePlayer(nm, pos, plantelUi.cat));
+    commitPlantel();
+  };
+  var rosterBox = el.querySelector('#plRoster');
+  function drawRoster(){
+    var list = state.players.filter(function(p){ return p.categoria===plantelUi.cat; })
+      .sort(function(a,b){ return posOrder(a.pos)-posOrder(b.pos) || a.name.localeCompare(b.name); });
+    el.querySelector('#plCount').textContent = list.length + ' jugador' + (list.length===1?'':'es');
+    if(!list.length){ rosterBox.innerHTML = '<div class="pl-summary">Todavía no hay jugadores en esta categoría.</div>'; return; }
+    rosterBox.innerHTML = '<table class="pl-table"><thead><tr><th>Nombre</th><th>Posición</th><th>Registros</th><th></th></tr></thead><tbody>' +
+      list.map(function(p){
+        return '<tr data-id="' + escHtml(p.id) + '"><td><input data-f="name" value="' + escHtml(p.name) + '" /></td>' +
+          '<td><select data-f="pos">' + posOptions(p.pos, false) + '</select></td>' +
+          '<td class="pl-count">' + p.historial.length + '</td>' +
+          '<td><button class="pl-btn danger small" data-f="del">Quitar</button></td></tr>';
+      }).join('') + '</tbody></table>';
+    rosterBox.querySelectorAll('tr[data-id]').forEach(function(tr){
+      var id = tr.getAttribute('data-id');
+      var p = state.players.find(function(x){ return x.id===id; });
+      tr.querySelector('[data-f="name"]').onchange = function(e){
+        var nm = toTitleName(e.target.value);
+        if(!nm){ e.target.value = p.name; return; }
+        p.name = nm; e.target.value = nm; persist();
+      };
+      tr.querySelector('[data-f="pos"]').onchange = function(e){ p.pos = e.target.value; persist(); };
+      tr.querySelector('[data-f="del"]').onclick = function(){
+        if(!window.confirm('¿Quitar a ' + p.name + ' del plantel?' + (p.historial.length ? ' Se borran también sus ' + p.historial.length + ' registros.' : ''))) return;
+        state.players = state.players.filter(function(x){ return x.id!==id; });
+        persist(); drawRoster();
+      };
+    });
+  }
+  drawRoster();
+  return el;
 }
 
 function openLoginModal(){
