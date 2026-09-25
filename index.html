@@ -387,7 +387,7 @@
 
   /* ---------- Cards / Cartas view ---------- */
   .cards-grid{
-    display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(205px,1fr));gap:16px;
   }
   .card-player{
     background:linear-gradient(160deg,var(--card-bg-raised),var(--card-bg) 70%);
@@ -426,6 +426,68 @@
   .xp-bar i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,var(--orange-500),var(--lime));}
   .xp-txt{font-size:11px;color:var(--ink-faint);margin-top:4px;}
   .modal .xp{margin:0 0 16px;}
+  /* ---- Carta estilo FIFA: la foto es la protagonista ---- */
+  .card-player{padding:10px 10px 16px;}
+  .fut-photo{
+    position:relative;z-index:1;aspect-ratio:4/5;border-radius:14px;overflow:hidden;
+    background:radial-gradient(circle at 50% 30%, var(--navy-700), var(--navy-950) 80%);
+    border:1px solid var(--border-strong);
+  }
+  .fut-photo img{width:100%;height:100%;object-fit:cover;object-position:center 22%;display:block;transition:transform .35s ease;}
+  .card-player:hover .fut-photo img{transform:scale(1.04);}
+  .fut-photo.no-photo{display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:68px;color:rgba(246,83,52,.45);letter-spacing:.02em;}
+  .fut-photo::after{
+    content:'';position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(180deg, rgba(4,7,22,.62) 0%, rgba(4,7,22,0) 30%, rgba(4,7,22,0) 52%, rgba(4,7,22,.94) 100%);
+  }
+  .fut-rating{position:absolute;top:10px;left:12px;z-index:2;display:flex;flex-direction:column;align-items:center;line-height:1;}
+  .fut-rating b{font-family:var(--font-display);font-size:42px;font-weight:600;color:#fff;text-shadow:0 2px 12px rgba(0,0,0,.55);}
+  .fut-rating span{font-size:12px;font-weight:700;letter-spacing:.1em;color:var(--lime);margin-top:5px;}
+  .fut-name{position:absolute;left:12px;right:12px;bottom:11px;z-index:2;}
+  .fut-name .card-name{margin:0;font-size:21px;line-height:1.08;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.6);}
+  .fut-name .card-pos{margin-top:4px;}
+  .card-player .xp, .card-player .card-stats, .card-player .spark{padding:0 6px;}
+  .card-player .pill{margin-left:6px;}
+  /* ---- Niveles de carta ---- */
+  .card-player{--tier-accent:var(--lime);--sheen:rgba(255,255,255,.3);}
+  .fut-rating span, .fut-name .card-pos{color:var(--tier-accent);}
+  .card-player .xp, .card-player .card-stats, .card-player .spark, .card-player .pill{position:relative;z-index:1;}
+  .fut-tier{
+    position:absolute;top:12px;right:12px;z-index:2;display:inline-flex;align-items:center;gap:4px;
+    font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+    padding:4px 9px;border-radius:999px;background:rgba(0,0,0,.42);color:var(--tier-accent);border:1px solid var(--tier-accent);
+  }
+  .fut-tier svg{width:12px;height:12px;fill:currentColor;}
+  .card-player.t-bronce, .card-player.t-plata, .card-player.t-oro, .card-player.t-elite{
+    box-shadow:0 14px 34px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.22);
+  }
+  .card-player.t-bronce{--tier-accent:#ffd2ab;--sheen:rgba(255,220,190,.32);background:linear-gradient(155deg,#c98b5a 0%,#8a5a36 38%,#4a2e1a 100%);border:1.5px solid #e0a574;}
+  .card-player.t-plata{--tier-accent:#f2f5fa;--sheen:rgba(255,255,255,.42);background:linear-gradient(155deg,#d9dee6 0%,#8d96a3 38%,#4e5561 100%);border:1.5px solid #eef2f7;}
+  .card-player.t-oro{--tier-accent:#fff0b8;--sheen:rgba(255,245,200,.48);background:linear-gradient(155deg,#f4d36b 0%,#b8871e 38%,#6b4a0e 100%);border:1.5px solid #ffe596;}
+  .card-player.t-elite{
+    --tier-accent:#f2c94c;--sheen:rgba(255,215,110,.38);
+    background:linear-gradient(155deg,#1b2350 0%,#0b0f24 45%,#040612 100%);border:1.5px solid #f2c94c;
+    box-shadow:0 0 0 1px rgba(242,201,76,.35), 0 0 26px rgba(242,201,76,.26), 0 14px 34px rgba(0,0,0,.5);
+  }
+  .card-player.t-elite .fut-photo{border-color:rgba(242,201,76,.55);}
+  .card-player.t-bronce::after, .card-player.t-plata::after, .card-player.t-oro::after{display:none;}
+  .card-player.t-elite::after{ /* rayas doradas diagonales: sello de la carta especial */
+    content:'';position:absolute;inset:0;top:0;right:0;width:auto;height:auto;border-radius:0;z-index:0;pointer-events:none;opacity:.1;
+    background:repeating-linear-gradient(135deg,#f2c94c 0 2px,transparent 2px 14px);
+  }
+  .card-player.t-bronce::before, .card-player.t-plata::before, .card-player.t-oro::before, .card-player.t-elite::before{
+    content:'';position:absolute;inset:-40% -60%;z-index:0;pointer-events:none;
+    background:linear-gradient(115deg,transparent 42%,var(--sheen) 50%,transparent 58%);
+    animation:cardSheen 5.5s ease-in-out infinite;
+  }
+  @keyframes cardSheen{0%,60%{transform:translateX(-35%);}100%{transform:translateX(35%);}}
+  @media (prefers-reduced-motion:reduce){.card-player::before{animation:none !important;}}
+  .fut-bolt{position:absolute;right:-14px;bottom:-18px;width:120px;height:120px;z-index:0;pointer-events:none;opacity:.14;}
+  .fut-bolt svg{width:100%;height:100%;fill:#f2c94c;}
+  .card-player[class*="t-"] .card-stats, .card-player[class*="t-"] .xp-txt{color:rgba(255,255,255,.88);}
+  .card-player[class*="t-"] .card-stats span b{color:#fff;}
+  .card-player[class*="t-"] .xp-bar{background:rgba(0,0,0,.35);}
+  .card-player[class*="t-"] .xp-bar i{background:linear-gradient(90deg,var(--tier-accent),#fff);}
 
   /* ---------- Modal ---------- */
   .modal-overlay{
@@ -1728,15 +1790,18 @@ function renderCartas(){
   var grid = el.querySelector('#cardsGrid');
   categoryPlayers().forEach(function(p){
     var c = document.createElement('div');
-    c.className = 'card-player';
+    var tier = tierOf(p.valoracion);
+    c.className = 'card-player t-' + tier.id;
     var pts = sparkPath(p.historial);
     var best = publicMode ? bestAttribute(p.historial) : null;
-    var valBlock = publicMode
-      ? '<div class="card-val-row"><span class="card-val">' + p.valoracion + '</span><span class="card-val-max">valoración</span></div><span class="pill" style="margin-top:6px;">' + formBadge(p.historial).label + '</span>'
-      : '<div class="card-val-row"><span class="card-val">' + p.valoracion + '</span><span class="card-val-max">valoración</span></div>';
+    var valBlock = publicMode ? '<span class="pill" style="margin-top:12px;">' + formBadge(p.historial).label + '</span>' : '';
     c.innerHTML =
-      '<div class="card-top"><div class="card-photo">' + avatarInner(p) + '</div><div><div class="card-pos">' + posName(p.pos) + '</div>' +
-      '<div class="card-name">' + escHtml(p.name) + '</div></div></div>' +
+      '<div class="fut-photo' + (photoMap[p.id] ? '' : ' no-photo') + '">' + avatarInner(p) +
+        '<div class="fut-rating"><b>' + p.valoracion + '</b><span>' + escHtml(p.pos) + '</span></div>' +
+        '<div class="fut-tier">' + (tier.id==='elite' ? BOLT_SVG : '') + tier.label + '</div>' +
+        '<div class="fut-name"><div class="card-name">' + escHtml(p.name) + '</div><div class="card-pos">' + posName(p.pos) + '</div></div>' +
+      '</div>' +
+      (tier.id==='elite' ? '<div class="fut-bolt">' + BOLT_SVG + '</div>' : '') +
       valBlock + xpBar(p) +
       '<svg class="spark" viewBox="0 0 200 26" preserveAspectRatio="none"><polyline points="' + pts + '" fill="none" stroke="#f65334" stroke-width="2.5"/></svg>' +
       '<div class="card-stats"><span><b>' + p.goles + '</b> goles</span><span><b>' + p.asistencias + '</b> asist.</span>' + (publicMode ? (best ? '<span><b>' + best.label + '</b></span>' : '') : '<span><b>' + p.historial.length + '</b> registros</span>') + '</div>';
@@ -2186,6 +2251,15 @@ function replayRating(entries, mult){
 function recomputeRating(p, levels){ var r = replayRating(p.historial||[], levelMult(p.categoria, levels)); p.valoracion = r.valoracion; p.xp = r.xp; p.xpCost = r.cost; }
 function recomputeAllRatings(){ if(state && Array.isArray(state.players)) state.players.forEach(function(p){ recomputeRating(p, state.categoryLevels); }); }
 function ratingBefore(p, dateStr){ return replayRating((p.historial||[]).filter(function(h){ return h.date < dateStr; }), levelMult(p.categoria)).valoracion; }
+// Nivel de la carta según la valoración: bronce, plata, oro y la especial Élite (90+)
+var TIERS = [
+  {id:'bronce', label:'Bronce', min:0},
+  {id:'plata',  label:'Plata',  min:65},
+  {id:'oro',    label:'Oro',    min:75},
+  {id:'elite',  label:'Élite',  min:90}
+];
+function tierOf(v){ var t = TIERS[0]; TIERS.forEach(function(x){ if(v>=x.min) t = x; }); return t; }
+var BOLT_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13.5 1.5 4 13.2h6.2L9 22.5l10-12.2h-6.3z"/></svg>';
 function xpBar(p){
   if(p.valoracion>=VAL_MAX) return '<div class="xp"><div class="xp-bar"><i style="width:100%"></i></div><div class="xp-txt">Valoración máxima</div></div>';
   var pct = Math.max(0, Math.min(100, Math.floor((p.xp||0) / (p.xpCost||levelCost(p.valoracion, levelMult(p.categoria))) * 100)));
@@ -2204,7 +2278,7 @@ function initialsOf(name){
 }
 function avatarInner(p){ var src = photoMap[p.id]; return src ? '<img src="' + src + '" alt="" />' : escHtml(initialsOf(p.name)); }
 function compressPhoto(file, size){
-  size = size || 320;
+  size = size || 480; // más resolución porque ahora la foto ocupa casi toda la carta
   return new Promise(function(resolve, reject){
     var url = URL.createObjectURL(file);
     var img = new Image();
