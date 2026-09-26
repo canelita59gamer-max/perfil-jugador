@@ -176,6 +176,10 @@
   .pl-msg{margin-top:10px;font-size:12.5px;color:var(--good);}
   .pl-msg.err{color:var(--bad);}
   .pl-count{font-size:12px;color:var(--ink-faint);}
+  .pl-pos2{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;align-items:center;}
+  .pl-chip{font-size:11.5px;padding:3px 8px;border-radius:999px;background:rgba(246,83,52,.14);color:var(--ink);border:1px solid rgba(246,83,52,.35);cursor:pointer;white-space:nowrap;}
+  .pl-chip:hover{border-color:var(--bad);}
+  .pl-pos2 select{padding:4px 8px !important;font-size:12px !important;}
   .staff-google-btn{
     display:flex;align-items:center;justify-content:center;gap:8px;
     background:#fff;color:#3c4043;border:1px solid var(--border-strong);
@@ -822,6 +826,7 @@ function normalizeState(s){
       if(!p.categoria) p.categoria = s.categories[0];
       if(s.categories.indexOf(p.categoria)===-1) s.categories.push(p.categoria); // nunca se borra un jugador por tener una categoría desconocida
       p.pos = normalizePos(p.pos) || 'MC';
+      p.posExtra = (Array.isArray(p.posExtra) ? p.posExtra : []).map(normalizePos).filter(function(c, i, a){ return c && c!==p.pos && a.indexOf(c)===i; });
       if(typeof p.valoracion !== 'number') p.valoracion = 60;
       if(typeof p.goles !== 'number') p.goles = 0;
       if(typeof p.asistencias !== 'number') p.asistencias = 0;
@@ -849,9 +854,10 @@ function normalizeState(s){
     if(!s.profesorCategoria || s.categories.indexOf(s.profesorCategoria)===-1) s.profesorCategoria = s.categories[0];
     if(typeof s.enteredClub === 'undefined') s.enteredClub = null;
     if(!s.categoryLevels || typeof s.categoryLevels !== 'object') s.categoryLevels = {};
+    if(!s.categoryWeights || typeof s.categoryWeights !== 'object') s.categoryWeights = {};
     if(!s.categoryProfiles || typeof s.categoryProfiles !== 'object') s.categoryProfiles = {};
     if(!s.trainingSchedules || typeof s.trainingSchedules !== 'object') s.trainingSchedules = {};
-    s.players.forEach(function(p){ recomputeRating(p, s.categoryLevels); });
+    s.players.forEach(function(p){ recomputeRating(p, s.categoryLevels, s.categoryWeights); });
     syncCategories(s.categories);
     return s;
   }catch(e){ return null; }
@@ -866,6 +872,7 @@ function freshState(){
   return {
     categories: cats.slice(),
     categoryLevels: {},
+    categoryWeights: {},
     categoryProfiles: {},
     trainingSchedules: {},
     players: allPlayers,
@@ -901,9 +908,9 @@ var pendingRebuild = false, migrating = false;
 function cleanJson(o){ return JSON.parse(JSON.stringify(o)); }
 function publicPlayer(p){
   var hl = recentHighlight(p.historial||[]); // el único comentario que se publica es el destacado positivo que ya se mostraba
-  return {id:p.id, name:p.name, categoria:p.categoria, pos:p.pos, goles:p.goles||0, asistencias:p.asistencias||0,
+  return {id:p.id, name:p.name, categoria:p.categoria, pos:p.pos, posExtra:p.posExtra||[], goles:p.goles||0, asistencias:p.asistencias||0,
     historial:(p.historial||[]).map(function(h){
-      return {type:h.type, date:h.date, delta:h.delta, rating:h.rating, asistio:h.asistio, quickValues:h.quickValues||{},
+      return {type:h.type, date:h.date, delta:h.delta, rating:h.rating, asistio:h.asistio, pos:h.pos||p.pos, quickValues:h.quickValues||{},
         attrsHit:h.attrsHit||[], goles:h.goles||0, asistencias:h.asistencias||0,
         feedback: h===hl ? (h.feedback||'') : '', comment: h===hl ? (h.comment||'') : ''};
     })};
@@ -916,9 +923,10 @@ function buildDocs(s){
     var td = {};
     Object.keys(s.trainingDays||{}).forEach(function(k){ if(k.indexOf(cat+'::')===0) td[k.slice(cat.length+2)] = s.trainingDays[k]; });
     var level = (s.categoryLevels||{})[cat] || null;
-    docs['categorias/'+cat] = cleanJson({nombre:cat, players:players, trainingDays:td, level:level,
+    var weights = (s.categoryWeights||{})[cat] || null;
+    docs['categorias/'+cat] = cleanJson({nombre:cat, players:players, trainingDays:td, level:level, weights:weights,
       profile:(s.categoryProfiles||{})[cat] || {}, schedule:(s.trainingSchedules||{})[cat] || null});
-    docs['publico/'+cat] = cleanJson({nombre:cat, level:level, players:players.map(publicPlayer)});
+    docs['publico/'+cat] = cleanJson({nombre:cat, level:level, weights:weights, players:players.map(publicPlayer)});
   });
   return docs;
 }
@@ -968,13 +976,14 @@ function rebuildFromRemote(){
   if(!remote.general){ if(remote.generalMissing) tryMigrate(); return; }
   var g = remote.general, old = state || {};
   var s = {categories:(g.categories||[]).slice(), profiles:cleanJson(g.profiles||{}), players:[], trainingDays:{},
-    categoryLevels:{}, categoryProfiles:{}, trainingSchedules:{},
+    categoryLevels:{}, categoryWeights:{}, categoryProfiles:{}, trainingSchedules:{},
     activePos:old.activePos, selectedCategoria:old.selectedCategoria, profesorCategoria:old.profesorCategoria, role:old.role, enteredClub:null};
   s.categories.forEach(function(cat){
     var priv = remote.priv[cat], src = priv || remote.pub[cat];
     if(!src) return;
     s.players = s.players.concat(cleanJson(src.players||[]));
     if(src.level) s.categoryLevels[cat] = src.level;
+    if(src.weights) s.categoryWeights[cat] = src.weights;
     if(priv){
       Object.keys(priv.trainingDays||{}).forEach(function(d){ s.trainingDays[cat+'::'+d] = cleanJson(priv.trainingDays[d]); });
       if(priv.profile && Object.keys(priv.profile).length) s.categoryProfiles[cat] = cleanJson(priv.profile);
@@ -1310,8 +1319,8 @@ function renderEntrenamiento(){
       rosterBox.innerHTML =
         '<div class="focus-title">Jugadores registrados este día (' + entries.length + ')</div>' +
         (entries.length ? entries.map(function(e){
-          var deltaTxt = (sessionXp(e.h)>=0?'+':'') + sessionXp(e.h) + ' progreso';
-          return '<div class="tl-item"><div class="tl-date"><b>' + e.p.name + '</b> · ' + posName(e.p.pos) + ' · Calificación ' + e.h.rating + '/10 · <span class="tl-delta ' + (sessionXp(e.h)>=0?'up':'down') + '">' + deltaTxt + '</span></div>' +
+          var deltaTxt = (sessionXp(e.h, e.p.categoria)>=0?'+':'') + sessionXp(e.h, e.p.categoria) + ' progreso';
+          return '<div class="tl-item"><div class="tl-date"><b>' + e.p.name + '</b> · ' + posName(e.p.pos) + ' · Calificación ' + e.h.rating + '/10 · <span class="tl-delta ' + (sessionXp(e.h, e.p.categoria)>=0?'up':'down') + '">' + deltaTxt + '</span></div>' +
             (e.h.comment ? '<div class="tl-comment">' + e.h.comment + '</div>' : '') + '</div>';
         }).join('') : '<div style="font-size:12.5px;color:var(--ink-faint);">Nadie quedó registrado con calificación este día.</div>') +
         '<div class="save-row" style="margin-top:14px;"><button class="btn-save-player" id="reopenBtn" style="background:var(--navy-700);">Reabrir edición</button></div>';
@@ -1414,7 +1423,14 @@ function renderTrainingRow(p, dateStr, day){
   var ratingBody = row.querySelector('.rating-body');
 
   btnYes.onclick = function(){ draft.asistio = true; day.attendance[p.id] = true; persist(); renderRatingBody(); refreshRowChrome(); };
-  btnNo.onclick = function(){ draft.asistio = false; draft.rating=null; draft.feedback=''; day.attendance[p.id] = false; persist(); ratingBody.style.display='none'; refreshRowChrome(); };
+  btnNo.onclick = function(){
+    draft.asistio = false; draft.rating=null; draft.feedback=''; day.attendance[p.id] = false;
+    if(existingEntry){ // si ya estaba calificado, ese registro se quita
+      p.historial = p.historial.filter(function(h){ return h!==existingEntry; });
+      existingEntry = null; row.classList.remove('done');
+    }
+    persist(); ratingBody.style.display='none'; refreshRowChrome();
+  };
 
   function refreshRowChrome(){
     btnYes.className = 'on-yes' + (draft.asistio===true?' sel':'');
@@ -1487,9 +1503,9 @@ function renderTrainingRow(p, dateStr, day){
       if(draft.rating==null){ return; }
       var quickKeys = Object.keys(draft.quick);
       var quickRatings = quickKeys.map(function(k){
-        return {key:k, value:draft.quick[k], weight:profileFor(p.categoria, p.pos)[k]};
+        return {key:k, value:draft.quick[k], weight:profileFor(p.categoria, draft.pos || p.pos)[k]};
       });
-      var hits = analyzeFeedback(draft.feedback||'', p.pos, quickKeys);
+      var hits = analyzeFeedback(draft.feedback||'', draft.pos || p.pos, quickKeys);
       var newDelta = computeDelta(draft.rating, hits, quickRatings);
       var attrsHitLabels = quickRatings.map(function(q){
         var a = ATTRS.find(function(x){return x.key===q.key;});
@@ -1517,11 +1533,12 @@ function renderTrainingRow(p, dateStr, day){
         };
         p.historial.unshift(existingEntry);
       }
-      persist();
+      existingEntry.pos = draft.pos || p.pos; persist();
       saveBtn.textContent = 'Guardado ✓';
       saveBtn.classList.add('saved');
       row.classList.add('done');
     };
+    setupAutoSave(ratingBody, draft, existingEntry);
   }
 
   if(draft.asistio===true) renderRatingBody();
@@ -1529,6 +1546,39 @@ function renderTrainingRow(p, dateStr, day){
 }
 
 /* ============ RENDER: PARTIDO DEL DÍA ============ */
+// Guardado automático de una fila (entrenamiento o partido): cada toque se guarda solo; el texto, al dejar de escribir.
+function setupAutoSave(ratingBody, draft, existingEntry){
+  var btn = ratingBody.querySelector('.btn-save-player');
+  if(btn && !btn.classList.contains('saved')) btn.textContent = existingEntry ? 'Guardado ✓' : 'Se guarda solo al calificar';
+  if(existingEntry && btn) btn.classList.add('saved');
+  if(ratingBody.__autoSave) return; // los escuchas se ponen una sola vez por fila
+  ratingBody.__autoSave = true;
+  var timer = null;
+  function schedule(delay){
+    clearTimeout(timer);
+    timer = setTimeout(function(){
+      var b = ratingBody.querySelector('.btn-save-player');
+      if(b && draft.rating!=null) b.onclick();
+    }, delay);
+  }
+  ratingBody.addEventListener('click', function(e){
+    if(e.target.tagName==='BUTTON' && !e.target.classList.contains('btn-save-player')) schedule(0);
+  });
+  ratingBody.addEventListener('input', function(e){
+    var b = ratingBody.querySelector('.btn-save-player');
+    if(b && draft.rating!=null){ b.textContent = 'Guardando…'; b.classList.remove('saved'); }
+    schedule(e.target.tagName==='TEXTAREA' ? 900 : 350);
+  });
+  ratingBody.addEventListener('change', function(e){ if(e.target.tagName==='SELECT') schedule(0); });
+}
+// Posiciones para el partido: primero las del jugador, luego las demás
+function playerPositions(p){ return [p.pos].concat((p.posExtra||[]).filter(function(c){ return c!==p.pos; })); }
+function matchPosOptions(p, sel){
+  var mine = playerPositions(p);
+  var others = POSITIONS.map(function(x){ return x.code; }).filter(function(c){ return mine.indexOf(c)===-1; });
+  function opt(c){ return '<option value="' + c + '"' + (c===sel?' selected':'') + '>' + posName(c) + '</option>'; }
+  return '<optgroup label="Sus posiciones">' + mine.map(opt).join('') + '</optgroup><optgroup label="Otras posiciones">' + others.map(opt).join('') + '</optgroup>';
+}
 function allMatchDates(){
   var set = {};
   categoryPlayers().forEach(function(p){
@@ -1582,6 +1632,7 @@ function renderMatchRow(p, dateStr){
     feedback: existingEntry ? (existingEntry.feedback||'') : '',
     goles: existingEntry ? (existingEntry.goles||0) : 0,
     asistencias: existingEntry ? (existingEntry.asistencias||0) : 0,
+    pos: existingEntry && existingEntry.pos ? existingEntry.pos : p.pos,
     quick: existingEntry ? Object.assign({}, existingEntry.quickValues||{}) : {}
   };
 
@@ -1609,7 +1660,16 @@ function renderMatchRow(p, dateStr){
   var ratingBody = row.querySelector('.rating-body');
 
   btnYes.onclick = function(){ draft.convocado = true; renderRatingBody(); refreshRowChrome(); };
-  btnNo.onclick = function(){ draft.convocado = false; draft.rating=null; draft.feedback=''; ratingBody.style.display='none'; refreshRowChrome(); };
+  btnNo.onclick = function(){
+    draft.convocado = false; draft.rating=null; draft.feedback='';
+    if(existingEntry){ // si ya estaba calificado en este partido, ese registro se quita (con sus goles y asistencias)
+      p.goles -= (existingEntry.goles||0); p.asistencias -= (existingEntry.asistencias||0);
+      p.historial = p.historial.filter(function(h){ return h!==existingEntry; });
+      existingEntry = null; row.classList.remove('done');
+      persist();
+    }
+    ratingBody.style.display='none'; refreshRowChrome();
+  };
 
   function refreshRowChrome(){
     btnYes.className = 'on-yes' + (draft.convocado===true?' sel':'');
@@ -1618,11 +1678,13 @@ function renderMatchRow(p, dateStr){
   }
 
   function renderRatingBody(){
-    var quickAttrs = quickAttrsFor(p.pos, null); // partido: sin filtro de "qué se trabajó", va completo
+    var quickAttrs = quickAttrsFor(draft.pos, null); // partido: sin filtro de "qué se trabajó", va completo, según la posición en que jugó
 
     ratingBody.innerHTML =
       '<div class="rating-block">' +
-        '<div class="rating-label">¿Qué tal fue en el partido? (1 a 10)</div>' +
+        '<div class="rating-label">Posición en la que jugó este partido</div>' +
+        '<select class="cat-select match-pos">' + matchPosOptions(p, draft.pos) + '</select>' +
+        '<div class="rating-label" style="margin-top:14px;">¿Qué tal fue en el partido? (1 a 10)</div>' +
         '<div class="rating-scale"></div>' +
         '<div class="rating-label" style="margin-top:14px;">Goles y asistencias en este partido (opcional)</div>' +
         '<div class="match-stat-row">' +
@@ -1655,6 +1717,7 @@ function renderMatchRow(p, dateStr){
     var asisInput = ratingBody.querySelector('#asisInput');
     golesInput.oninput = function(){ draft.goles = parseInt(golesInput.value,10) || 0; };
     asisInput.oninput = function(){ draft.asistencias = parseInt(asisInput.value,10) || 0; };
+    ratingBody.querySelector('.match-pos').onchange = function(e){ draft.pos = e.target.value; renderRatingBody(); };
 
     var quickWrap = ratingBody.querySelector('.quick-attrs');
     if(quickAttrs.length===0){
@@ -1692,9 +1755,9 @@ function renderMatchRow(p, dateStr){
       if(draft.rating==null){ return; }
       var quickKeys = Object.keys(draft.quick);
       var quickRatings = quickKeys.map(function(k){
-        return {key:k, value:draft.quick[k], weight:profileFor(p.categoria, p.pos)[k]};
+        return {key:k, value:draft.quick[k], weight:profileFor(p.categoria, draft.pos || p.pos)[k]};
       });
-      var hits = analyzeFeedback(draft.feedback||'', p.pos, quickKeys);
+      var hits = analyzeFeedback(draft.feedback||'', draft.pos || p.pos, quickKeys);
       var newDelta = computeDelta(draft.rating, hits, quickRatings);
       var attrsHitLabels = quickRatings.map(function(q){
         var a = ATTRS.find(function(x){return x.key===q.key;});
@@ -1729,11 +1792,12 @@ function renderMatchRow(p, dateStr){
         };
         p.historial.unshift(existingEntry);
       }
-      persist();
+      existingEntry.pos = draft.pos || p.pos; persist();
       saveBtn.textContent = 'Guardado ✓';
       saveBtn.classList.add('saved');
       row.classList.add('done');
     };
+    setupAutoSave(ratingBody, draft, existingEntry);
   }
 
   if(draft.convocado===true) renderRatingBody();
@@ -1854,8 +1918,8 @@ function openPlayerModal(p){
   p.historial.forEach(function(h){
     var item = document.createElement('div');
     item.className = 'tl-item';
-    var deltaCls = sessionXp(h)>=0?'up':'down';
-    var deltaTxt = (sessionXp(h)>=0?'+':'') + sessionXp(h);
+    var deltaCls = sessionXp(h, p.categoria)>=0?'up':'down';
+    var deltaTxt = (sessionXp(h, p.categoria)>=0?'+':'') + sessionXp(h, p.categoria);
     var tipoLabel = h.type==='partido' ? 'Partido' : 'Entrenamiento';
     var golesTxt = h.type==='partido' ? ' · ' + (h.goles||0) + ' gol(es), ' + (h.asistencias||0) + ' asist.' : '';
     item.innerHTML =
@@ -2063,8 +2127,8 @@ function renderInforme(){
     function fullTimelineHtml(){
       if(!hist.length) return '<div style="font-size:12.5px;color:var(--ink-faint);">Todavía no hay entrenamientos ni partidos registrados.</div>';
       return hist.map(function(h){
-        var deltaCls = sessionXp(h)>=0?'up':'down';
-        var deltaTxt = (sessionXp(h)>=0?'+':'') + sessionXp(h);
+        var deltaCls = sessionXp(h, p.categoria)>=0?'up':'down';
+        var deltaTxt = (sessionXp(h, p.categoria)>=0?'+':'') + sessionXp(h, p.categoria);
         var tipoLabel = h.type==='partido' ? 'Partido' : 'Entrenamiento';
         var golesTxt = h.type==='partido' ? ' · ' + (h.goles||0) + ' gol(es), ' + (h.asistencias||0) + ' asist.' : '';
         return '<div class="tl-item">' +
@@ -2236,11 +2300,29 @@ function categoryLevel(cat, levels){
 }
 function levelMult(cat, levels){ return LEVELS[categoryLevel(cat, levels)].mult; }
 function levelCost(v, mult){ return Math.round(LEVEL_COSTS[Math.max(0, Math.min(4, Math.floor((v-50)/10)))] * (mult||1)); }
-function sessionXp(h){ if(!h || h.asistio===false) return 0; return XP_BASE + (h.delta||0) * XP_PER_DELTA; }
-function replayRating(entries, mult){
+// Tope por sesión: ni un partido espectacular ni uno malo mueven demasiado la valoración de una sola vez
+var XP_CAP_UP = 45, XP_CAP_DOWN = -30;
+// Qué sube más la valoración en cada categoría (lo decide su profesor)
+var WEIGHT_MODES = {
+  igual:    {label:'Entrenos y partidos pesan igual', entrenamiento:1,    partido:1},
+  partidos: {label:'Pesan más los partidos',          entrenamiento:0.85, partido:1.5},
+  entrenos: {label:'Pesan más los entrenamientos',    entrenamiento:1.15, partido:0.6}
+};
+function weightMode(cat, modes){
+  modes = modes || (state && state.categoryWeights) || {};
+  return WEIGHT_MODES[modes[cat]] ? modes[cat] : 'igual';
+}
+function sessionRawXp(h){
+  if(!h || h.asistio===false) return 0;
+  return Math.max(XP_CAP_DOWN, Math.min(XP_CAP_UP, XP_BASE + (h.delta||0) * XP_PER_DELTA));
+}
+function sessionXpWith(h, w){ return Math.round(sessionRawXp(h) * (h && h.type==='partido' ? w.partido : w.entrenamiento)); }
+function sessionXp(h, cat, modes){ return sessionXpWith(h, WEIGHT_MODES[weightMode(cat, modes)]); }
+function replayRating(entries, mult, w){
+  w = w || WEIGHT_MODES.igual;
   var v = VAL_MIN, xp = 0;
   entries.slice().sort(function(a,b){ return a.date<b.date ? -1 : (a.date>b.date ? 1 : 0); }).forEach(function(h){
-    xp += sessionXp(h);
+    xp += sessionXpWith(h, w);
     while(v<VAL_MAX && xp>=levelCost(v, mult)){ xp -= levelCost(v, mult); v++; }
     while(xp<0){ if(v<=VAL_MIN){ xp = 0; break; } v--; xp += levelCost(v, mult); }
   });
@@ -2248,9 +2330,12 @@ function replayRating(entries, mult){
   return {valoracion:v, xp:xp, cost:levelCost(v, mult)};
 }
 // la valoración siempre se recalcula desde el historial: editar, reabrir o borrar un registro queda bien solo
-function recomputeRating(p, levels){ var r = replayRating(p.historial||[], levelMult(p.categoria, levels)); p.valoracion = r.valoracion; p.xp = r.xp; p.xpCost = r.cost; }
-function recomputeAllRatings(){ if(state && Array.isArray(state.players)) state.players.forEach(function(p){ recomputeRating(p, state.categoryLevels); }); }
-function ratingBefore(p, dateStr){ return replayRating((p.historial||[]).filter(function(h){ return h.date < dateStr; }), levelMult(p.categoria)).valoracion; }
+function recomputeRating(p, levels, weights){
+  var r = replayRating(p.historial||[], levelMult(p.categoria, levels), WEIGHT_MODES[weightMode(p.categoria, weights)]);
+  p.valoracion = r.valoracion; p.xp = r.xp; p.xpCost = r.cost;
+}
+function recomputeAllRatings(){ if(state && Array.isArray(state.players)) state.players.forEach(function(p){ recomputeRating(p, state.categoryLevels, state.categoryWeights); }); }
+function ratingBefore(p, dateStr){ return replayRating((p.historial||[]).filter(function(h){ return h.date < dateStr; }), levelMult(p.categoria), WEIGHT_MODES[weightMode(p.categoria)]).valoracion; }
 // Nivel de la carta según la valoración: bronce, plata, oro y la especial Élite (90+)
 var TIERS = [
   {id:'bronce', label:'Bronce', min:0},
@@ -2347,6 +2432,15 @@ function posOptions(selected, withEmpty){
     POSITIONS.map(function(p){ return '<option value="' + p.code + '"' + (p.code===selected?' selected':'') + '>' + p.name + '</option>'; }).join('');
 }
 
+// "LI/EX", "LI - EX", "LI, EX" o "lateral izquierdo y extremo" -> ['LI','EXT'] (la primera es la principal)
+function splitPositions(raw){
+  var s = String(raw||'').trim();
+  if(!s) return [];
+  var whole = normalizePos(s);
+  var parts = s.split(/\s*[\/,;\-]\s*|\s+y\s+/i).map(normalizePos).filter(Boolean);
+  if(parts.length<=1 && whole) parts = [whole];
+  return parts.filter(function(c, i, a){ return a.indexOf(c)===i; });
+}
 // Texto como llega por WhatsApp: "SUB 11" como encabezado y "• NOMBRE (PT)" por jugador
 function parseRosterText(text){
   var out = {categoria:null, rows:[]};
@@ -2359,7 +2453,8 @@ function parseRosterText(text){
     var name = (m ? m[1] : l).replace(/[\s\-\u2013\u2014:,]+$/,'').trim();
     var posRaw = m ? m[2].trim() : '';
     if(!name) return;
-    out.rows.push({name: toTitleName(name), posRaw: posRaw, pos: normalizePos(posRaw), categoria: null});
+    var pp = splitPositions(posRaw);
+    out.rows.push({name: toTitleName(name), posRaw: posRaw, pos: pp[0] || null, posExtra: pp.slice(1), categoria: null});
   });
   return out;
 }
@@ -2379,7 +2474,8 @@ function parseRosterSheet(rows){
     if(!name) return;
     var posRaw = String(pick(['pos'])||'').trim();
     var cat = String(pick(['categ'])||'').trim();
-    out.rows.push({name: toTitleName(name), posRaw: posRaw, pos: normalizePos(posRaw), categoria: cat ? normalizeCategoryName(cat) : null});
+    var pp = splitPositions(posRaw);
+    out.rows.push({name: toTitleName(name), posRaw: posRaw, pos: pp[0] || null, posExtra: pp.slice(1), categoria: cat ? normalizeCategoryName(cat) : null});
   });
   return out;
 }
@@ -2389,6 +2485,7 @@ function renameCategory(oldName, newName){
   if(i===-1) return;
   state.categories[i] = newName;
   if(state.categoryLevels && state.categoryLevels[oldName]){ state.categoryLevels[newName] = state.categoryLevels[oldName]; delete state.categoryLevels[oldName]; }
+  if(state.categoryWeights && state.categoryWeights[oldName]){ state.categoryWeights[newName] = state.categoryWeights[oldName]; delete state.categoryWeights[oldName]; }
   state.players.forEach(function(p){ if(p.categoria===oldName) p.categoria = newName; });
   Object.keys(state.trainingDays).forEach(function(k){
     if(k.indexOf(oldName+'::')===0){ state.trainingDays[newName + k.slice(oldName.length)] = state.trainingDays[k]; delete state.trainingDays[k]; }
@@ -2405,6 +2502,7 @@ function renameCategory(oldName, newName){
 }
 function deleteCategory(name){
   if(state.categoryLevels) delete state.categoryLevels[name];
+  if(state.categoryWeights) delete state.categoryWeights[name];
   state.players.forEach(function(p){ if(p.categoria===name) deletePhoto(p.id); });
   state.categories = state.categories.filter(function(c){ return c!==name; });
   state.players = state.players.filter(function(p){ return p.categoria!==name; });
@@ -2446,7 +2544,7 @@ function renderPlantel(){
 
     '<section class="pl-card"><h3>' + (isAdmin ? 'Categorías' : 'Exigencia de mi categoría') + '</h3>' +
       '<div id="plCats"></div>' +
-      '<p class="pl-help" style="margin-top:10px;">Exigencia de la barra de progreso: <b>Infantil</b> sube más fácil, <b>Medio</b> es el punto intermedio, <b>Competitivo</b> pide más y <b>Máxima</b> es para grupos de alto nivel. Por defecto se asigna por edad (hasta Sub-8 Infantil, Sub-9 a Sub-12 Medio, Sub-13 en adelante Competitivo), pero ' + (isAdmin ? 'el administrador o el profesor de cada categoría la pueden cambiar' : 'la puedes cambiar cuando quieras') + '; la valoración de todos se recalcula al instante.</p>' +
+      '<p class="pl-help" style="margin-top:10px;">Exigencia de la barra de progreso: <b>Infantil</b> sube más fácil, <b>Medio</b> es el punto intermedio, <b>Competitivo</b> pide más y <b>Máxima</b> es para grupos de alto nivel. Por defecto se asigna por edad (hasta Sub-8 Infantil, Sub-9 a Sub-12 Medio, Sub-13 en adelante Competitivo), pero ' + (isAdmin ? 'el administrador o el profesor de cada categoría la pueden cambiar' : 'la puedes cambiar cuando quieras') + '; la valoración de todos se recalcula al instante. Al lado, cada categoría elige si suben más los entrenamientos, los partidos o los dos por igual. Ninguna sesión sola puede mover demasiado la valoración.</p>' +
       (isAdmin ? '<div class="pl-inline"><input id="plNewCat" placeholder="Nueva categoría, ej. Sub-11" /><button class="pl-btn" id="plAddCat">Agregar categoría</button></div>' : '') +
       (testCount ? '<div class="pl-inline"><button class="pl-btn danger" id="plDelTest">Eliminar los ' + testCount + ' jugadores de prueba</button><span class="pl-count">Los “Jugador 01, 02…” que venían de ejemplo.</span></div>' : '') +
     '</section>' +
@@ -2471,7 +2569,13 @@ function renderPlantel(){
     row.className = 'pl-cat-row';
     row.innerHTML = '<span class="nm">' + escHtml(cat) + '</span><span class="ct">' + n + ' jugador' + (n===1?'':'es') + '</span>' +
       '<select data-a="lvl" title="Exigencia de la barra de progreso">' + Object.keys(LEVELS).map(function(k){ return '<option value="' + k + '"' + (categoryLevel(cat)===k?' selected':'') + '>' + LEVELS[k].label + (k===defaultLevel(cat)?' (por edad)':'') + '</option>'; }).join('') + '</select>' +
+      '<select data-a="wgt" title="Qué hace subir más la valoración">' + Object.keys(WEIGHT_MODES).map(function(k){ return '<option value="' + k + '"' + (weightMode(cat)===k?' selected':'') + '>' + WEIGHT_MODES[k].label + '</option>'; }).join('') + '</select>' +
       (isAdmin ? '<button class="pl-btn ghost small" data-a="ren">Renombrar</button><button class="pl-btn danger small" data-a="del">Eliminar</button>' : '');
+    row.querySelector('[data-a="wgt"]').onchange = function(e){
+      state.categoryWeights = state.categoryWeights || {};
+      state.categoryWeights[cat] = e.target.value;
+      commitPlantel();
+    };
     row.querySelector('[data-a="lvl"]').onchange = function(e){
       state.categoryLevels = state.categoryLevels || {};
       state.categoryLevels[cat] = e.target.value;
@@ -2524,7 +2628,7 @@ function renderPlantel(){
     var rows = parsed.rows.map(function(r){
       var cat = r.categoria || target;
       var dup = state.players.some(function(p){ return p.categoria===cat && nameKey(p.name)===nameKey(r.name); });
-      return {name:r.name, posRaw:r.posRaw, pos:r.pos, categoria:r.categoria, dup:dup, include: !!r.pos && !dup};
+      return {name:r.name, posRaw:r.posRaw, pos:r.pos, posExtra:r.posExtra||[], categoria:r.categoria, dup:dup, include: !!r.pos && !dup};
     });
     plantelUi.preview = {target:target, perRowCat: rows.some(function(r){return r.categoria;}), rows:rows};
     drawPreview();
@@ -2543,7 +2647,7 @@ function renderPlantel(){
       '<table class="pl-table"><thead><tr><th></th><th>Nombre</th><th>Posición</th>' + (pv.perRowCat?'<th>Categoría</th>':'') + '<th></th></tr></thead><tbody>' +
       pv.rows.map(function(r, i){
         var status = r.dup ? '<span class="pl-status warn">Ya está en la categoría</span>' :
-          (!r.pos ? '<span class="pl-status warn">' + (r.posRaw ? 'No reconocí “' + escHtml(r.posRaw) + '”' : 'Sin posición') + '</span>' : '<span class="pl-status ok">' + (r.posRaw ? escHtml(r.posRaw) + ' → ' : '') + escHtml(posName(r.pos)) + '</span>');
+          (!r.pos ? '<span class="pl-status warn">' + (r.posRaw ? 'No reconocí “' + escHtml(r.posRaw) + '”' : 'Sin posición') + '</span>' : '<span class="pl-status ok">' + (r.posRaw ? escHtml(r.posRaw) + ' → ' : '') + escHtml([r.pos].concat(r.posExtra||[]).map(posName).join(' / ')) + '</span>');
         return '<tr data-i="' + i + '"><td><input type="checkbox" data-f="inc"' + (r.include?' checked':'') + ' /></td>' +
           '<td><input data-f="name" value="' + escHtml(r.name) + '" /></td>' +
           '<td><select data-f="pos">' + posOptions(r.pos, !r.pos) + '</select></td>' +
@@ -2588,7 +2692,9 @@ function renderPlantel(){
         if(!r.include || !r.pos || !nm) return;
         var cat = r.categoria || pv.target;
         if(state.categories.indexOf(cat)===-1) state.categories.push(cat);
-        state.players.push(makePlayer(nm, r.pos, cat));
+        var np = makePlayer(nm, r.pos, cat);
+        np.posExtra = (r.posExtra||[]).filter(function(c){ return c!==r.pos; });
+        state.players.push(np);
         cats[cat] = true; added++;
       });
       var catList = Object.keys(cats);
@@ -2649,7 +2755,9 @@ function renderPlantel(){
     rosterBox.innerHTML = '<table class="pl-table"><thead><tr><th>Foto</th><th>Nombre</th><th>Posición</th><th>Registros</th><th></th></tr></thead><tbody>' +
       list.map(function(p){
         return '<tr data-id="' + escHtml(p.id) + '"><td><label class="pl-thumb" title="Subir o cambiar foto" style="cursor:pointer;">' + avatarInner(p) + '<input type="file" accept="image/*" data-f="photo" style="display:none;" /></label></td><td><input data-f="name" value="' + escHtml(p.name) + '" /></td>' +
-          '<td><select data-f="pos">' + posOptions(p.pos, false) + '</select></td>' +
+          '<td><select data-f="pos">' + posOptions(p.pos, false) + '</select>' +
+            '<div class="pl-pos2">' + (p.posExtra||[]).map(function(c){ return '<span class="pl-chip" data-rm="' + c + '" title="Quitar">' + escHtml(posName(c)) + ' ✕</span>'; }).join('') +
+            '<select data-f="addpos"><option value="">+ otra posición</option>' + POSITIONS.filter(function(x){ return x.code!==p.pos && (p.posExtra||[]).indexOf(x.code)===-1; }).map(function(x){ return '<option value="' + x.code + '">' + x.name + '</option>'; }).join('') + '</select></div></td>' +
           '<td class="pl-count">' + p.historial.length + '</td>' +
           '<td><button class="pl-btn danger small" data-f="del">Quitar</button></td></tr>';
       }).join('') + '</tbody></table>';
@@ -2661,7 +2769,11 @@ function renderPlantel(){
         if(!nm){ e.target.value = p.name; return; }
         p.name = nm; e.target.value = nm; persist();
       };
-      tr.querySelector('[data-f="pos"]').onchange = function(e){ p.pos = e.target.value; persist(); };
+      tr.querySelector('[data-f="pos"]').onchange = function(e){ p.pos = e.target.value; p.posExtra = (p.posExtra||[]).filter(function(c){ return c!==p.pos; }); persist(); drawRoster(); };
+      tr.querySelector('[data-f="addpos"]').onchange = function(e){ if(!e.target.value) return; p.posExtra = (p.posExtra||[]).concat([e.target.value]); persist(); drawRoster(); };
+      tr.querySelectorAll('[data-rm]').forEach(function(ch){
+        ch.onclick = function(){ var c = ch.getAttribute('data-rm'); p.posExtra = (p.posExtra||[]).filter(function(x){ return x!==c; }); persist(); drawRoster(); };
+      });
       tr.querySelector('[data-f="photo"]').onchange = function(e){
         var f = e.target.files && e.target.files[0];
         if(!f) return;
