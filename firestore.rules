@@ -1,77 +1,93 @@
 rules_version = '2';
 
-// Reglas de seguridad — Perfil de Jugador (Arena Sports)
+// Reglas de seguridad — Plataforma Arena Sports (multi-club)
 // Pegar completas en Firebase Console → Firestore Database → Reglas → Publicar.
 service cloud.firestore {
   match /databases/{database}/documents {
 
     // ---------- quién es quién ----------
-    function signedIn() {
-      return request.auth != null && request.auth.token.email != null;
-    }
+    function signedIn() { return request.auth != null && request.auth.token.email != null; }
     function myEmail() { return request.auth.token.email.lower(); }
     function provider() { return request.auth.token.firebase.sign_in_provider; }
     function staffPath() { return /databases/$(database)/documents/staff/$(myEmail()); }
     function staff() { return get(staffPath()).data; }
 
-    // Es staff si su correo está registrado por el administrador Y entró con el método con el que se registró.
-    // Así nadie puede crear una cuenta con clave usando el Gmail de un profesor que entra con Google.
+    // Es staff si su correo está registrado Y entró con el método con el que se registró
+    // (nadie puede crear una cuenta con clave usando el Gmail de alguien que entra con Google).
     function isStaff() {
-      return signedIn()
-        && exists(staffPath())
+      return signedIn() && exists(staffPath())
         && (provider() == 'password' || (provider() == 'google.com' && request.auth.token.email_verified == true))
         && (!('modo' in staff()) || staff().modo == provider());
     }
-    function isAdmin() { return isStaff() && staff().role == 'admin'; }
-    function isProfeDe(cat) { return isStaff() && staff().role == 'profesor' && staff().categoria == cat; }
+    function isCreador() { return isStaff() && staff().role == 'creador'; }
+    function clubDoc(club) { return /databases/$(database)/documents/clubes/$(club); }
+    function clubActivo(club) { return exists(clubDoc(club)) && get(clubDoc(club)).data.get('estado', 'activo') != 'suspendido'; }
+    function esDelClub(club) { return isStaff() && staff().get('club', '') == club; }
+    function isAdminOf(club) { return isCreador() || (esDelClub(club) && staff().role == 'admin' && clubActivo(club)); }
+    function isProfeDe(club, cat) { return esDelClub(club) && staff().role == 'profesor' && staff().get('categoria', '') == cat && clubActivo(club); }
+    function miClub() { return staff().get('club', '-'); }
+    function staffKeysOk() { return request.resource.data.keys().hasOnly(['role', 'club', 'categoria', 'modo']); }
 
-    // ---------- datos del club ----------
-    // Categorías y perfil predeterminado: los ve cualquiera (la página los necesita), solo el administrador los cambia.
-    match /club/general {
+    // ---------- clubes ----------
+    match /clubes/{club} {
+      // la lista de clubes la ve cualquiera (página de inicio); solo el Creador crea, edita o suspende
       allow read: if true;
-      allow write: if isAdmin();
-    }
+      allow write: if isCreador();
 
-    // Todo lo privado de una categoría (comentarios de los profesores, asistencia, horario, exigencia):
-    // solo el administrador y el profesor de ESA categoría.
-    match /categorias/{cat} {
-      allow read, write: if isAdmin() || isProfeDe(cat);
-    }
-
-    // Lo que muestran las cartas públicas (sin comentarios privados): lo ve cualquiera.
-    match /publico/{cat} {
-      allow read: if true;
-      allow write: if isAdmin() || isProfeDe(cat);
-    }
-
-    // Fotos: se ven en las cartas públicas; solo el administrador o el profesor de la categoría del jugador las suben o borran.
-    match /fotosJugadores/{jugador} {
-      allow read: if true;
-      allow create, update: if (isAdmin() || isProfeDe(request.resource.data.categoria))
-        && request.resource.data.keys().hasOnly(['data', 'categoria', 'actualizada'])
-        && (!('data' in request.resource.data) || (request.resource.data.data is string && request.resource.data.data.size() < 400000));
-      allow delete: if isAdmin() || (('categoria' in resource.data) && isProfeDe(resource.data.categoria));
+      // categorías y perfil predeterminado del club
+      match /datos/general {
+        allow read: if clubActivo(club) || isCreador();
+        allow write: if isAdminOf(club);
+      }
+      // todo lo privado de una categoría: solo el administrador del club y el profesor de ESA categoría
+      match /categorias/{cat} {
+        allow read, write: if isAdminOf(club) || isProfeDe(club, cat);
+      }
+      // lo que muestran las cartas públicas (sin comentarios privados); un club suspendido no se ve
+      match /publico/{cat} {
+        allow read: if clubActivo(club) || isCreador();
+        allow write: if isAdminOf(club) || isProfeDe(club, cat);
+      }
+      // fotos de los jugadores
+      match /fotos/{jugador} {
+        allow read: if clubActivo(club) || isCreador();
+        allow create, update: if (isAdminOf(club) || isProfeDe(club, request.resource.data.get('categoria', '')))
+          && request.resource.data.keys().hasOnly(['data', 'categoria', 'actualizada'])
+          && request.resource.data.data is string
+          && request.resource.data.data.size() < 400000;
+        allow delete: if isAdminOf(club) || isProfeDe(club, resource.data.get('categoria', ''));
+      }
     }
 
     // ---------- cuentas del staff ----------
     match /staff/{email} {
-      // cada quien puede leer su propio registro; el administrador ve todos
-      allow read: if isAdmin() || (signedIn() && email == myEmail());
-      allow create, update: if isAdmin()
-        && request.resource.data.role in ['admin', 'profesor']
-        && request.resource.data.keys().hasOnly(['role', 'categoria', 'modo']);
-      allow delete: if isAdmin();
-      // cuentas creadas antes de estas reglas: anotan una sola vez con qué método entran
-      allow update: if signedIn() && email == myEmail()
-        && !('modo' in resource.data)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['modo'])
-        && request.resource.data.modo == provider();
+      allow read: if isCreador()
+        || (signedIn() && email == myEmail())
+        || (isStaff() && staff().role == 'admin' && resource.data.get('club', '') == miClub());
+      allow create: if staffKeysOk() && (
+          (isCreador() && request.resource.data.role in ['creador', 'admin', 'profesor'])
+          || (isStaff() && staff().role == 'admin' && clubActivo(miClub())
+              && request.resource.data.role in ['admin', 'profesor']
+              && request.resource.data.get('club', '') == miClub()));
+      allow update: if (staffKeysOk() && isCreador() && request.resource.data.role in ['creador', 'admin', 'profesor'])
+        || (staffKeysOk() && isStaff() && staff().role == 'admin' && clubActivo(miClub())
+            && resource.data.get('club', '') == miClub()
+            && request.resource.data.role in ['admin', 'profesor']
+            && request.resource.data.get('club', '') == miClub())
+        // cuentas anteriores: cada quien anota una sola vez con qué método entra
+        || (signedIn() && email == myEmail() && !('modo' in resource.data)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['modo'])
+            && request.resource.data.modo == provider());
+      allow delete: if isCreador()
+        || (isStaff() && staff().role == 'admin' && resource.data.get('club', '') == miClub());
     }
 
-    // Documento único de la versión anterior: solo el administrador (para pasar los datos a la estructura nueva).
-    match /appState/{doc} {
-      allow read, write: if isAdmin();
-    }
+    // ---------- estructura anterior (antes de multi-club): solo el Creador, para la migración ----------
+    match /club/{doc} { allow read, write: if isCreador(); }
+    match /categorias/{cat} { allow read, write: if isCreador(); }
+    match /publico/{cat} { allow read, write: if isCreador(); }
+    match /fotosJugadores/{f} { allow read, write: if isCreador(); }
+    match /appState/{doc} { allow read, write: if isCreador(); }
 
     // Todo lo demás: cerrado.
   }
