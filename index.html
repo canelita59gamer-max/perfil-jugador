@@ -145,6 +145,23 @@
     padding:14px 6px 0;border-top:1px solid rgba(255,255,255,.06);
   }
   .chrome-block{margin-bottom:6px;}
+  .back-btn{
+    display:flex;align-items:center;gap:9px;width:100%;
+    background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);
+    color:rgba(255,255,255,.72);padding:10px 13px;border-radius:13px;
+    font-size:13px;font-weight:600;cursor:pointer;margin-bottom:14px;text-align:left;
+    font-family:var(--font-body);letter-spacing:-.005em;
+    transition:transform .5s var(--ease-spring), background .3s ease, color .3s ease, border-color .3s ease;
+  }
+  .back-btn span{
+    display:flex;align-items:center;justify-content:center;
+    width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.08);
+    font-size:12px;flex-shrink:0;transition:transform .5s var(--ease-spring);
+  }
+  .back-btn:hover{
+    background:rgba(255,255,255,.08);color:#fff;border-color:rgba(255,255,255,.18);
+  }
+  .back-btn:hover span{transform:translateX(-3px);}
   .chrome-label{
     font-size:9.5px;color:rgba(255,255,255,.34);text-transform:uppercase;
     letter-spacing:.15em;font-weight:700;margin:0 6px 9px;
@@ -309,8 +326,8 @@
   }
   .hero-stats{display:flex;gap:44px;justify-content:center;flex-wrap:wrap;margin-top:40px;}
   .hero-stat b{
-    display:block;font-family:var(--font-heading);font-size:34px;font-weight:800;
-    color:#fff;letter-spacing:-.03em;line-height:1;
+    display:block;font-family:var(--font-heading);font-size:clamp(20px,2.4vw,26px);font-weight:800;
+    color:#fff;letter-spacing:-.03em;line-height:1;white-space:nowrap;
   }
   .hero-stat span{
     display:block;margin-top:7px;font-size:10.5px;text-transform:uppercase;
@@ -877,6 +894,7 @@
     .chrome-mobile select{flex:1;min-width:120px;}
     .chrome-mobile .staff-box{flex-direction:row;align-items:center;gap:8px;margin:0;flex-wrap:wrap;}
     .chrome-mobile .staff-email{font-size:11px;}
+    .chrome-mobile .back-btn{width:auto;margin:0;padding:8px 13px;font-size:12.5px;flex-shrink:0;}
     .tabs-mobile{
       display:flex;gap:7px;overflow-x:auto;padding:12px 18px 13px;
       border-bottom:1px solid rgba(255,255,255,.06);position:sticky;top:64px;z-index:19;
@@ -1508,6 +1526,15 @@ function renderChrome(){
   var mobile = document.getElementById('chromeMobile');
   desktop.innerHTML = '';
   mobile.innerHTML = '';
+
+  // --- volver al inicio (visible, no solo el escudo) ---
+  [desktop, mobile].forEach(function(target){
+    var b = document.createElement('button');
+    b.className = 'back-btn';
+    b.innerHTML = '<span>←</span> Todos los clubes';
+    b.onclick = goToLanding;
+    target.appendChild(b);
+  });
 
   // --- acceso staff (login / usuario actual) ---
   var staffHtml =
@@ -2811,11 +2838,11 @@ function renderLanding(){
         '<img class="hero-logo reveal" src="' + ARENA_LOGO_SRC + '" alt="Arena Sports" />' +
         '<div class="eyebrow reveal">Plataforma de cartas deportivas</div>' +
         '<h1 class="reveal">Cada jugador,<br/>con su <em>propia carta</em></h1>' +
-        '<p class="reveal">Los clubes llevan el control de entrenamientos y partidos, y cada jugador tiene una carta que sube o baja según su desempeño real. No una foto fija: algo vivo.</p>' +
+        '<p class="reveal">Los clubes llevan el control de entrenamientos y partidos, y cada jugador tiene una carta que sube o baja según su desempeño real. No es una foto fija: es algo vivo.</p>' +
         '<div class="hero-stats reveal">' +
-          '<div class="hero-stat"><b>' + list.length + '</b><span>' + (list.length===1?'Club afiliado':'Clubes afiliados') + '</span></div>' +
-          '<div class="hero-stat"><b>4</b><span>Niveles de carta</span></div>' +
-          '<div class="hero-stat"><b>360°</b><span>Seguimiento del jugador</span></div>' +
+          '<div class="hero-stat"><b>Multi-club</b><span>Una plataforma, todos tus clubes</span></div>' +
+          '<div class="hero-stat"><b>En vivo</b><span>Las cartas cambian cada semana</span></div>' +
+          '<div class="hero-stat"><b>Bronce → Élite</b><span>El camino de cada jugador</span></div>' +
         '</div>' +
       '</div>' +
       '<div class="landing-clubs reveal">' +
