@@ -234,6 +234,80 @@
   .pl-chip{font-size:11.5px;padding:3px 8px;border-radius:999px;background:rgba(246,83,52,.14);color:var(--ink);border:1px solid rgba(246,83,52,.35);cursor:pointer;white-space:nowrap;}
   .pl-chip:hover{border-color:var(--bad);}
   .pl-pos2 select{padding:4px 8px !important;font-size:12px !important;}
+  /* ---- Alineación del partido ---- */
+  .lineup-bar{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-bottom:16px;}
+  .lbl-mini{font-size:9.5px;color:rgba(255,255,255,.34);text-transform:uppercase;letter-spacing:.14em;font-weight:700;}
+  .pl-btn.active-btn{background:var(--orange-500);border-color:var(--orange-500);color:#fff;}
+  .lineup-layout{display:grid;grid-template-columns:1.2fr .9fr;gap:18px;align-items:start;margin-bottom:8px;}
+  .pitch-outer{border-radius:24px;padding:6px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);}
+  .pitch{
+    position:relative;border-radius:19px;aspect-ratio:68/100;overflow:hidden;
+    background:repeating-linear-gradient(0deg, rgba(255,255,255,.022) 0 8%, transparent 8% 16%),
+      radial-gradient(130% 80% at 50% 0%, #17381f 0%, #0d2416 60%, #091a10 100%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.07);
+  }
+  .pitch.editando{touch-action:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.07), inset 0 0 0 2px rgba(246,83,52,.45);}
+  .pitch.editando::after{content:'EDITANDO FORMACIÓN';position:absolute;top:8px;left:50%;
+    transform:translateX(-50%);font:700 8.5px var(--font-body);letter-spacing:.16em;color:var(--orange-500);
+    background:rgba(0,0,0,.55);padding:4px 10px;border-radius:100px;z-index:4;pointer-events:none;}
+  .pitch .lines{position:absolute;inset:0;pointer-events:none;}
+  .pitch .lines rect,.pitch .lines circle,.pitch .lines line{stroke:rgba(255,255,255,.17);fill:none;stroke-width:.35;}
+  .crest-mid{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    width:34%;opacity:.13;pointer-events:none;}
+  .zones{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .3s;z-index:3;}
+  .pitch.dragging .zones{opacity:1;}
+  .zones div{position:absolute;left:0;right:0;border-top:1px dashed rgba(255,255,255,.16);}
+  .zones div span{position:absolute;left:8px;top:5px;font:700 8.5px var(--font-body);
+    letter-spacing:.14em;color:rgba(255,255,255,.38);text-transform:uppercase;}
+  .slot{position:absolute;transform:translate(-50%,-50%);width:64px;text-align:center;cursor:pointer;z-index:2;
+    transition:transform .5s var(--ease-spring), left .35s var(--ease-spring), top .35s var(--ease-spring);}
+  .slot:hover{transform:translate(-50%,-50%) scale(1.07);}
+  .slot.drag{transition:none;z-index:6;}
+  .slot .disc{width:46px;height:46px;margin:0 auto 5px;border-radius:50%;overflow:hidden;
+    display:flex;align-items:center;justify-content:center;
+    font:800 14px var(--font-heading);letter-spacing:-.02em;
+    background:rgba(255,255,255,.07);border:1.5px dashed rgba(255,255,255,.26);color:rgba(255,255,255,.5);
+    transition:transform .35s var(--ease-spring), box-shadow .35s var(--ease-spring);}
+  .slot .disc img{width:100%;height:100%;object-fit:cover;}
+  .slot.filled .disc{background:linear-gradient(160deg,#20263d,#141829);border:1.5px solid var(--lime);
+    color:#fff;box-shadow:0 6px 20px -6px rgba(0,0,0,.9), 0 0 18px -8px rgba(193,248,7,.8);}
+  .slot.sel .disc{border-color:var(--orange-500);box-shadow:0 0 0 3px rgba(246,83,52,.3);}
+  .slot.drag .disc{transform:scale(1.15);box-shadow:0 14px 30px -8px rgba(0,0,0,.95),0 0 26px -6px rgba(246,83,52,.9);}
+  .slot .nm{font-size:10px;font-weight:700;line-height:1.2;color:#fff;
+    text-shadow:0 1px 6px rgba(0,0,0,.9);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .slot .ps{font-size:8.5px;font-weight:700;color:var(--lime);letter-spacing:.09em;margin-top:2px;}
+  .slot.drag .ps{color:var(--orange-500);}
+  .slot:not(.filled) .nm{color:rgba(255,255,255,.4);font-weight:600;}
+  .lineup-side{border-radius:22px;padding:6px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07);}
+  .lu-in{border-radius:16px;background:linear-gradient(158deg,#131726,#0a0c16 75%);padding:18px 16px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.06);}
+  .lu-in .count{font-size:11px;color:rgba(255,255,255,.5);font-weight:600;margin-bottom:12px;}
+  .lu-h{font:700 10px var(--font-body);text-transform:uppercase;letter-spacing:.15em;
+    color:rgba(255,255,255,.32);margin:14px 0 8px;}
+  .lu-h:first-child{margin-top:0;}
+  .lu-empty{font-size:12px;color:rgba(255,255,255,.3);padding:2px 2px 6px;}
+  .lu-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:12px;cursor:pointer;
+    background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06);margin-bottom:6px;
+    transition:.3s var(--ease-spring);}
+  .lu-item:hover{background:rgba(255,255,255,.08);transform:translateX(2px);}
+  .lu-item.sel{border-color:var(--orange-500);background:rgba(246,83,52,.1);}
+  .lu-item.entro{border-color:rgba(95,211,155,.4);background:rgba(95,211,155,.07);}
+  .lu-av{width:32px;height:32px;border-radius:10px;flex-shrink:0;overflow:hidden;
+    display:flex;align-items:center;justify-content:center;font:800 11px var(--font-heading);
+    color:var(--orange-500);background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);}
+  .lu-av img{width:100%;height:100%;object-fit:cover;}
+  .lu-n{flex:1;min-width:0;}
+  .lu-n b{display:block;font-size:12.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .lu-n span{font-size:9px;color:rgba(255,255,255,.32);text-transform:uppercase;letter-spacing:.1em;font-weight:600;}
+  .lu-tag{font-size:9px;font-weight:700;padding:3px 8px;border-radius:100px;letter-spacing:.07em;flex-shrink:0;}
+  .lu-tag.tit{background:rgba(193,248,7,.14);color:var(--lime);}
+  .lu-in-btn{background:transparent;border:1px solid rgba(255,255,255,.14);color:rgba(255,255,255,.5);
+    font:700 9px var(--font-body);padding:4px 9px;border-radius:100px;cursor:pointer;
+    letter-spacing:.06em;flex-shrink:0;transition:.3s;}
+  .lu-in-btn:hover{border-color:var(--good);color:var(--good);}
+  .lu-in-btn.on{background:var(--good);border-color:var(--good);color:#08170f;}
+  .lu-hint{font-size:11.5px;color:rgba(255,255,255,.3);line-height:1.55;margin-top:12px;}
+  @media (max-width:880px){ .lineup-layout{grid-template-columns:1fr;} }
   /* ---- Panel del Creador y página de inicio multi-club ---- */
   .landing-staff{margin-top:8px;font-size:12px;color:var(--ink-faint);}
   .landing-staff a{color:var(--ink-muted);text-decoration:none;border-bottom:1px dotted currentColor;}
@@ -1183,6 +1257,9 @@ function normalizeState(s){
     if(typeof s.enteredClub === 'undefined') s.enteredClub = null;
     if(!s.categoryLevels || typeof s.categoryLevels !== 'object') s.categoryLevels = {};
     if(!s.categoryWeights || typeof s.categoryWeights !== 'object') s.categoryWeights = {};
+    if(!s.lineups || typeof s.lineups !== 'object') s.lineups = {};
+    if(!s.formacionesCat || typeof s.formacionesCat !== 'object') s.formacionesCat = {};
+    if(!s.formatoCat || typeof s.formatoCat !== 'object') s.formatoCat = {};
     if(!s.categoryProfiles || typeof s.categoryProfiles !== 'object') s.categoryProfiles = {};
     if(!s.trainingSchedules || typeof s.trainingSchedules !== 'object') s.trainingSchedules = {};
     s.players.forEach(function(p){ recomputeRating(p, s.categoryLevels, s.categoryWeights); });
@@ -1250,9 +1327,12 @@ function buildDocs(s){
     var players = s.players.filter(function(p){ return p.categoria===cat; });
     var td = {};
     Object.keys(s.trainingDays||{}).forEach(function(k){ if(k.indexOf(cat+'::')===0) td[k.slice(cat.length+2)] = s.trainingDays[k]; });
+    var lu = {};
+    Object.keys(s.lineups||{}).forEach(function(k){ if(k.indexOf(cat+'::')===0) lu[k.slice(cat.length+2)] = s.lineups[k]; });
     var level = (s.categoryLevels||{})[cat] || null;
     var weights = (s.categoryWeights||{})[cat] || null;
     docs['categorias/'+cat] = cleanJson({nombre:cat, players:players, trainingDays:td, level:level, weights:weights,
+      lineups:lu, formaciones:(s.formacionesCat||{})[cat] || {}, formato:(s.formatoCat||{})[cat] || null,
       profile:(s.categoryProfiles||{})[cat] || {}, schedule:(s.trainingSchedules||{})[cat] || null});
     docs['publico/'+cat] = cleanJson({nombre:cat, level:level, weights:weights, players:players.map(publicPlayer)});
   });
@@ -1305,7 +1385,7 @@ function rebuildFromRemote(){
   if(!remote.general){ if(remote.generalMissing) tryMigrate(); return; }
   var g = remote.general, old = state || {};
   var s = {categories:(g.categories||[]).slice(), profiles:cleanJson(g.profiles||{}), players:[], trainingDays:{},
-    categoryLevels:{}, categoryWeights:{}, categoryProfiles:{}, trainingSchedules:{},
+    categoryLevels:{}, categoryWeights:{}, categoryProfiles:{}, trainingSchedules:{}, lineups:{}, formacionesCat:{}, formatoCat:{},
     activePos:old.activePos, selectedCategoria:old.selectedCategoria, profesorCategoria:old.profesorCategoria, role:old.role, enteredClub:null};
   s.categories.forEach(function(cat){
     var priv = remote.priv[cat], src = priv || remote.pub[cat];
@@ -1315,6 +1395,9 @@ function rebuildFromRemote(){
     if(src.weights) s.categoryWeights[cat] = src.weights;
     if(priv){
       Object.keys(priv.trainingDays||{}).forEach(function(d){ s.trainingDays[cat+'::'+d] = cleanJson(priv.trainingDays[d]); });
+      Object.keys(priv.lineups||{}).forEach(function(d){ s.lineups[cat+'::'+d] = cleanJson(priv.lineups[d]); });
+      if(priv.formaciones && Object.keys(priv.formaciones).length) s.formacionesCat[cat] = cleanJson(priv.formaciones);
+      if(priv.formato) s.formatoCat[cat] = priv.formato;
       if(priv.profile && Object.keys(priv.profile).length) s.categoryProfiles[cat] = cleanJson(priv.profile);
       if(Array.isArray(priv.schedule)) s.trainingSchedules[cat] = priv.schedule.slice();
     }
@@ -2029,22 +2112,46 @@ function jugaronEn(dateStr){
 function renderPartido(){
   var el = document.createElement('div');
   var loggedDates = allMatchDates();
+  var L = getLineup(matchDate);
+  var cat = activeCategoria();
   el.innerHTML =
     '<div class="view-head">' +
       '<div><h1>Partido del día</h1>' +
-      '<p>Mismo modelo que el entrenamiento, pero para partido: aquí sí se pregunta por todo lo que le exige el puesto (en un partido, de una u otra forma, todo se pone a prueba), y además se suman goles y asistencias. Puede registrar más de un partido en la semana — cada uno con su propia fecha.</p></div>' +
+      '<p>Arma la alineación en la cancha, marca qué suplentes entraron y califica solo a los que jugaron. Puede registrar más de un partido en la semana — cada uno con su propia fecha.</p></div>' +
     '</div>' +
     '<div class="focus-box">' +
       '<div class="focus-title">Fecha del partido</div>' +
       '<input type="date" id="matchDateInput" class="cat-select" value="' + matchDate + '" />' +
       (loggedDates.length ? '<div class="focus-title" style="margin-top:14px;">Partidos ya registrados</div><div class="focus-chips" id="loggedDates"></div>' : '') +
     '</div>' +
+    '<div class="lineup-bar">' +
+      '<span class="lbl-mini">Formato</span><select class="cat-select" id="luFmt"></select>' +
+      '<span class="lbl-mini">Formación</span><select class="cat-select" id="luForm"></select>' +
+      '<button class="pl-btn ghost small" id="luAuto">Ubicar por posición</button>' +
+      '<button class="pl-btn ghost small" id="luEdit">Editar formación</button>' +
+      '<button class="pl-btn ghost small" id="luSave" style="display:none">Guardar como mía</button>' +
+      '<button class="pl-btn ghost small" id="luClear">Vaciar</button>' +
+    '</div>' +
+    '<div class="lineup-layout">' +
+      '<div class="pitch-outer"><div class="pitch" id="luPitch">' +
+        '<svg class="lines" viewBox="0 0 68 100" preserveAspectRatio="none">' +
+          '<rect x="2" y="2" width="64" height="96" rx="1"/><line x1="2" y1="50" x2="66" y2="50"/>' +
+          '<circle cx="34" cy="50" r="9"/><rect x="16" y="2" width="36" height="14"/><rect x="26" y="2" width="16" height="6"/>' +
+          '<rect x="16" y="84" width="36" height="14"/><rect x="26" y="92" width="16" height="6"/></svg>' +
+        '<img class="crest-mid" id="luCrest" alt="" />' +
+        '<div class="zones"><div style="top:0;height:36%"><span>Ataque</span></div>' +
+          '<div style="top:36%;height:26%"><span>Mediocampo</span></div>' +
+          '<div style="top:62%;height:23%"><span>Defensa</span></div>' +
+          '<div style="top:85%;height:15%"><span>Arco</span></div></div>' +
+      '</div></div>' +
+      '<div class="lineup-side"><div class="lu-in">' +
+        '<div class="count" id="luCnt"></div><div id="luList"></div>' +
+        '<div class="lu-hint" id="luHint"></div>' +
+      '</div></div>' +
+    '</div>' +
     '<div id="matchRows"></div>';
 
-  el.querySelector('#matchDateInput').onchange = function(e){
-    matchDate = e.target.value;
-    render();
-  };
+  el.querySelector('#matchDateInput').onchange = function(e){ matchDate = e.target.value; render(); };
   if(loggedDates.length){
     var chipsWrap = el.querySelector('#loggedDates');
     loggedDates.forEach(function(d){
@@ -2056,22 +2163,203 @@ function renderPartido(){
     });
   }
 
+  var club = currentClub();
+  var crest = el.querySelector('#luCrest');
+  if(club) crest.src = clubLogo(club); else crest.style.display='none';
+
+  var pitch = el.querySelector('#luPitch');
+  var fmtSel = el.querySelector('#luFmt'), formSel = el.querySelector('#luForm');
+  var editBtn = el.querySelector('#luEdit'), saveBtn = el.querySelector('#luSave');
+  var editando = false, pick = null;
   var rowsWrap = el.querySelector('#matchRows');
-  categoryPlayers().forEach(function(p){
-    rowsWrap.appendChild(renderMatchRow(p, matchDate));
-  });
+
+  fmtSel.innerHTML = Object.keys(FORMACIONES).map(function(k){
+    return '<option value="' + k + '"' + (+k===L.formato?' selected':'') + '>Fútbol ' + k + '</option>'; }).join('');
+  function misFormaciones(){ return ((state.formacionesCat||{})[cat]||{})[L.formato] || {}; }
+  function fillForms(){
+    var base = Object.keys(FORMACIONES[L.formato]).map(function(k){
+      return '<option value="' + k + '"' + (k===L.formacion && !L.mia ? ' selected':'') + '>' + k + '</option>'; }).join('');
+    var m = misFormaciones();
+    var mias = Object.keys(m).map(function(k){
+      return '<option value="M:' + escHtml(k) + '"' + (k===L.formacion && L.mia ? ' selected':'') + '>' + escHtml(k) + '</option>'; }).join('');
+    formSel.innerHTML = (L.tocada ? '<option value="__x" selected>' + escHtml(L.formacion) + ' (editada)</option>' : '') +
+      '<optgroup label="Predeterminadas">' + base + '</optgroup>' +
+      (mias ? '<optgroup label="Mis formaciones">' + mias + '</optgroup>' : '');
+  }
+  fmtSel.onchange = function(){
+    L.formato = +fmtSel.value; L.mia = false; L.tocada = false;
+    L.formacion = Object.keys(FORMACIONES[L.formato])[0];
+    L.puestos = cleanJson(FORMACIONES[L.formato][L.formacion]);
+    L.asign = {}; L.entraron = {};
+    state.formatoCat = state.formatoCat || {}; state.formatoCat[cat] = L.formato;
+    persist(); fillForms(); pintar();
+  };
+  formSel.onchange = function(){
+    var v = formSel.value; if(v==='__x') return;
+    L.mia = v.indexOf('M:')===0; L.formacion = L.mia ? v.slice(2) : v; L.tocada = false;
+    L.puestos = cleanJson(L.mia ? misFormaciones()[L.formacion] : FORMACIONES[L.formato][L.formacion]);
+    persist(); fillForms(); pintar();
+  };
+  el.querySelector('#luClear').onclick = function(){ L.asign={}; L.entraron={}; pick=null; persist(); pintar(); };
+  el.querySelector('#luAuto').onclick = function(){
+    L.asign = {};
+    var libres = categoryPlayers().slice();
+    L.puestos.forEach(function(s,i){
+      var k = libres.findIndex(function(p){ return p.pos===s.p || (p.posExtra||[]).indexOf(s.p)>=0; });
+      if(k<0 && s.p!=='POR') k = libres.findIndex(function(p){ return p.pos!=='POR'; });
+      if(k>=0){ L.asign[i] = libres[k].id; libres.splice(k,1); }
+    });
+    pick=null; persist(); pintar();
+  };
+  editBtn.onclick = function(){
+    editando = !editando;
+    editBtn.classList.toggle('active-btn', editando);
+    editBtn.textContent = editando ? '✓ Editando formación' : 'Editar formación';
+    saveBtn.style.display = editando ? '' : 'none';
+    pintar();
+  };
+  saveBtn.onclick = function(){
+    var nom = window.prompt('Nombre para tu formación:', String(L.formacion).replace(' (editada)','') + ' mía');
+    if(!nom) return;
+    state.formacionesCat = state.formacionesCat || {};
+    state.formacionesCat[cat] = state.formacionesCat[cat] || {};
+    state.formacionesCat[cat][L.formato] = state.formacionesCat[cat][L.formato] || {};
+    state.formacionesCat[cat][L.formato][nom] = cleanJson(L.puestos);
+    L.mia = true; L.tocada = false; L.formacion = nom;
+    persist(); fillForms(); pintar();
+  };
+
+  function pintar(){
+    pitch.classList.toggle('editando', editando);
+    [].slice.call(pitch.querySelectorAll('.slot')).forEach(function(e){ e.remove(); });
+    L.puestos.forEach(function(s,i){
+      var pid = L.asign[i], pl = pid ? state.players.find(function(x){ return x.id===pid; }) : null;
+      var d = document.createElement('div');
+      d.className = 'slot' + (pl?' filled':'') + (pick && pick.t==='slot' && pick.i===i ? ' sel':'');
+      d.style.left = s.x + '%'; d.style.top = s.y + '%';
+      d.innerHTML = '<div class="disc">' + (pl ? avatarInner(pl) : '+') + '</div>' +
+        '<div class="nm">' + (pl ? escHtml(pl.name.split(' ').slice(0,2).join(' ')) : posName(s.p)) + '</div>' +
+        (pl ? '<div class="ps">' + s.p + '</div>' : '');
+      engancharArrastre(d, i);
+      if(!editando) d.onclick = function(){ tocarSlot(i); };
+      pitch.appendChild(d);
+    });
+    var usados = Object.keys(L.asign).map(function(k){ return L.asign[k]; });
+    var lista = categoryPlayers();
+    var ents = lista.filter(function(p){ return L.entraron[p.id] && usados.indexOf(p.id)<0; });
+    el.querySelector('#luCnt').textContent = usados.length + ' titulares · ' + ents.length + ' entraron · ' +
+      (lista.length - usados.length - ents.length) + ' no jugaron';
+
+    var box = el.querySelector('#luList'); box.innerHTML = '';
+    function grupo(titulo, arr, tipo){
+      var h = document.createElement('div'); h.className='lu-h'; h.textContent = titulo + ' (' + arr.length + ')';
+      box.appendChild(h);
+      if(!arr.length){ var e2=document.createElement('div'); e2.className='lu-empty'; e2.textContent='—'; box.appendChild(e2); return; }
+      arr.forEach(function(p){
+        var ent = !!L.entraron[p.id];
+        var it = document.createElement('div');
+        it.className = 'lu-item' + (pick && pick.t==='player' && pick.id===p.id ? ' sel':'') + (tipo==='banca'&&ent?' entro':'');
+        it.innerHTML = '<div class="lu-av">' + avatarInner(p) + '</div>' +
+          '<div class="lu-n"><b>' + escHtml(p.name) + '</b><span>' + posName(p.pos) + '</span></div>' +
+          (tipo==='tit' ? '<span class="lu-tag tit">TITULAR</span>'
+                        : '<button class="lu-in-btn' + (ent?' on':'') + '">' + (ent?'✓ ENTRÓ':'ENTRÓ') + '</button>');
+        if(tipo==='banca') it.querySelector('.lu-in-btn').onclick = function(ev){
+          ev.stopPropagation(); L.entraron[p.id] = !ent; if(!L.entraron[p.id]) delete L.entraron[p.id];
+          persist(); pintar();
+        };
+        it.onclick = function(){
+          if(pick && pick.t==='slot'){
+            Object.keys(L.asign).forEach(function(k){ if(L.asign[k]===p.id) delete L.asign[k]; });
+            L.asign[pick.i] = p.id; delete L.entraron[p.id]; pick=null;
+          } else if(pick && pick.t==='player' && pick.id===p.id){ pick=null; }
+          else if(tipo==='tit'){ Object.keys(L.asign).forEach(function(k){ if(L.asign[k]===p.id) delete L.asign[k]; }); pick=null; }
+          else pick={t:'player', id:p.id};
+          persist(); pintar();
+        };
+        box.appendChild(it);
+      });
+    }
+    grupo('En cancha', lista.filter(function(p){ return usados.indexOf(p.id)>=0; }), 'tit');
+    grupo('Banca', lista.filter(function(p){ return usados.indexOf(p.id)<0; }), 'banca');
+
+    el.querySelector('#luHint').textContent = pick
+      ? (pick.t==='player' ? 'Ahora toca una posición en la cancha.' : 'Toca otra posición para intercambiar, o un jugador de la banca.')
+      : (editando ? 'Arrastra las fichas: el puesto cambia según la zona.' : 'Toca un jugador y luego una posición. Para mover la formación, activa “Editar formación”.');
+
+    pintarFilas();
+  }
+  function tocarSlot(i){
+    if(pick && pick.t==='player'){
+      Object.keys(L.asign).forEach(function(k){ if(L.asign[k]===pick.id) delete L.asign[k]; });
+      L.asign[i] = pick.id; delete L.entraron[pick.id]; pick=null;
+    } else if(pick && pick.t==='slot'){
+      var a=L.asign[pick.i], b=L.asign[i];
+      if(b) L.asign[pick.i]=b; else delete L.asign[pick.i];
+      if(a) L.asign[i]=a; else delete L.asign[i];
+      pick=null;
+    } else pick = {t:'slot', i:i};
+    persist(); pintar();
+  }
+  function engancharArrastre(d, i){
+    d.addEventListener('pointerdown', function(ev){
+      if(ev.button) return;
+      if(!editando) return; // sin modo edición el dedo sirve para hacer scroll
+      var moved=false, sx=ev.clientX, sy=ev.clientY;
+      try{ d.setPointerCapture(ev.pointerId); }catch(_){}
+      function mv(e){
+        if(!moved && Math.abs(e.clientX-sx)+Math.abs(e.clientY-sy)<6) return;
+        if(!moved){ moved=true; d.classList.add('drag'); pitch.classList.add('dragging'); }
+        var r = pitch.getBoundingClientRect();
+        var pos = acomodarFicha(L.puestos, i, (e.clientX-r.left)/r.width*100, (e.clientY-r.top)/r.height*100);
+        L.puestos[i].x = pos.x; L.puestos[i].y = pos.y;
+        var np = puestoPorZona(pos.x, pos.y);
+        if(np !== L.puestos[i].p){
+          L.puestos[i].p = np;
+          var et=d.querySelector('.ps'); if(et) et.textContent = np;
+          var nm=d.querySelector('.nm'); if(nm && !L.asign[i]) nm.textContent = posName(np);
+        }
+        d.style.left = pos.x+'%'; d.style.top = pos.y+'%';
+      }
+      function up(){
+        try{ d.releasePointerCapture(ev.pointerId); }catch(_){}
+        d.removeEventListener('pointermove', mv); d.removeEventListener('pointerup', up);
+        d.classList.remove('drag'); pitch.classList.remove('dragging');
+        if(moved){ if(!L.tocada){ L.tocada = true; L.mia = false; fillForms(); } persist(); pintar(); }
+        else tocarSlot(i);
+      }
+      d.addEventListener('pointermove', mv); d.addEventListener('pointerup', up);
+    });
+  }
+  // solo se califica a quienes jugaron
+  function pintarFilas(){
+    rowsWrap.innerHTML = '';
+    var jug = jugaronEn(matchDate);
+    if(!jug.length){
+      rowsWrap.innerHTML = '<div class="focus-box" style="text-align:center;color:var(--ink-faint);font-size:13px;">' +
+        'Arma la alineación arriba y aquí aparecerán los jugadores para calificar.</div>';
+      return;
+    }
+    var h = document.createElement('div');
+    h.className = 'focus-title';
+    h.style.cssText = 'margin:26px 0 12px;';
+    h.textContent = 'Calificación · ' + jug.length + ' jugaron';
+    rowsWrap.appendChild(h);
+    jug.forEach(function(o){ rowsWrap.appendChild(renderMatchRow(o.p, matchDate, o.pos, o.titular)); });
+  }
+
+  fillForms(); pintar();
   return el;
 }
 
-function renderMatchRow(p, dateStr){
+function renderMatchRow(p, dateStr, posJugada, esTitular){
   var existingEntry = p.historial.find(function(h){ return h.type==='partido' && h.date===dateStr; });
   var draft = {
-    convocado: existingEntry ? true : null,
+    convocado: true,
     rating: existingEntry ? existingEntry.rating : null,
     feedback: existingEntry ? (existingEntry.feedback||'') : '',
     goles: existingEntry ? (existingEntry.goles||0) : 0,
     asistencias: existingEntry ? (existingEntry.asistencias||0) : 0,
-    pos: existingEntry && existingEntry.pos ? existingEntry.pos : p.pos,
+    pos: posJugada || (existingEntry && existingEntry.pos) || p.pos,
     quick: existingEntry ? Object.assign({}, existingEntry.quickValues||{}) : {}
   };
 
@@ -2085,14 +2373,14 @@ function renderMatchRow(p, dateStr){
       '<div class="avatar">' + initials + '</div>' +
       '<div class="player-name-block">' +
         '<div class="player-name">' + p.name + (existingEntry ? ' <span style="font-size:11px;color:var(--ink-faint);font-weight:400;">(ya registrado — editable)</span>' : '') + '</div>' +
-        '<div class="player-meta">' + posName(p.pos) + ' · Valoración actual ' + p.valoracion + '</div>' +
+        '<div class="player-meta">' + posName(draft.pos) + ' · ' + (esTitular===false ? 'Entró de cambio' : 'Titular') + ' · Valoración actual ' + p.valoracion + '</div>' +
       '</div>' +
       '<div class="attend-toggle">' +
-        '<button class="on-yes' + (draft.convocado===true?' sel':'') + '">Convocado</button>' +
-        '<button class="on-no' + (draft.convocado===false?' sel':'') + '">No convocado</button>' +
+        '<button class="on-yes sel">Jugó</button>' +
+        '<button class="on-no">No jugó</button>' +
       '</div>' +
     '</div>' +
-    '<div class="rating-body" style="display:' + (draft.convocado===true?'block':'none') + '"></div>';
+    '<div class="rating-body" style="display:block"></div>';
 
   var btnYes = row.querySelector('.on-yes');
   var btnNo = row.querySelector('.on-no');
