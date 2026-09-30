@@ -1955,6 +1955,77 @@ function allMatchDates(){
   return Object.keys(set).sort().reverse();
 }
 
+/* ============ ALINEACIÓN DEL PARTIDO ============ */
+// Formaciones por formato (fútbol 5, 7, 8, 9 y 11). x,y en % de la cancha; y=100 es el arco propio.
+function _G(x,y){return {x:x,y:y,p:'POR'};}
+var FORMACIONES = {
+  5:{ '1-2-1':[_G(50,90),{x:26,y:66,p:'DFC'},{x:74,y:66,p:'DFC'},{x:50,y:44,p:'MC'},{x:50,y:20,p:'DC'}],
+      '2-1-1':[_G(50,90),{x:30,y:70,p:'DFC'},{x:70,y:70,p:'DFC'},{x:50,y:45,p:'MC'},{x:50,y:20,p:'DC'}] },
+  7:{ '2-3-1':[_G(50,91),{x:28,y:72,p:'DFC'},{x:72,y:72,p:'DFC'},{x:18,y:48,p:'MC'},{x:50,y:48,p:'MC'},{x:82,y:48,p:'MC'},{x:50,y:20,p:'DC'}],
+      '3-2-1':[_G(50,91),{x:22,y:72,p:'LI'},{x:50,y:74,p:'DFC'},{x:78,y:72,p:'LD'},{x:35,y:46,p:'MC'},{x:65,y:46,p:'MC'},{x:50,y:20,p:'DC'}] },
+  8:{ '3-3-1':[_G(50,91),{x:20,y:73,p:'LI'},{x:50,y:75,p:'DFC'},{x:80,y:73,p:'LD'},{x:20,y:48,p:'MC'},{x:50,y:48,p:'MCO'},{x:80,y:48,p:'MC'},{x:50,y:20,p:'DC'}],
+      '3-2-2':[_G(50,91),{x:20,y:73,p:'LI'},{x:50,y:75,p:'DFC'},{x:80,y:73,p:'LD'},{x:33,y:50,p:'MC'},{x:67,y:50,p:'MC'},{x:33,y:23,p:'DC'},{x:67,y:23,p:'DC'}],
+      '2-3-2':[_G(50,91),{x:32,y:74,p:'DFC'},{x:68,y:74,p:'DFC'},{x:18,y:50,p:'MC'},{x:50,y:50,p:'MC'},{x:82,y:50,p:'MC'},{x:33,y:23,p:'DC'},{x:67,y:23,p:'DC'}] },
+  9:{ '3-3-2':[_G(50,92),{x:20,y:75,p:'LI'},{x:50,y:77,p:'DFC'},{x:80,y:75,p:'LD'},{x:20,y:52,p:'MC'},{x:50,y:52,p:'MCO'},{x:80,y:52,p:'MC'},{x:34,y:24,p:'DC'},{x:66,y:24,p:'DC'}],
+      '4-3-1':[_G(50,92),{x:15,y:74,p:'LI'},{x:38,y:77,p:'DFC'},{x:62,y:77,p:'DFC'},{x:85,y:74,p:'LD'},{x:22,y:50,p:'MC'},{x:50,y:50,p:'MCO'},{x:78,y:50,p:'MC'},{x:50,y:22,p:'DC'}],
+      '3-4-1':[_G(50,92),{x:20,y:75,p:'LI'},{x:50,y:77,p:'DFC'},{x:80,y:75,p:'LD'},{x:14,y:52,p:'EXT'},{x:38,y:54,p:'MC'},{x:62,y:54,p:'MC'},{x:86,y:52,p:'EXT'},{x:50,y:22,p:'DC'}] },
+  11:{'4-3-3':[_G(50,93),{x:12,y:74,p:'LI'},{x:37,y:78,p:'DFC'},{x:63,y:78,p:'DFC'},{x:88,y:74,p:'LD'},{x:26,y:54,p:'MC'},{x:50,y:57,p:'MCD'},{x:74,y:54,p:'MC'},{x:16,y:26,p:'EXT'},{x:50,y:20,p:'DC'},{x:84,y:26,p:'EXT'}],
+      '4-4-2':[_G(50,93),{x:12,y:74,p:'LI'},{x:37,y:78,p:'DFC'},{x:63,y:78,p:'DFC'},{x:88,y:74,p:'LD'},{x:13,y:52,p:'EXT'},{x:38,y:55,p:'MC'},{x:62,y:55,p:'MC'},{x:87,y:52,p:'EXT'},{x:35,y:23,p:'DC'},{x:65,y:23,p:'DC'}],
+      '4-2-3-1':[_G(50,93),{x:12,y:74,p:'LI'},{x:37,y:78,p:'DFC'},{x:63,y:78,p:'DFC'},{x:88,y:74,p:'LD'},{x:36,y:60,p:'MCD'},{x:64,y:60,p:'MCD'},{x:15,y:38,p:'EXT'},{x:50,y:40,p:'MCO'},{x:85,y:38,p:'EXT'},{x:50,y:18,p:'DC'}],
+      '3-5-2':[_G(50,93),{x:25,y:77,p:'DFC'},{x:50,y:79,p:'DFC'},{x:75,y:77,p:'DFC'},{x:10,y:55,p:'LI'},{x:33,y:57,p:'MC'},{x:50,y:60,p:'MCD'},{x:67,y:57,p:'MC'},{x:90,y:55,p:'LD'},{x:36,y:23,p:'DC'},{x:64,y:23,p:'DC'}],
+      '3-4-3':[_G(50,93),{x:25,y:77,p:'DFC'},{x:50,y:79,p:'DFC'},{x:75,y:77,p:'DFC'},{x:11,y:54,p:'LI'},{x:38,y:57,p:'MC'},{x:62,y:57,p:'MC'},{x:89,y:54,p:'LD'},{x:17,y:25,p:'EXT'},{x:50,y:20,p:'DC'},{x:83,y:25,p:'EXT'}],
+      '5-3-2':[_G(50,93),{x:9,y:70,p:'LI'},{x:30,y:78,p:'DFC'},{x:50,y:80,p:'DFC'},{x:70,y:78,p:'DFC'},{x:91,y:70,p:'LD'},{x:28,y:52,p:'MC'},{x:50,y:55,p:'MCD'},{x:72,y:52,p:'MC'},{x:36,y:23,p:'DC'},{x:64,y:23,p:'DC'}]}
+};
+// Zonas: donde quede la ficha, ese es el puesto
+function puestoPorZona(x,y){
+  if(y>=85) return 'POR';
+  if(y>=62){ if(x<=24) return 'LI'; if(x>=76) return 'LD'; return 'DFC'; }
+  if(y>=36){ if(x<=17 || x>=83) return 'EXT'; if(y>=53) return 'MCD'; if(y>=44) return 'MC'; return 'MCO'; }
+  if(x<=27 || x>=73) return 'EXT';
+  return 'DC';
+}
+// Alineado automático: la ficha se pega a la línea o columna de sus compañeros
+function acomodarFicha(puestos, i, x, y){
+  x=Math.round(x*2)/2; y=Math.round(y*2)/2;
+  if(Math.abs(x-50)<=3) x=50;
+  puestos.forEach(function(o,j){
+    if(j===i) return;
+    if(Math.abs(o.y-y)<=4.5) y=o.y;
+    if(Math.abs(o.x-x)<=3.5) x=o.x;
+    if(Math.abs((100-o.x)-x)<=3.5) x=100-o.x;
+  });
+  return {x:Math.max(6,Math.min(94,x)), y:Math.max(5,Math.min(95,y))};
+}
+function matchKey(dateStr){ return activeCategoria() + '::' + dateStr; }
+function getLineup(dateStr){
+  state.lineups = state.lineups || {};
+  var k = matchKey(dateStr);
+  if(!state.lineups[k]){
+    var f = (state.formatoCat||{})[activeCategoria()] || 8;
+    var nom = Object.keys(FORMACIONES[f])[0];
+    state.lineups[k] = {formato:f, formacion:nom, puestos:cleanJson(FORMACIONES[f][nom]), asign:{}, entraron:{}};
+  }
+  var L = state.lineups[k];
+  if(!Array.isArray(L.puestos) || !L.puestos.length){ L.puestos = cleanJson(FORMACIONES[L.formato||8][L.formacion] || FORMACIONES[8]['3-3-1']); }
+  L.asign = L.asign || {}; L.entraron = L.entraron || {};
+  return L;
+}
+// Quiénes jugaron: titulares de la cancha + suplentes marcados como que entraron
+function jugaronEn(dateStr){
+  var L = getLineup(dateStr), out = [];
+  Object.keys(L.asign).forEach(function(i){
+    var p = state.players.find(function(x){ return x.id===L.asign[i]; });
+    if(p) out.push({p:p, pos:(L.puestos[i]||{}).p || p.pos, titular:true});
+  });
+  Object.keys(L.entraron).forEach(function(id){
+    if(!L.entraron[id]) return;
+    if(out.some(function(o){ return o.p.id===id; })) return;
+    var p = state.players.find(function(x){ return x.id===id; });
+    if(p && p.categoria===activeCategoria()) out.push({p:p, pos:p.pos, titular:false});
+  });
+  return out;
+}
+
 function renderPartido(){
   var el = document.createElement('div');
   var loggedDates = allMatchDates();
