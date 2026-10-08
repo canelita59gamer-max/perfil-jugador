@@ -1171,6 +1171,17 @@
 @media (max-width:520px){.lp .lp-tabs button{font-size:13px;padding:9px 12px}}
 
 .lp .lp-top>span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;margin-right:8px}
+.lp .lp-hero .lp-wrap{grid-template-columns:1.1fr 1fr}
+.lp h1 .lp-X{font-size:clamp(70px,9.4vw,120px)}
+.lp h1 em{font-size:clamp(48px,6.8vw,88px)}
+.lp .lp-railbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+.lp .lp-railbar .lp-tabs{margin-bottom:0}
+.lp .lp-nav{display:flex;gap:8px}
+.lp .lp-nav button{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--ink);font-size:18px;transition:background .3s,border-color .3s,color .3s}
+.lp .lp-nav button:hover{background:var(--lime);border-color:var(--lime);color:#0a0f02}
+@media (hover:none),(max-width:820px){.lp .lp-nav{display:none}}
+.lp .lp-rail{-webkit-mask-image:linear-gradient(90deg,#000 88%,transparent);mask-image:linear-gradient(90deg,#000 88%,transparent)}
+
 .lp .lp-pop{animation:lppop .6s var(--ease)}
 @keyframes lppop{50%{scale:1.06}}
 
@@ -3485,9 +3496,13 @@ function lpFillWeekly(){
         '<span class="lp-bigup">+' + x.u + '</span></div>' +
       '</div>' +
     '</div>' +
-    '<div class="lp-tabs" id="lpTabs"><span class="lp-pill"></span>' +
+    '<div class="lp-railbar"><div class="lp-tabs" id="lpTabs"><span class="lp-pill"></span>' +
       '<button data-k="sube">Más subieron</button><button data-k="carta">Subieron de carta</button><button data-k="gol">Goleadores</button></div>' +
+      '<div class="lp-nav"><button data-d="-1" aria-label="Anteriores">←</button><button data-d="1" aria-label="Siguientes">→</button></div></div>' +
     '<div class="lp-rail" id="lpRail"></div>';
+  [].slice.call(box.querySelectorAll('.lp-nav button')).forEach(function(btn){
+    btn.onclick = function(){ var r = document.getElementById('lpRail'); r.scrollBy({left:(+btn.dataset.d) * r.clientWidth * .8, behavior:'smooth'}); };
+  });
   var tabs = box.querySelector('#lpTabs'), pill = tabs.querySelector('.lp-pill');
   function movePill(btn){ pill.style.left = btn.offsetLeft + 'px'; pill.style.width = btn.offsetWidth + 'px'; }
   var on = tabs.querySelector('[data-k="' + lpTab + '"]');
@@ -3528,14 +3543,13 @@ function renderLanding(){
   root.innerHTML =
     '<div class="lp' + (lpPlayed ? ' lp-ready' : '') + '">' +
       '<header class="lp-hero"><div class="lp-glow"></div>' +
-        '<svg class="lp-pitch" viewBox="0 0 600 400" fill="none" stroke="#fff" stroke-width="2" aria-hidden="true"><rect x="10" y="10" width="580" height="380" rx="4"/><line x1="300" y1="10" x2="300" y2="390"/><circle cx="300" cy="200" r="60"/><rect x="10" y="110" width="80" height="180"/><rect x="510" y="110" width="80" height="180"/></svg>' +
-        '<div class="lp-wrap"><div>' +
+                '<div class="lp-wrap"><div>' +
           '<div class="lp-brand"><img src="' + ARENA_LOGO_SRC + '" alt="Arena Sports" /></div>' +
           '<h1><span class="lp-X"><span class="lp-w">La</span> <span class="lp-w" style="transition-delay:.08s">cantera</span></span>' +
             '<em><span class="lp-w" style="transition-delay:.2s">en</span> <span class="lp-w" style="transition-delay:.28s">movimiento</span></em></h1>' +
           '<a class="lp-scroll" href="#lpClubes"><i></i>CLUBES</a>' +
         '</div>' +
-        '<div class="lp-fan"><img class="lp-fanlogo" src="' + ARENA_LOGO_SRC + '" alt="" /><div class="lp-float" id="lpFan"></div></div>' +
+        '<div class="lp-fan"><div class="lp-float" id="lpFan"></div></div>' +
       '</div></header>' +
       '<main class="lp-wrap">' +
         '<section id="lpClubes"><div class="lp-sh lp-rv"><div><p class="lp-kick">Clubes</p><h2><span class="lp-X">Entra a tu</span> <em>club</em></h2></div></div>' +
