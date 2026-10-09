@@ -3557,9 +3557,11 @@ function openClubModal(club){
 
 
 // ---------- Acceso staff: un solo link para todos los clubes (#/staff) ----------
-var staffMode = false, authReady = false, staffMsg = '';
-function staffRedirect(){
+var staffMode = false, authReady = false, staffMsg = '', staffJustSigned = false;
+function staffRedirect(force){
   if(!authReady || !currentUser) return false;
+  if(!force && !staffJustSigned){ safeRender(); return false; } // ya tenía sesión abierta: se le pregunta con qué cuenta sigue
+  staffJustSigned = false;
   var r = currentUser.role;
   if(!r){ staffMsg = 'Tu cuenta (' + currentUser.email + ') todavía no tiene permisos. Pídele al administrador de tu club que te agregue.'; safeRender(); return false; }
   staffMode = false; staffMsg = '';
@@ -3599,9 +3601,12 @@ function renderStaffPage(){
       '<main class="sp-main"><div class="sp-box">' +
         '<span class="sp-kick">Arena Sports</span>' +
         '<h2><span class="sp-X">Bienvenido</span></h2>' +
-        (logged
-          ? '<p class="sp-sub">' + escHtml(staffMsg || ('Entraste como ' + currentUser.email + '.')) + '</p>' +
-            '<button class="sp-go" type="button" id="spOut">Cerrar sesión <i>→</i></button>'
+        (!authReady && window.auth
+          ? '<p class="sp-sub">Cargando…</p>'
+          : logged
+          ? '<p class="sp-sub">' + escHtml(staffMsg || ('Ya tienes la sesión abierta como ' + currentUser.email + '.')) + '</p>' +
+            (currentUser.role ? '<button class="sp-go" type="button" id="spCont">Continuar <i>→</i></button>' : '') +
+            '<button class="sp-g" type="button" id="spOut" style="margin-top:12px">Entrar con otra cuenta</button>'
           : '<p class="sp-sub">Entra con la cuenta que te dio tu club.</p>' +
             '<button class="sp-g" type="button" id="spGoogle">' + GOOGLE_ICON_SVG + 'Entrar con Google</button>' +
             '<div class="sp-or">o con correo</div>' +
@@ -3616,7 +3621,10 @@ function renderStaffPage(){
   var back = root.querySelector('#spBack');
   back.onclick = function(e){ e.preventDefault(); staffMode = false; goToLanding(); };
   var out = root.querySelector('#spOut');
+  var cont = root.querySelector('#spCont');
+  if(cont) cont.onclick = function(){ staffRedirect(true); };
   if(out){ out.onclick = function(){ staffMsg = ''; auth.signOut(); }; return; }
+  if(!root.querySelector('#spIn')) return;
   if(!window.auth){ root.querySelector('#spErr').textContent = 'El acceso no está disponible en esta vista previa.'; return; }
   var err = root.querySelector('#spErr'), btn = root.querySelector('#spIn');
   function busy(on){ btn.disabled = on; btn.style.opacity = on ? .6 : 1; }
@@ -3624,13 +3632,13 @@ function renderStaffPage(){
     var email = root.querySelector('#spEmail').value.trim(), pass = root.querySelector('#spPass').value;
     err.textContent = '';
     if(!email || !pass){ err.textContent = 'Escribe tu correo y tu contraseña.'; return; }
-    busy(true);
+    busy(true); staffJustSigned = true;
     auth.signInWithEmailAndPassword(email, pass).catch(function(e){ err.textContent = staffErr(e); busy(false); });
   }
   btn.onclick = go;
   root.querySelector('#spPass').onkeydown = function(e){ if(e.key==='Enter') go(); };
   root.querySelector('#spGoogle').onclick = function(){
-    err.textContent = '';
+    err.textContent = ''; staffJustSigned = true;
     auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(function(e){ err.textContent = staffErr(e); });
   };
   root.querySelector('#spForgot').onclick = function(e){
