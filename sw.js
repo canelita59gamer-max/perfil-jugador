@@ -64,3 +64,35 @@ self.addEventListener('fetch', function(e){
     })
   );
 });
+
+/* ---------- recordatorios ---------- */
+self.addEventListener('push', function(e){
+  var d = {};
+  try { d = e.data ? e.data.json() : {}; } catch(err){ try { d = {notification:{title:'Arena Sports', body:e.data.text()}}; } catch(e2){} }
+  var n = d.notification || d.data || {};
+  var titulo = n.title || 'Arena Sports';
+  var opciones = {
+    body: n.body || '',
+    icon: './icon-192.png',
+    badge: './icon-192.png',
+    tag: (d.data && d.data.tag) || 'arena',
+    renotify: true,
+    data: { url: (d.data && d.data.url) || (n.click_action) || './' }
+  };
+  e.waitUntil(self.registration.showNotification(titulo, opciones));
+});
+
+self.addEventListener('notificationclick', function(e){
+  e.notification.close();
+  var destino = (e.notification.data && e.notification.data.url) || './';
+  e.waitUntil(clients.matchAll({type:'window', includeUncontrolled:true}).then(function(lista){
+    for(var i=0;i<lista.length;i++){
+      var c = lista[i];
+      if(c.url.indexOf(self.location.origin)===0 && 'focus' in c){
+        if('navigate' in c) c.navigate(destino);
+        return c.focus();
+      }
+    }
+    return clients.openWindow(destino);
+  }));
+});

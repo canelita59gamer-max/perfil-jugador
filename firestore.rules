@@ -82,6 +82,15 @@ service cloud.firestore {
         || (isStaff() && staff().role == 'admin' && resource.data.get('club', '') == miClub());
     }
 
+    // ---------- recordatorios del staff: cada quien maneja los suyos ----------
+    match /avisos/{correo} {
+      allow read, write: if isStaff() && correo == request.auth.token.email.lower()
+        && request.resource.data.keys().hasOnly(['activo','dias','hora','antes','recordar','horaRecordar','partido','club','categoria','zona','token','actualizado'])
+        && request.resource.data.get('token', '') is string
+        && request.resource.data.get('token', '').size() < 500;
+      allow read: if isCreador();
+    }
+
     // ---------- estructura anterior (antes de multi-club): solo el Creador, para la migración ----------
     match /club/{doc} { allow read, write: if isCreador(); }
     match /categorias/{cat} { allow read, write: if isCreador(); }

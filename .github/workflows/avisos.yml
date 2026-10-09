@@ -1,0 +1,26 @@
+# Manda los recordatorios a los profesores. Corre solo cada media hora.
+name: Recordatorios
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:        # también se puede correr a mano desde la pestaña Actions
+
+concurrency:
+  group: avisos
+  cancel-in-progress: false
+
+jobs:
+  enviar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install firebase-admin@12 --no-save --silent
+      - run: node enviar-avisos.js
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          SITIO: https://perfil-jugador-wheat.vercel.app

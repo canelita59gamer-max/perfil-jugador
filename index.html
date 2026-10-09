@@ -1030,6 +1030,34 @@
 
 
 
+
+/* ---------- recordatorios ---------- */
+.staff-box .bell-btn{align-self:flex-start;margin-top:4px}
+.bell-btn{position:relative;flex:none;width:38px;height:38px;border-radius:12px;border:1px solid var(--border);background:rgba(255,255,255,.04);display:grid;place-items:center;cursor:pointer;transition:border-color .3s}
+.bell-btn:hover{border-color:var(--lime)}
+.bell-btn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.bell-btn i{position:absolute;top:7px;right:8px;width:7px;height:7px;border-radius:50%;background:var(--lime)}
+.bell-btn.pulse{border-color:var(--lime);animation:bellp 1.4s ease-in-out infinite}
+@keyframes bellp{50%{box-shadow:0 0 0 6px rgba(193,248,7,.18)}}
+.nt-toast{position:fixed;left:12px;right:12px;bottom:12px;z-index:9400;max-width:460px;margin:0 auto;display:flex;align-items:center;gap:10px;padding:13px 13px 13px 15px;border-radius:16px;
+  background:#1b2214;border:1px solid rgba(193,248,7,.35);font-size:12.5px;line-height:1.4;color:var(--ink);
+  transform:translateY(160%);transition:transform .5s cubic-bezier(.32,.72,0,1)}
+.nt-toast.on{transform:none}
+.nt-toast b{color:var(--lime)}
+.nt-toast button{margin-left:auto;flex:none;padding:7px 12px;border:0;border-radius:999px;background:var(--lime);color:#0a0f02;font-weight:700;cursor:pointer}
+.nt-def{display:inline-block;font-size:11px;font-weight:700;padding:4px 9px;border-radius:999px;background:rgba(193,248,7,.12);color:var(--lime);margin-bottom:12px}
+.nt-days{display:flex;gap:5px;margin:8px 0 14px}
+.nt-days button{flex:1;padding:10px 0;border-radius:10px;border:0;background:rgba(255,255,255,.06);color:var(--ink);font-size:12.5px;cursor:pointer}
+.nt-days button.on{background:var(--lime);color:#0a0f02;font-weight:700}
+.nt-field{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;border:1px solid var(--border);margin-bottom:8px;font-size:13.5px}
+.nt-field input[type=time],.nt-field select{background:rgba(0,0,0,.25);border:1px solid var(--border);color:var(--lime);font:inherit;font-weight:700;padding:6px 8px;border-radius:9px}
+.nt-sw{width:44px;height:26px;border-radius:999px;background:var(--lime);position:relative;flex:none;border:0;cursor:pointer}
+.nt-sw::after{content:'';position:absolute;right:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#0a0f02;transition:all .25s}
+.nt-sw.off{background:rgba(255,255,255,.18)}
+.nt-sw.off::after{right:calc(100% - 23px);background:#fff}
+.nt-note{font-size:12px;color:var(--ink-faint);line-height:1.55;margin-top:10px}
+.nt-err{font-size:12.5px;color:#ff7b7b;margin-top:10px;line-height:1.5}
+
 /* ---------- instalar como app ---------- */
 .pwa{position:fixed;left:12px;right:12px;bottom:12px;z-index:9500;max-width:460px;margin:0 auto;padding:16px;border-radius:22px;
   background:rgba(14,19,36,.96);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.12);
@@ -1382,6 +1410,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-check-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
   window.FIREBASE_CONFIG = {
@@ -1394,6 +1423,8 @@
   };
   // Clave de sitio de reCAPTCHA v3 para App Check (déjala vacía hasta crearla en Firebase Console)
   window.APPCHECK_SITE_KEY = '';
+  // Clave pública de los recordatorios (no es secreta: solo sirve para que este sitio pueda enviarlos)
+  window.VAPID_KEY = 'BHOXy3Hlh2oGVb8k-sRY0JWbk6Z8KMjrOOboRIMFVcV-A0A3YnDzIdUe1FS4VClijevvDqv2Hv7LjsFiKj5tpHI';
 </script>
 <script>
 (function(){
@@ -1990,7 +2021,8 @@ function renderChrome(){
       ? ('<span class="staff-email" title="' + escHtml(currentUser.email) + '">' + escHtml(currentUser.email) + '</span>' +
          '<span class="staff-role">' + (currentUser.role ? ROLE_LABELS[currentUser.role] + (clubRole() || isCreador() ? '' : ' (de otro club)') : 'Sin permisos asignados') + '</span>' +
          (clubRole()==='admin' ? '<button class="staff-link" data-act="panel">Administradores</button>' : '') +
-         '<button class="staff-link" data-act="logout">Cerrar sesión</button>')
+         '<button class="staff-link" data-act="logout">Cerrar sesión</button>' +
+         (clubRole() || isCreador() ? ntCampanaHtml() : ''))
       : '');
   [desktop, mobile].forEach(function(target){
     var box = document.createElement('div');
@@ -2002,6 +2034,7 @@ function renderChrome(){
     if(logoutBtn) logoutBtn.onclick = function(){ auth.signOut(); };
     var panelBtn = box.querySelector('[data-act="panel"]');
     if(panelBtn) panelBtn.onclick = openStaffPanel;
+    ntConectarCampana(box);
     target.appendChild(box);
   });
 
@@ -3635,6 +3668,210 @@ function openClubModal(club){
 
 
 
+
+// ---------- Recordatorios para el profesor ----------
+// Lo de cada persona se guarda en avisos/{correo}. El envío lo hace una tarea aparte que lee esos documentos.
+var NT_DEF = {activo:true, dias:[], hora:'16:00', antes:30, recordar:true, horaRecordar:'', partido:true};
+var ntPrefs = null, ntUnsub = null, ntToken = null, ntBusy = false;
+function ntSoportado(){
+  return !!(window.firebase && firebase.messaging && firebase.messaging.isSupported && firebase.messaging.isSupported()
+    && 'Notification' in window && 'serviceWorker' in navigator);
+}
+function ntDocRef(){
+  if(!window.db || !currentUser || !currentUser.email) return null;
+  return db.collection('avisos').doc(currentUser.email.toLowerCase());
+}
+function ntEscuchar(){
+  if(ntUnsub){ ntUnsub(); ntUnsub = null; }
+  var ref = ntDocRef();
+  if(!ref) { ntPrefs = null; return; }
+  ntUnsub = ref.onSnapshot(function(d){
+    ntPrefs = d.exists ? d.data() : null;
+    if(!isTyping()) safeRender();
+  }, function(){});
+}
+// Lo predeterminado sale del horario que ya tiene su categoría
+function ntPorDefecto(){
+  var p = JSON.parse(JSON.stringify(NT_DEF));
+  var cat = (currentUser && currentUser.categoria) || activeCategoria();
+  try{ if(state && cat) p.dias = scheduleFor(cat).slice(); }catch(e){}
+  if(!p.dias.length) p.dias = [2,4];
+  p.horaRecordar = ntSumarMin(p.hora, 120);
+  return p;
+}
+function ntSumarMin(hhmm, min){
+  var a = String(hhmm||'16:00').split(':');
+  var t = (+a[0])*60 + (+a[1]) + min;
+  t = ((t % 1440) + 1440) % 1440;
+  return ('0'+Math.floor(t/60)).slice(-2) + ':' + ('0'+(t%60)).slice(-2);
+}
+function nt12(hhmm){
+  var a = String(hhmm||'').split(':'); if(a.length<2) return '—';
+  var h = +a[0], m = a[1], s = h<12 ? 'a. m.' : 'p. m.';
+  h = h % 12; if(!h) h = 12;
+  return h + ':' + m + ' ' + s;
+}
+var NT_DIAS = ['D','L','M','X','J','V','S'];
+function ntResumen(p){
+  if(!p || !p.activo) return 'Recordatorios apagados';
+  var d = (p.dias||[]).slice().sort().map(function(i){ return NT_DIAS[i]; }).join(' · ');
+  return (d || 'sin días') + ' · ' + nt12(p.hora);
+}
+// Guardar: el token del celular se renueva cada vez que entra, por si cambió
+function ntGuardar(p, conToken){
+  var ref = ntDocRef();
+  if(!ref) return Promise.resolve();
+  var data = {
+    activo: !!p.activo, dias: (p.dias||[]).slice(), hora: p.hora, antes: +p.antes,
+    recordar: !!p.recordar, horaRecordar: p.horaRecordar || ntSumarMin(p.hora, 120), partido: !!p.partido,
+    club: (currentUser && currentUser.club) || DEFAULT_CLUB_ID,
+    categoria: (currentUser && currentUser.categoria) || '',
+    zona: -5, actualizado: Date.now()
+  };
+  if(conToken && ntToken) data.token = ntToken;
+  return ref.set(data, {merge:true});
+}
+function ntPedirPermiso(){
+  if(!ntSoportado()) return Promise.reject(new Error('nosoporta'));
+  return Notification.requestPermission().then(function(r){
+    if(r !== 'granted') throw new Error('negado');
+    return navigator.serviceWorker.ready;
+  }).then(function(reg){
+    var m = firebase.messaging();
+    return m.getToken({vapidKey: window.VAPID_KEY, serviceWorkerRegistration: reg});
+  }).then(function(tok){
+    if(!tok) throw new Error('sintoken');
+    ntToken = tok;
+    return tok;
+  });
+}
+function ntActivar(btnEstado){
+  if(ntBusy) return;
+  ntBusy = true;
+  if(btnEstado) btnEstado('Activando…');
+  ntPedirPermiso().then(function(){
+    return ntGuardar(ntPorDefecto(), true);
+  }).then(function(){
+    ntBusy = false;
+    var p = ntPorDefecto();
+    ntAviso('<div><b>✓ Recordatorios activados</b><br>' + escHtml(ntResumen(p)) + '</div>', 'Editar', function(){ ntAbrirPanel(); });
+  }).catch(function(err){
+    ntBusy = false;
+    var m = String(err && err.message);
+    if(btnEstado) btnEstado(null);
+    ntAviso('<div>' + (m==='negado'
+      ? 'Tu celular bloqueó los avisos. Actívalos en los ajustes del navegador para este sitio.'
+      : (m==='nosoporta' ? 'Este navegador no permite recordatorios. En iPhone, primero instala la app desde Safari.'
+                         : 'No se pudieron activar. Intenta otra vez.')) + '</div>', 'Entendido', null);
+  });
+}
+function ntAviso(html, btn, fn){
+  var old = document.getElementById('ntToast'); if(old) old.remove();
+  var box = document.createElement('div');
+  box.id = 'ntToast'; box.className = 'nt-toast'; box.innerHTML = html;
+  var b = document.createElement('button'); b.textContent = btn || 'Listo';
+  b.onclick = function(){ box.classList.remove('on'); setTimeout(function(){ box.remove(); }, 500); if(fn) fn(); };
+  box.appendChild(b);
+  document.body.appendChild(box);
+  requestAnimationFrame(function(){ requestAnimationFrame(function(){ box.classList.add('on'); }); });
+  setTimeout(function(){ if(box.isConnected){ box.classList.remove('on'); setTimeout(function(){ box.remove(); }, 500); } }, 9000);
+}
+function ntCampanaHtml(){
+  var activos = ntPrefs && ntPrefs.activo;
+  return '<button class="bell-btn' + (!ntPrefs ? ' pulse' : '') + '" id="ntBell" title="' + (ntPrefs ? 'Edita tus notificaciones' : 'Activa tus recordatorios') + '">' +
+    '<svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>' +
+    (activos ? '<i></i>' : '') + '</button>';
+}
+function ntConectarCampana(root){
+  var b = (root || document).querySelector('#ntBell');
+  if(b) b.onclick = function(){ ntAbrirPanel(); };
+}
+function ntAbrirPanel(){
+  var overlay = document.getElementById('modalOverlay');
+  var body = document.getElementById('modalBody');
+  var nuevo = !ntPrefs;
+  var p = ntPrefs ? JSON.parse(JSON.stringify(ntPrefs)) : ntPorDefecto();
+  if(!p.horaRecordar) p.horaRecordar = ntSumarMin(p.hora, 120);
+  function pinta(){
+    body.innerHTML =
+      '<button class="modal-close" id="closeModal">✕</button>' +
+      '<h2>' + (nuevo ? 'Activa tus recordatorios' : 'Edita tus notificaciones') + '</h2>' +
+      '<div class="sub">' + (nuevo
+        ? 'Te avisamos según el horario de tu categoría: antes del entreno, si se te olvida registrar y los días de partido.'
+        : 'Ya vienen listas con tu horario. Cambia solo lo que quieras.') + '</div>' +
+      (nuevo ? '' : '<span class="nt-def">' + escHtml(ntResumen(p)) + '</span>') +
+      '<div class="staff-form">' +
+        '<label style="font-size:12.5px;">Días de entrenamiento</label>' +
+        '<div class="nt-days" id="ntDias">' + NT_DIAS.map(function(d,i){
+          return '<button type="button" data-d="' + i + '" class="' + ((p.dias||[]).indexOf(i)!==-1 ? 'on' : '') + '">' + d + '</button>';
+        }).join('') + '</div>' +
+        '<div class="nt-field">Hora del entreno<input type="time" id="ntHora" value="' + escHtml(p.hora) + '" /></div>' +
+        '<div class="nt-field">Avisarme antes<select id="ntAntes">' +
+          [0,15,30,60,120].map(function(m){ return '<option value="' + m + '"' + (+p.antes===m?' selected':'') + '>' + (m ? m + ' min antes' : 'A la hora') + '</option>'; }).join('') +
+        '</select></div>' +
+        '<div class="nt-field">Si no he registrado, avisarme<input type="time" id="ntRec" value="' + escHtml(p.horaRecordar) + '"' + (p.recordar?'':' disabled') + ' /></div>' +
+        '<div class="nt-field">Recordarme si se me olvida<button type="button" class="nt-sw' + (p.recordar?'':' off') + '" id="ntSwRec"></button></div>' +
+        '<div class="nt-field">Aviso los días de partido<button type="button" class="nt-sw' + (p.partido?'':' off') + '" id="ntSwPar"></button></div>' +
+        '<div class="nt-field">Recordatorios activados<button type="button" class="nt-sw' + (p.activo?'':' off') + '" id="ntSwAct"></button></div>' +
+        '<div class="nt-err" id="ntErr" style="display:none;"></div>' +
+        '<button class="staff-submit" id="ntSave">' + (nuevo ? 'Activar recordatorios' : 'Guardar') + '</button>' +
+        (nuevo ? '' : '<button class="pl-btn ghost small" id="ntReset" style="margin-top:8px;width:100%;">Volver a lo predeterminado</button>') +
+        '<div class="nt-note">Solo los ves tú. En iPhone hay que instalar la app primero, desde Safari.</div>' +
+      '</div>';
+    body.querySelector('#closeModal').onclick = function(){ overlay.classList.remove('show'); };
+    body.querySelector('#ntDias').onclick = function(e){
+      var b = e.target.closest('[data-d]'); if(!b) return;
+      var i = +b.dataset.d, pos = (p.dias||[]).indexOf(i);
+      if(pos===-1) p.dias.push(i); else p.dias.splice(pos,1);
+      b.classList.toggle('on');
+    };
+    var hora = body.querySelector('#ntHora'), rec = body.querySelector('#ntRec');
+    hora.onchange = function(){ p.hora = hora.value || '16:00'; p.horaRecordar = ntSumarMin(p.hora, 120); rec.value = p.horaRecordar; };
+    rec.onchange = function(){ p.horaRecordar = rec.value; };
+    body.querySelector('#ntAntes').onchange = function(e){ p.antes = +e.target.value; };
+    function sw(id, key, extra){
+      var b = body.querySelector(id);
+      b.onclick = function(){ p[key] = !p[key]; b.classList.toggle('off', !p[key]); if(extra) extra(p[key]); };
+    }
+    sw('#ntSwRec','recordar', function(v){ rec.disabled = !v; });
+    sw('#ntSwPar','partido');
+    sw('#ntSwAct','activo');
+    var reset = body.querySelector('#ntReset');
+    if(reset) reset.onclick = function(){ p = ntPorDefecto(); pinta(); };
+    var save = body.querySelector('#ntSave');
+    save.onclick = function(){
+      var err = body.querySelector('#ntErr');
+      err.style.display = 'none';
+      save.disabled = true; save.textContent = 'Guardando…';
+      (ntToken ? Promise.resolve() : ntPedirPermiso().then(function(){}))
+        .then(function(){ return ntGuardar(p, true); })
+        .then(function(){
+          overlay.classList.remove('show');
+          ntAviso('<div><b>✓ Listo</b><br>' + escHtml(ntResumen(p)) + '</div>', 'Entendido', null);
+        })
+        .catch(function(e){
+          save.disabled = false; save.textContent = nuevo ? 'Activar recordatorios' : 'Guardar';
+          var m = String(e && e.message);
+          err.textContent = m==='negado' ? 'Tu celular bloqueó los avisos. Actívalos en los ajustes del navegador para este sitio.'
+            : (m==='nosoporta' ? 'Este navegador no permite recordatorios. En iPhone, instala primero la app desde Safari.'
+                               : 'No se pudo guardar. Intenta otra vez.');
+          err.style.display = 'block';
+        });
+    };
+  }
+  pinta();
+  overlay.classList.add('show');
+  overlay.onclick = function(e){ if(e.target===overlay) overlay.classList.remove('show'); };
+}
+// Al entrar un profesor: escuchar sus preferencias y refrescar el token del celular
+function ntAlEntrar(){
+  if(!window.db || !currentUser || !currentUser.role || currentUser.role==='visitante'){ ntPrefs = null; return; }
+  ntEscuchar();
+  if(ntSoportado() && Notification.permission==='granted'){
+    ntPedirPermiso().then(function(){ if(ntPrefs) ntGuardar(ntPrefs, true); }).catch(function(){});
+  }
+}
+
 // ---------- Instalar como app (PWA) ----------
 var pwaPrompt = null;
 function esIOS(){ return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1); }
@@ -4991,6 +5228,7 @@ if(window.firebase && window.FIREBASE_CONFIG){
 
     function afterAuthChange(){
       authReady = true;
+      ntAlEntrar();
       if(staffMode && staffRedirect()) return;
       if(isCreador() && clubsLoaded && !CLUBS.some(function(c){ return c.id===DEFAULT_CLUB_ID; })) migrateToMultiClub();
       if(sessionEnteredClub){ attachPrivate(); attachPhotos(); scheduleRebuild(); }
