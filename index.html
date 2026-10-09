@@ -1013,6 +1013,50 @@
   .attr-add input{flex:1;min-width:0;font:inherit;padding:9px 12px;border-radius:10px;border:1px dashed rgba(255,255,255,.22);background:rgba(255,255,255,.03);color:inherit}
   .attr-note{font-size:12px;opacity:.65;margin-top:8px;line-height:1.45}
 
+
+/* ---------- acceso staff ---------- */
+.sp{--bg:#05070f;--line:rgba(255,255,255,.1);--ink:#f1f3f8;--muted:#8a93ab;--lime:#c1f807;--ease:cubic-bezier(.32,.72,0,1);--d:'Saira',system-ui,sans-serif;
+  min-height:100vh;min-height:100svh;display:grid;grid-template-columns:1.05fr 1fr;background:var(--bg);color:var(--ink);font-family:'Plus Jakarta Sans',system-ui,sans-serif}
+.sp .sp-X{font-family:var(--d);font-style:italic;font-weight:900;font-stretch:78%;text-transform:uppercase;letter-spacing:-.01em}
+.sp-side{position:relative;overflow:hidden;padding:48px;display:flex;flex-direction:column;justify-content:space-between;gap:30px;
+  background:radial-gradient(70% 60% at 30% 30%,rgba(193,248,7,.18),transparent 70%),radial-gradient(60% 60% at 90% 100%,rgba(60,90,255,.18),transparent 70%),#070a16;border-right:1px solid var(--line)}
+.sp-lines{position:absolute;inset:0;width:100%;height:100%;opacity:.07;pointer-events:none}
+.sp-logo{position:relative;width:120px;filter:drop-shadow(0 0 28px rgba(193,248,7,.3))}
+.sp-side h1{margin:0;line-height:.88}
+.sp-side h1 .sp-X{display:block;font-size:clamp(54px,6.4vw,96px)}
+.sp-side h1 em{display:block;color:var(--lime)}
+.sp-side p{color:var(--muted);max-width:40ch;line-height:1.6;margin:18px 0 0}
+.sp-roles{display:flex;gap:8px;flex-wrap:wrap}
+.sp-roles span{font-size:12px;font-weight:600;padding:7px 12px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.sp-main{display:grid;place-items:center;padding:40px 20px}
+.sp-box{width:100%;max-width:400px}
+.sp-kick{display:inline-flex;align-items:center;gap:8px;font-family:var(--d);font-size:11px;font-weight:800;letter-spacing:.14em;color:var(--lime);text-transform:uppercase}
+.sp-kick::before{content:'';width:18px;height:2px;background:var(--lime)}
+.sp-box h2{margin:12px 0 6px}
+.sp-box h2 .sp-X{font-size:44px}
+.sp-sub{color:var(--muted);font-size:14px;margin:0 0 28px;line-height:1.5}
+.sp-g{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;padding:13px;border-radius:14px;border:1px solid var(--line);background:#fff;color:#111;font:inherit;font-weight:700;cursor:pointer;transition:transform .3s var(--ease)}
+.sp-g:hover{transform:translateY(-2px)}
+.sp-or{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:12px;margin:20px 0}
+.sp-or::before,.sp-or::after{content:'';flex:1;height:1px;background:var(--line)}
+.sp-box label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin:0 0 6px}
+.sp-in{width:100%;box-sizing:border-box;padding:13px 14px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.03);color:var(--ink);font:inherit;margin-bottom:14px;outline:none;transition:border-color .3s}
+.sp-in:focus{border-color:var(--lime)}
+.sp-err{min-height:18px;font-size:13px;color:#ff7b7b;margin:-4px 0 8px;line-height:1.4}
+.sp-go{width:100%;display:flex;align-items:center;justify-content:space-between;padding:7px 7px 7px 20px;border:0;border-radius:999px;background:var(--lime);color:#0a0f02;font-family:var(--d);font-style:italic;font-weight:900;font-stretch:85%;font-size:17px;text-transform:uppercase;cursor:pointer}
+.sp-go i{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:#0a0f02;color:var(--lime);font-style:normal;transition:transform .4s var(--ease)}
+.sp-go:hover i{transform:translateX(3px)}
+.sp-forgot{display:block;text-align:center;margin-top:16px;font-size:13px;color:var(--muted);text-decoration:none}
+.sp-back{display:block;text-align:center;margin-top:28px;font-size:12px;color:var(--muted);opacity:.7;text-decoration:none}
+@media (max-width:860px){
+  .sp{grid-template-columns:1fr}
+  .sp-side{padding:28px 20px 34px;border-right:0;border-bottom:1px solid var(--line)}
+  .sp-logo{width:84px}
+  .sp-side h1 .sp-X{font-size:52px}
+  .sp-side p,.sp-roles{display:none}
+  .sp-main{padding:30px 20px 40px;place-items:start center}
+}
+
 /* ---------- página de inicio ---------- */
 .lp{position:relative;background:var(--bg);color:var(--ink);font-family:var(--b);overflow-x:hidden;min-height:100vh;
   --bg:#05070f;--bg2:#0a0e1c;--line:rgba(255,255,255,.08);--ink:#f1f3f8;--muted:#8a93ab;
@@ -1876,7 +1920,7 @@ function renderChrome(){
          '<span class="staff-role">' + (currentUser.role ? ROLE_LABELS[currentUser.role] + (clubRole() || isCreador() ? '' : ' (de otro club)') : 'Sin permisos asignados') + '</span>' +
          (clubRole()==='admin' ? '<button class="staff-link" data-act="panel">Administradores</button>' : '') +
          '<button class="staff-link" data-act="logout">Cerrar sesión</button>')
-      : '<button class="staff-link" data-act="login">Acceso staff</button>');
+      : '');
   [desktop, mobile].forEach(function(target){
     var box = document.createElement('div');
     box.className = 'staff-box';
@@ -3252,6 +3296,12 @@ function enterClub(clubId){
 }
 // Cada club tiene su propia dirección: tusitio/#/jogo-bonito
 function routeFromHash(){
+  if(location.hash==='#/staff'){
+    staffMode = true;
+    if(sessionEnteredClub){ if(window.db) detachClub(); sessionEnteredClub = null; resetClubTheme(); }
+    render(); staffRedirect(); return;
+  }
+  staffMode = false;
   var m = location.hash.match(/^#\/([a-z0-9\-]+)$/);
   var id = m ? m[1] : null;
   if(id && id!==sessionEnteredClub) enterClub(id);
@@ -3464,7 +3514,7 @@ function openClubModal(club){
     var nombre = body.querySelector('#cmNombre').value.replace(/[<>&"]/g,'').trim();
     if(!nombre) return fail('Escribe el nombre del club.');
     var id = isNew ? slugify(nombre) : club.id;
-    if(!id) return fail('Ese nombre no sirve para la dirección del club; usa letras o números.');
+    if(!id || id==='staff') return fail('Ese nombre no sirve para la dirección del club; usa otras letras o números.');
     if(isNew && CLUBS.some(function(x){ return x.id===id; })) return fail('Ya existe un club con la dirección #/' + id + '.');
     var data = {
       nombre: nombre,
@@ -3503,6 +3553,94 @@ function openClubModal(club){
   overlay.classList.add('show');
   body.querySelector('#closeModal').onclick = function(){ overlay.classList.remove('show'); };
   overlay.onclick = function(e){ if(e.target===overlay) overlay.classList.remove('show'); };
+}
+
+
+// ---------- Acceso staff: un solo link para todos los clubes (#/staff) ----------
+var staffMode = false, authReady = false, staffMsg = '';
+function staffRedirect(){
+  if(!authReady || !currentUser) return false;
+  var r = currentUser.role;
+  if(!r){ staffMsg = 'Tu cuenta (' + currentUser.email + ') todavía no tiene permisos. Pídele al administrador de tu club que te agregue.'; safeRender(); return false; }
+  staffMode = false; staffMsg = '';
+  if(r==='creador'){
+    goToLanding();
+    setTimeout(function(){ var p = document.getElementById('creadorPanel'); if(p) p.scrollIntoView({behavior:'smooth'}); }, 300);
+    return true;
+  }
+  var club = currentUser.club || DEFAULT_CLUB_ID;
+  history.replaceState(null, '', '#/' + club);
+  enterClub(club);
+  if(r==='profesor'){ currentView = 'entrenamiento'; render(); }
+  return true;
+}
+function staffErr(err){
+  var c = (err && err.code) || '';
+  if(/wrong-password|invalid-credential|user-not-found|invalid-login/.test(c)) return 'El correo o la contraseña no coinciden.';
+  if(/too-many-requests/.test(c)) return 'Demasiados intentos. Espera unos minutos y vuelve a probar.';
+  if(/popup-closed|cancelled-popup/.test(c)) return '';
+  if(/popup-blocked/.test(c)) return 'Tu navegador bloqueó la ventana de Google. Permite ventanas emergentes e intenta otra vez.';
+  if(/invalid-email/.test(c)) return 'Ese correo no es válido.';
+  if(/network/.test(c)) return 'Sin conexión. Revisa tu internet.';
+  return 'No se pudo entrar. Intenta de nuevo.';
+}
+function renderStaffPage(){
+  var root = document.getElementById('landingRoot');
+  var logged = authReady && currentUser;
+  root.innerHTML =
+    '<div class="sp">' +
+      '<aside class="sp-side">' +
+        '<svg class="sp-lines" viewBox="0 0 600 800" fill="none" stroke="#fff" stroke-width="2" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect x="40" y="40" width="520" height="720"/><line x1="40" y1="400" x2="560" y2="400"/><circle cx="300" cy="400" r="80"/><rect x="170" y="40" width="260" height="120"/><rect x="170" y="640" width="260" height="120"/></svg>' +
+        '<img class="sp-logo" src="' + ARENA_LOGO_SRC + '" alt="Arena Sports" />' +
+        '<div><h1><span class="sp-X">Acceso</span><em class="sp-X">staff</em></h1>' +
+        '<p>Un solo acceso para todos los clubes. Entras con tu cuenta y llegas directo a lo tuyo.</p></div>' +
+        '<div class="sp-roles"><span>Profesores</span><span>Administradores</span><span>Arena Sports</span></div>' +
+      '</aside>' +
+      '<main class="sp-main"><div class="sp-box">' +
+        '<span class="sp-kick">Arena Sports</span>' +
+        '<h2><span class="sp-X">Bienvenido</span></h2>' +
+        (logged
+          ? '<p class="sp-sub">' + escHtml(staffMsg || ('Entraste como ' + currentUser.email + '.')) + '</p>' +
+            '<button class="sp-go" type="button" id="spOut">Cerrar sesión <i>→</i></button>'
+          : '<p class="sp-sub">Entra con la cuenta que te dio tu club.</p>' +
+            '<button class="sp-g" type="button" id="spGoogle">' + GOOGLE_ICON_SVG + 'Entrar con Google</button>' +
+            '<div class="sp-or">o con correo</div>' +
+            '<label for="spEmail">Correo</label><input class="sp-in" id="spEmail" type="email" placeholder="profe@club.com" autocomplete="username" />' +
+            '<label for="spPass">Contraseña</label><input class="sp-in" id="spPass" type="password" placeholder="••••••••" autocomplete="current-password" />' +
+            '<div class="sp-err" id="spErr"></div>' +
+            '<button class="sp-go" type="button" id="spIn">Entrar <i>→</i></button>' +
+            '<a class="sp-forgot" href="#" id="spForgot">¿Olvidaste tu contraseña?</a>') +
+        '<a class="sp-back" href="#" id="spBack">← Ver las cartas públicas</a>' +
+      '</div></main>' +
+    '</div>';
+  var back = root.querySelector('#spBack');
+  back.onclick = function(e){ e.preventDefault(); staffMode = false; goToLanding(); };
+  var out = root.querySelector('#spOut');
+  if(out){ out.onclick = function(){ staffMsg = ''; auth.signOut(); }; return; }
+  if(!window.auth){ root.querySelector('#spErr').textContent = 'El acceso no está disponible en esta vista previa.'; return; }
+  var err = root.querySelector('#spErr'), btn = root.querySelector('#spIn');
+  function busy(on){ btn.disabled = on; btn.style.opacity = on ? .6 : 1; }
+  function go(){
+    var email = root.querySelector('#spEmail').value.trim(), pass = root.querySelector('#spPass').value;
+    err.textContent = '';
+    if(!email || !pass){ err.textContent = 'Escribe tu correo y tu contraseña.'; return; }
+    busy(true);
+    auth.signInWithEmailAndPassword(email, pass).catch(function(e){ err.textContent = staffErr(e); busy(false); });
+  }
+  btn.onclick = go;
+  root.querySelector('#spPass').onkeydown = function(e){ if(e.key==='Enter') go(); };
+  root.querySelector('#spGoogle').onclick = function(){
+    err.textContent = '';
+    auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(function(e){ err.textContent = staffErr(e); });
+  };
+  root.querySelector('#spForgot').onclick = function(e){
+    e.preventDefault();
+    var email = root.querySelector('#spEmail').value.trim();
+    if(!email){ err.textContent = 'Escribe tu correo arriba y vuelve a tocar "¿Olvidaste tu contraseña?".'; return; }
+    auth.sendPasswordResetEmail(email).then(function(){
+      err.style.color = '#c1f807'; err.textContent = 'Te enviamos un correo para crear una contraseña nueva. Si entras con Google, no la necesitas.';
+    }).catch(function(e){ err.style.color = ''; err.textContent = staffErr(e); });
+  };
 }
 
 // ---------- Página de inicio: clubes y jugadores de la fecha ----------
@@ -3754,7 +3892,7 @@ function renderLanding(){
   var sc = root.querySelector('.lp-scroll');
   sc.onclick = function(e){ e.preventDefault(); var t = root.querySelector('#lpClubes'); if(t) t.scrollIntoView({behavior:'smooth'}); };
   var lg = root.querySelector('[data-act="login"]');
-  if(lg) lg.onclick = function(e){ e.preventDefault(); openLoginModal(); };
+  if(lg) lg.onclick = function(e){ e.preventDefault(); location.hash = '#/staff'; };
   var lo = root.querySelector('[data-act="logout"]');
   if(lo) lo.onclick = function(e){ e.preventDefault(); auth.signOut(); };
   if(isCreador()) renderCreadorPanel(root.querySelector('#creadorPanel'));
@@ -3802,6 +3940,12 @@ function revealOnScroll(root){
 }
 
 function render(){
+  if(staffMode){
+    document.getElementById('appRoot').style.display = 'none';
+    document.getElementById('landingRoot').style.display = 'block';
+    renderStaffPage();
+    return;
+  }
   if(!sessionEnteredClub){
     document.getElementById('appRoot').style.display = 'none';
     document.getElementById('landingRoot').style.display = 'block';
@@ -4663,6 +4807,8 @@ if(window.firebase && window.FIREBASE_CONFIG){
     }, function(err){ console.error('No se pudo leer la lista de clubes', err); clubsLoaded = true; safeRender(); });
 
     function afterAuthChange(){
+      authReady = true;
+      if(staffMode && staffRedirect()) return;
       if(isCreador() && clubsLoaded && !CLUBS.some(function(c){ return c.id===DEFAULT_CLUB_ID; })) migrateToMultiClub();
       if(sessionEnteredClub){ attachPrivate(); attachPhotos(); scheduleRebuild(); }
       safeRender();
