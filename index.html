@@ -1207,6 +1207,21 @@
 .lp .lp-nav button:hover{background:var(--lime);border-color:var(--lime);color:#0a0f02}
 @media (hover:none),(max-width:820px){.lp .lp-nav{display:none}}
 
+.lp .lp-sc .lp-ph{background:radial-gradient(circle at 50% 38%,rgba(255,255,255,.16),rgba(0,0,0,.45) 78%)}
+.lp .lp-sc .lp-ph::after{background:linear-gradient(180deg,transparent 55%,rgba(0,0,0,.55))}
+.lp .lp-bigpos{position:absolute;left:0;right:0;top:15%;text-align:center;font-family:var(--d);font-style:italic;font-weight:900;font-stretch:78%;font-size:clamp(70px,8vw,112px);line-height:1;color:rgba(255,255,255,.08);z-index:1}
+.lp .lp-mini{position:absolute;left:50%;top:17%;width:36%;transform:translateX(-50%);z-index:2}
+.lp .lp-mini rect,.lp .lp-mini line,.lp .lp-mini .lp-l{stroke:var(--acc);stroke-opacity:.45;fill:none;stroke-width:1.4}
+.lp .lp-mini .lp-dot{fill:var(--acc);filter:drop-shadow(0 0 6px var(--acc))}
+.lp .lp-mini .lp-ring{fill:none;stroke:var(--acc);stroke-width:1.2;transform-box:fill-box;transform-origin:center;animation:lpring 2.2s ease-out infinite}
+@keyframes lpring{from{transform:scale(.6);opacity:.9}to{transform:scale(2.4);opacity:0}}
+.lp .lp-sc .lp-nm{bottom:auto;top:61%}
+.lp .lp-sc .lp-nm div:first-child{font-size:clamp(15px,1.5vw,19px)}
+.lp .lp-st{position:absolute;left:10px;right:10px;bottom:10px;z-index:3;display:grid;grid-template-columns:repeat(3,1fr);gap:4px 6px;padding-top:8px;border-top:1px solid rgba(255,255,255,.18)}
+.lp .lp-st span{display:flex;align-items:baseline;gap:5px;font-family:var(--d);font-stretch:85%;font-weight:600;font-size:10px;letter-spacing:.06em;color:var(--acc)}
+.lp .lp-st b{font-weight:900;font-size:15px;color:#fff;font-style:italic}
+@media (max-width:820px){.lp .lp-st span:nth-child(n+4),.lp .lp-sc .lp-nm div:last-child{display:none}.lp .lp-sc .lp-nm{top:66%}.lp .lp-mini{width:32%;top:22%}.lp .lp-st b{font-size:13px}.lp .lp-st span{font-size:9px}}
+
 .lp .lp-pop{animation:lppop .6s var(--ease)}
 @keyframes lppop{50%{scale:1.06}}
 
@@ -3570,13 +3585,26 @@ function lpLoadWeekly(clubs){
   }).catch(function(e){ console.error(e); lpWeekly.loading = false; });
 }
 
+// Cartas de muestra del inicio: inventadas, sin fotos de jugadores reales
+var LP_SHOW = [
+  {pos:'EXT', v:71, t:'Extremo', sub:'Carta plata', x:82, y:30, st:[['VEL',80],['PAS',72],['TIR',69],['ACT',74],['RES',70],['DEF',48]]},
+  {pos:'DC',  v:84, t:'Delantero centro', sub:'Carta oro', x:50, y:14, st:[['TIR',89],['VEL',86],['ACT',85],['PAS',78],['RES',80],['DEF',52]]},
+  {pos:'POR', v:92, t:'Portero', sub:'Carta élite', x:50, y:90, st:[['ATA',95],['ACT',93],['DEF',88],['RES',84],['VEL',81],['PAS',79]]}
+];
+function lpShowCard(x){
+  var t = tierOf(x.v), cx = x.x*.6, cy = x.y*.84;
+  return '<div class="lp-card lp-sc' + (t.id==='bronce' ? '' : ' lp-' + t.id) + '"><div class="lp-ph"><div class="lp-bigpos">' + x.pos + '</div>' +
+    '<svg class="lp-mini" viewBox="0 0 60 84" aria-hidden="true"><rect x="1" y="1" width="58" height="82" rx="2"/><line x1="1" y1="42" x2="59" y2="42"/><circle class="lp-l" cx="30" cy="42" r="8"/><rect x="16" y="1" width="28" height="12"/><rect x="16" y="71" width="28" height="12"/>' +
+      '<circle class="lp-ring" cx="' + cx + '" cy="' + cy + '" r="4"/><circle class="lp-dot" cx="' + cx + '" cy="' + cy + '" r="3"/></svg>' +
+    '<div class="lp-rt"><b>' + x.v + '</b><span>' + x.pos + '</span></div>' +
+    '<div class="lp-tg">' + (t.id==='elite' ? BOLT_SVG : '') + t.label + '</div>' +
+    '<div class="lp-nm"><div>' + x.t + '</div><div>' + x.sub + '</div></div>' +
+    '<div class="lp-st">' + x.st.map(function(s){ return '<span><b>' + s[1] + '</b>' + s[0] + '</span>'; }).join('') + '</div>' +
+  '</div></div>';
+}
 function lpFillFan(){
   var fl = document.getElementById('lpFan');
-  if(!fl) return;
-  var top = lpWeekly.data && lpWeekly.data.top;
-  var cards = (top && top.length===3) ? [top[1], top[2], top[0]]
-    : [{v:68,pos:'',name:''},{v:84,pos:'',name:''},{v:92,pos:'',name:''}];
-  fl.innerHTML = cards.map(function(x){ return lpCardHtml(x); }).join('');
+  if(fl) fl.innerHTML = LP_SHOW.map(lpShowCard).join('');
 }
 
 function lpStat(x, k, i){
