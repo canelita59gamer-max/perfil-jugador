@@ -999,6 +999,20 @@
     .rating-scale button{width:35px;height:35px;}
   }
 
+
+  .attr-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:6px 0 10px;font-weight:700;font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-muted,#9aa3bf)}
+  .attr-head small{text-transform:none;letter-spacing:0;font-weight:500;font-size:11.5px;opacity:.8}
+  .attr-ic{border:0;background:rgba(255,255,255,.06);color:inherit;border-radius:6px;padding:1px 6px;margin-left:4px;font-size:11px;cursor:pointer;opacity:.7}
+  .attr-ic:hover{opacity:1}
+  .attr-ic.sure{background:#e5484d;color:#fff;opacity:1}
+  .attr-new{font-style:normal;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-left:6px;padding:2px 6px;border-radius:999px;background:rgba(193,248,7,.12);color:#c1f807}
+  .attr-eff{font-size:11.5px;opacity:.75;margin-top:4px}
+  .attr-eff .up{color:#3ee08a}.attr-eff .down{color:#ff6b6b}
+  .attr-name-in{font:inherit;padding:4px 8px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.25);color:inherit;width:min(220px,60vw)}
+  .attr-add{display:flex;gap:8px;margin-top:14px}
+  .attr-add input{flex:1;min-width:0;font:inherit;padding:9px 12px;border-radius:10px;border:1px dashed rgba(255,255,255,.22);background:rgba(255,255,255,.03);color:inherit}
+  .attr-note{font-size:12px;opacity:.65;margin-top:8px;line-height:1.45}
+
 /* ---------- página de inicio ---------- */
 .lp{position:relative;background:var(--bg);color:var(--ink);font-family:var(--b);overflow-x:hidden;min-height:100vh;
   --bg:#05070f;--bg2:#0a0e1c;--line:rgba(255,255,255,.08);--ink:#f1f3f8;--muted:#8a93ab;
@@ -1256,7 +1270,7 @@
 
 /* ============ DATA MODEL ============ */
 
-var ATTRS = [
+var BASE_ATTRS = [
   {key:'resistencia', label:'Resistencia'},
   {key:'pase', label:'Pase'},
   {key:'tiro', label:'Tiro'},
@@ -1266,6 +1280,24 @@ var ATTRS = [
   {key:'actitud', label:'Actitud'},
   {key:'velocidad', label:'Velocidad'}
 ];
+// Características: las de base + las que agregue el club (administrador) o cada categoría (su profesor).
+// Cada uno también les puede cambiar el nombre. 'club' = solo lo del club (predeterminado).
+function cleanLabel(s){ return String(s||'').replace(/[<>&"]/g,'').replace(/\s+/g,' ').trim().slice(0,40); }
+function attrsFor(cat){
+  var st = state || {};
+  var club = st.clubAttrs || {}, own = (cat && cat!=='club' && st.categoryAttrs && st.categoryAttrs[cat]) || {};
+  var labels = Object.assign({}, club.labels||{}, own.labels||{});
+  var seen = {};
+  return BASE_ATTRS.concat(club.extra||[], own.extra||[]).filter(function(a){
+    if(!a || !a.key || seen[a.key]) return false; seen[a.key] = true; return true;
+  }).map(function(a){
+    var base = BASE_ATTRS.some(function(b){ return b.key===a.key; });
+    var origen = base ? 'base' : ((own.extra||[]).some(function(x){ return x.key===a.key; }) ? 'categoria' : 'club');
+    return {key:a.key, label:cleanLabel(labels[a.key] || a.label) || a.label, origen:origen};
+  });
+}
+// Peso de una característica en el perfil de una posición (las nuevas arrancan en 5)
+function pw(profile, key){ var v = profile && profile[key]; return typeof v==='number' ? v : 5; }
 var RATING_MAX = 10;
 var QUICK_THRESHOLD = 5;
 
@@ -1443,7 +1475,7 @@ function normalizeState(s){
     POSITIONS.forEach(function(pos){
       var def = DEFAULT_PROFILES[pos.code];
       var cur = s.profiles[pos.code] || {};
-      ATTRS.forEach(function(a){ if(typeof cur[a.key] !== 'number') cur[a.key] = def[a.key]; });
+      BASE_ATTRS.forEach(function(a){ if(typeof cur[a.key] !== 'number') cur[a.key] = def[a.key]; });
       s.profiles[pos.code] = cur;
     });
     s.activePos = normalizePos(s.activePos) || 'MCO';
@@ -1520,7 +1552,7 @@ function publicPlayer(p){
 }
 function buildDocs(s){
   var docs = {};
-  docs['datos/general'] = cleanJson({categories:s.categories, profiles:s.profiles, v:2});
+  docs['datos/general'] = cleanJson({categories:s.categories, profiles:s.profiles, attrs:s.clubAttrs || {extra:[], labels:{}}, v:2});
   s.categories.forEach(function(cat){
     var players = s.players.filter(function(p){ return p.categoria===cat; });
     var td = {};
@@ -1531,8 +1563,9 @@ function buildDocs(s){
     var weights = (s.categoryWeights||{})[cat] || null;
     docs['categorias/'+cat] = cleanJson({nombre:cat, players:players, trainingDays:td, level:level, weights:weights,
       lineups:lu, formaciones:(s.formacionesCat||{})[cat] || {}, formato:(s.formatoCat||{})[cat] || null,
-      profile:(s.categoryProfiles||{})[cat] || {}, schedule:(s.trainingSchedules||{})[cat] || null});
-    docs['publico/'+cat] = cleanJson({nombre:cat, level:level, weights:weights, players:players.map(publicPlayer)});
+      profile:(s.categoryProfiles||{})[cat] || {}, schedule:(s.trainingSchedules||{})[cat] || null,
+      attrs:(s.categoryAttrs||{})[cat] || {extra:[], labels:{}}});
+    docs['publico/'+cat] = cleanJson({nombre:cat, level:level, weights:weights, attrs:(s.categoryAttrs||{})[cat] || {extra:[], labels:{}}, players:players.map(publicPlayer)});
   });
   return docs;
 }
@@ -1584,6 +1617,7 @@ function rebuildFromRemote(){
   var g = remote.general, old = state || {};
   var s = {categories:(g.categories||[]).slice(), profiles:cleanJson(g.profiles||{}), players:[], trainingDays:{},
     categoryLevels:{}, categoryWeights:{}, categoryProfiles:{}, trainingSchedules:{}, lineups:{}, formacionesCat:{}, formatoCat:{},
+    clubAttrs:cleanJson(g.attrs || {extra:[], labels:{}}), categoryAttrs:{},
     activePos:old.activePos, selectedCategoria:old.selectedCategoria, profesorCategoria:old.profesorCategoria, role:old.role, enteredClub:null};
   s.categories.forEach(function(cat){
     var priv = remote.priv[cat], src = priv || remote.pub[cat];
@@ -1591,6 +1625,7 @@ function rebuildFromRemote(){
     s.players = s.players.concat(cleanJson(src.players||[]));
     if(src.level) s.categoryLevels[cat] = src.level;
     if(src.weights) s.categoryWeights[cat] = src.weights;
+    if(src.attrs) s.categoryAttrs[cat] = cleanJson(src.attrs);
     if(priv){
       Object.keys(priv.trainingDays||{}).forEach(function(d){ s.trainingDays[cat+'::'+d] = cleanJson(priv.trainingDays[d]); });
       Object.keys(priv.lineups||{}).forEach(function(d){ s.lineups[cat+'::'+d] = cleanJson(priv.lineups[d]); });
@@ -1730,7 +1765,7 @@ function getTrainingDay(dateStr){
   var key = activeCategoria() + '::' + dateStr;
   if(!state.trainingDays[key]){
     var focus = {};
-    ATTRS.forEach(function(a){ focus[a.key] = false; }); // todos apagados por defecto — el profesor marca lo que sí se trabajó
+    attrsFor(activeCategoria()).forEach(function(a){ focus[a.key] = false; }); // todos apagados por defecto — el profesor marca lo que sí se trabajó
     state.trainingDays[key] = { held: null, reason:'', focus: focus, attendance: {}, finalized: false };
   }
   if(!state.trainingDays[key].attendance) state.trainingDays[key].attendance = {};
@@ -1753,22 +1788,22 @@ function scheduleFor(cat){
 }
 function quickAttrsFor(posCode, focus){
   var profile = profileFor(activeCategoria(), posCode);
-  return ATTRS.filter(function(a){
-    if(profile[a.key] < QUICK_THRESHOLD) return false;
+  return attrsFor(activeCategoria()).filter(function(a){
+    if(pw(profile, a.key) < QUICK_THRESHOLD) return false;
     if(focus && !focus[a.key]) return false; // no se trabajó ese día / no aplica
     return true;
-  }).sort(function(a,b){ return profile[b.key]-profile[a.key]; });
+  }).sort(function(a,b){ return pw(profile, b.key)-pw(profile, a.key); });
 }
 function analyzeFeedback(text, posCode, skipKeys){
   var profile = profileFor(activeCategoria(), posCode);
   var lower = text.toLowerCase();
   var hits = [];
-  ATTRS.forEach(function(a){
+  attrsFor(activeCategoria()).forEach(function(a){
     if(skipKeys && skipKeys.indexOf(a.key)!==-1) return; // ya se calificó por atributo, no duplicar
-    var words = KEYWORDS[a.key];
+    var words = (KEYWORDS[a.key] || []).concat([a.label.toLowerCase()]);
     var matched = words.some(function(w){ return lower.indexOf(w) !== -1; });
     if(matched){
-      var weight = profile[a.key];
+      var weight = pw(profile, a.key);
       var tier = weight >= 7 ? 'up' : (weight <= 3 ? 'down' : 'neutral');
       hits.push({key:a.key, label:a.label, weight:weight, tier:tier});
     }
@@ -1780,14 +1815,16 @@ var RATING_STEPS = {1:-2, 2:-2, 3:-1, 4:-1, 5:0, 6:1, 7:1, 8:2, 9:2, 10:3};
 function baseDelta(rating){ return RATING_STEPS[rating] !== undefined ? RATING_STEPS[rating] : 0; }
 function computeDelta(rating, hits, quickRatings){
   var d = baseDelta(rating);
+  // Cada característica pesa según el perfil de exigencia: con 10 sube MÁS si le fue bien y baja MÁS si le fue mal;
+  // con 5 se mueve la mitad. Ya no se redondea cada una (antes un 7 y un 10 terminaban valiendo lo mismo).
   (quickRatings||[]).forEach(function(q){
-    d += Math.round(baseDelta(q.value) * (q.weight/RATING_MAX) * 0.6);
+    d += baseDelta(q.value) * (q.weight/RATING_MAX) * 0.8;
   });
   hits.forEach(function(h){
     if(h.tier==='up') d += 1; // mención en texto de algo clave para el puesto: bono chico
     // neutral o no-clave: sin bono, para no duplicar lo que ya califican los atributos rápidos
   });
-  return d;
+  return Math.round(d*10)/10;
 }
 
 /* ============ RENDER: CHROME (rol + categoría) ============ */
@@ -1983,7 +2020,7 @@ function renderEntrenamiento(){
     focusBox.innerHTML = '<div class="focus-title">¿Qué se trabajó este día? (empieza vacío — marca solo lo que aplique)</div><div class="focus-chips" id="focusChips"></div>';
     el.appendChild(focusBox);
     var chipsWrap = focusBox.querySelector('#focusChips');
-    ATTRS.forEach(function(a){
+    attrsFor(activeCategoria()).forEach(function(a){
       var chip = document.createElement('button');
       chip.className = 'focus-chip' + (day.focus[a.key] ? ' on':'');
       chip.textContent = a.label;
@@ -2033,7 +2070,7 @@ function computeDayReport(dateStr, day){
     var bd = baseDelta(Math.round(avgRating));
     quality = bd > 0 ? 'Buen entrenamiento' : (bd < 0 ? 'Entrenamiento flojo' : 'Entrenamiento parejo');
   }
-  var focusLabels = ATTRS.filter(function(a){ return day.focus[a.key]; }).map(function(a){ return a.label; });
+  var focusLabels = attrsFor(activeCategoria()).filter(function(a){ return day.focus[a.key]; }).map(function(a){ return a.label; });
   return { presentes:presentes, ausentes:ausentes, sinMarcar:sinMarcar, avgRating:avgRating, quality:quality, focusLabels:focusLabels };
 }
 
@@ -2152,12 +2189,12 @@ function renderTrainingRow(p, dateStr, day){
       if(draft.rating==null){ return; }
       var quickKeys = Object.keys(draft.quick);
       var quickRatings = quickKeys.map(function(k){
-        return {key:k, value:draft.quick[k], weight:profileFor(p.categoria, draft.pos || p.pos)[k]};
+        return {key:k, value:draft.quick[k], weight:pw(profileFor(p.categoria, draft.pos || p.pos), k)};
       });
       var hits = analyzeFeedback(draft.feedback||'', draft.pos || p.pos, quickKeys);
       var newDelta = computeDelta(draft.rating, hits, quickRatings);
       var attrsHitLabels = quickRatings.map(function(q){
-        var a = ATTRS.find(function(x){return x.key===q.key;});
+        var a = attrsFor(p.categoria).find(function(x){return x.key===q.key;}) || {label:q.key};
         return a.label + ' (' + q.value + '/10)';
       }).concat(hits.map(function(h){return h.label + ' (texto)';}));
       var displayComment = draft.feedback || (quickRatings.length ? '(calificado por atributos, sin comentario escrito)' : '(sin comentario)');
@@ -2680,12 +2717,12 @@ function renderMatchRow(p, dateStr, posJugada, esTitular){
       if(draft.rating==null){ return; }
       var quickKeys = Object.keys(draft.quick);
       var quickRatings = quickKeys.map(function(k){
-        return {key:k, value:draft.quick[k], weight:profileFor(p.categoria, draft.pos || p.pos)[k]};
+        return {key:k, value:draft.quick[k], weight:pw(profileFor(p.categoria, draft.pos || p.pos), k)};
       });
       var hits = analyzeFeedback(draft.feedback||'', draft.pos || p.pos, quickKeys);
       var newDelta = computeDelta(draft.rating, hits, quickRatings);
       var attrsHitLabels = quickRatings.map(function(q){
-        var a = ATTRS.find(function(x){return x.key===q.key;});
+        var a = attrsFor(p.categoria).find(function(x){return x.key===q.key;}) || {label:q.key};
         return a.label + ' (' + q.value + '/10)';
       }).concat(hits.map(function(h){return h.label + ' (texto)';}));
       var displayComment = draft.feedback || (quickRatings.length ? '(calificado por atributos, sin comentario escrito)' : '(sin comentario)');
@@ -2860,6 +2897,13 @@ function openPlayerModal(p){
 }
 
 /* ============ RENDER: PERFIL DE EXIGENCIA ============ */
+// Cuánto mueve la carta un 10 y un 1 en esa característica, según su peso
+function effTxt(w){
+  if(w < QUICK_THRESHOLD) return 'No se califica aparte en este puesto';
+  var q = w>=9 ? 'mucho' : (w>=7 ? 'bastante' : 'poco');
+  return 'Pesa <b>' + Math.round(w/RATING_MAX*100) + '%</b> · si le va bien sube <b class="up">' + q + '</b> · si le va mal baja <b class="down">' + q + '</b>';
+}
+
 var perfilUi = {scope:'club'};
 function renderPerfil(){
   var el = document.createElement('div');
@@ -2907,32 +2951,101 @@ function renderPerfil(){
     var profile = scope==='club' ? state.profiles[pos.code] : profileFor(scope, pos.code);
     panel.innerHTML = '<h3>' + pos.name + '</h3>' +
       (scope!=='club' ? '<span class="pill" style="margin-bottom:10px;">' + (custom ? 'Personalizado para ' + escHtml(scope) : 'Igual al predeterminado del club') + '</span>' : '') +
-      '<div class="desc">' + pos.short + ' — ' + (editable ? 'mueva cada barra de 0 a 10 según qué tanto le exige a un jugador en este puesto.' : 'solo lectura.') + ' Desde ' + QUICK_THRESHOLD + '/10, esa cualidad le aparece al profesor como pregunta rápida durante el entrenamiento, sin que tenga que escribir nada.</div>';
-    ATTRS.forEach(function(a){
+      '<div class="desc">' + pos.short + ' — ' + (editable ? 'mueva cada barra de 0 a 10 según qué tanto le exige a un jugador en este puesto. Entre más alta, más sube la carta cuando le va bien en eso y más baja cuando le va mal.' : 'solo lectura.') + ' Desde ' + QUICK_THRESHOLD + '/10, esa cualidad le aparece al profesor como pregunta rápida durante el entrenamiento, sin que tenga que escribir nada.</div>';
+    var canEditAttrs = isAdmin ? scope==='club' : true;
+    var mine = scope==='club' ? 'club' : 'categoria';
+    function attrStore(){
+      if(scope==='club'){ state.clubAttrs = state.clubAttrs || {extra:[], labels:{}}; return state.clubAttrs; }
+      state.categoryAttrs = state.categoryAttrs || {};
+      state.categoryAttrs[scope] = state.categoryAttrs[scope] || {extra:[], labels:{}};
+      var st = state.categoryAttrs[scope]; st.extra = st.extra || []; st.labels = st.labels || {};
+      return st;
+    }
+    function setWeight(key, val){
+      if(scope!=='club' && !custom){
+        // primer cambio en esta posición: la categoría se queda con su propia copia
+        state.categoryProfiles = state.categoryProfiles || {};
+        state.categoryProfiles[scope] = state.categoryProfiles[scope] || {};
+        state.categoryProfiles[scope][pos.code] = Object.assign({}, profile);
+        profile = state.categoryProfiles[scope][pos.code];
+        custom = true;
+      }
+      profile[key] = val;
+    }
+    var head = document.createElement('div');
+    head.className = 'attr-head';
+    head.innerHTML = '<span>Características</span>' + (canEditAttrs ? '<small>Toca el lápiz para cambiarle el nombre</small>' : '');
+    panel.appendChild(head);
+    attrsFor(scope).forEach(function(a){
       var row = document.createElement('div');
       row.className = 'attr-row';
+      var v = pw(profile, a.key);
+      var del = canEditAttrs && a.origen===mine;
       row.innerHTML =
-        '<div class="attr-row-top"><span class="name">' + a.label + '</span><span class="val">' + profile[a.key] + '/10</span></div>' +
-        '<input type="range" min="0" max="10" step="1" value="' + profile[a.key] + '"' + (editable?'':' disabled') + ' />';
-      var input = row.querySelector('input');
-      var valSpan = row.querySelector('.val');
+        '<div class="attr-row-top"><span class="name">' + escHtml(a.label) +
+          (canEditAttrs ? ' <button class="attr-ic" data-act="ren" title="Cambiar nombre">✎</button>' : '') +
+          (del ? '<button class="attr-ic" data-act="del" title="Quitar característica">✕</button>' : '') +
+          (a.origen!=='base' ? '<em class="attr-new">' + (a.origen==='club' ? 'del club' : 'propia') + '</em>' : '') +
+        '</span><span class="val">' + v + '/10</span></div>' +
+        '<input type="range" min="0" max="10" step="1" value="' + v + '"' + (editable?'':' disabled') + ' />' +
+        '<div class="attr-eff">' + effTxt(v) + '</div>';
+      var input = row.querySelector('input[type=range]');
+      var valSpan = row.querySelector('.val'), eff = row.querySelector('.attr-eff');
       input.oninput = function(){
         if(!editable) return;
-        if(scope!=='club' && !custom){
-          // primer cambio en esta posición: la categoría se queda con su propia copia
-          state.categoryProfiles = state.categoryProfiles || {};
-          state.categoryProfiles[scope] = state.categoryProfiles[scope] || {};
-          state.categoryProfiles[scope][pos.code] = Object.assign({}, profile);
-          profile = state.categoryProfiles[scope][pos.code];
-          custom = true;
-        }
-        profile[a.key] = parseInt(input.value,10);
-        valSpan.textContent = profile[a.key] + '/10';
+        var nv = parseInt(input.value,10);
+        setWeight(a.key, nv);
+        valSpan.textContent = nv + '/10';
+        eff.innerHTML = effTxt(nv);
         persist();
         updateSummary();
       };
+      var ren = row.querySelector('[data-act=ren]');
+      if(ren) ren.onclick = function(){
+        var nameEl = row.querySelector('.name');
+        nameEl.innerHTML = '<input class="attr-name-in" maxlength="40" value="' + escHtml(a.label) + '" /> <button class="pl-btn small" data-ok>Guardar</button>';
+        var inp = nameEl.querySelector('input'); inp.focus(); inp.select();
+        function ok(){
+          var nl = cleanLabel(inp.value);
+          if(nl && nl!==a.label){ attrStore().labels[a.key] = nl; persist(); }
+          renderPerfilPanel();
+        }
+        nameEl.querySelector('[data-ok]').onclick = ok;
+        inp.onkeydown = function(e){ if(e.key==='Enter') ok(); if(e.key==='Escape') renderPerfilPanel(); };
+      };
+      var dl = row.querySelector('[data-act=del]');
+      if(dl) dl.onclick = function(){
+        if(!dl.classList.contains('sure')){ dl.classList.add('sure'); dl.textContent = '¿Quitar?'; setTimeout(function(){ if(dl.isConnected){ dl.classList.remove('sure'); dl.textContent = '✕'; } }, 3000); return; }
+        var st = attrStore();
+        st.extra = (st.extra||[]).filter(function(x){ return x.key!==a.key; });
+        if(st.labels) delete st.labels[a.key];
+        persist(); renderPerfilPanel();
+      };
       panel.appendChild(row);
     });
+    if(canEditAttrs){
+      var addRow = document.createElement('div');
+      addRow.className = 'attr-add';
+      addRow.innerHTML = '<input maxlength="40" placeholder="Nueva característica (ej: Juego aéreo)" /><button class="pl-btn small">+ Agregar</button>';
+      var ain = addRow.querySelector('input');
+      function add(){
+        var lbl = cleanLabel(ain.value);
+        if(!lbl) return;
+        if(attrsFor(scope).some(function(x){ return x.label.toLowerCase()===lbl.toLowerCase(); })){ ain.value=''; ain.placeholder = 'Ya existe "' + lbl + '"'; return; }
+        var key = 'c_' + lbl.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'_').slice(0,20) + '_' + Date.now().toString(36).slice(-4);
+        attrStore().extra.push({key:key, label:lbl});
+        persist(); renderPerfilPanel();
+      }
+      addRow.querySelector('button').onclick = add;
+      ain.onkeydown = function(e){ if(e.key==='Enter') add(); };
+      panel.appendChild(addRow);
+      var note = document.createElement('div');
+      note.className = 'attr-note';
+      note.textContent = scope==='club'
+        ? 'Las que agregues aquí le aparecen a todas las categorías del club. Arrancan en 5/10 en cada posición: ajústalas posición por posición.'
+        : 'Las que agregues solo aparecen en ' + scope + '. Arrancan en 5/10 en cada posición: ajústalas posición por posición.';
+      panel.appendChild(note);
+    }
     var summary = document.createElement('div');
     summary.className = 'summary-box';
     panel.appendChild(summary);
@@ -2948,8 +3061,8 @@ function renderPerfil(){
       panel.appendChild(resetRow);
     }
     function updateSummary(){
-      var sorted = ATTRS.slice().sort(function(x,y){ return profile[y.key]-profile[x.key]; });
-      var quick = sorted.filter(function(a){ return profile[a.key] >= QUICK_THRESHOLD; });
+      var sorted = attrsFor(scope).sort(function(x,y){ return pw(profile, y.key)-pw(profile, x.key); });
+      var quick = sorted.filter(function(a){ return pw(profile, a.key) >= QUICK_THRESHOLD; });
       var low = sorted.slice(-1)[0];
       var quickTxt = quick.length ? quick.map(function(a){return a.label.toLowerCase();}).join(', ') : 'ninguna todavía';
       summary.innerHTML = 'En "Entrenamiento del día", a un jugador de <b>' + pos.name + '</b> se le va a preguntar directamente por: <b>' + quickTxt + '</b>. Lo que quede por debajo de ' + QUICK_THRESHOLD + '/10 (como <b>' + low.label.toLowerCase() + '</b>, en ' + profile[low.key] + '/10) solo suma si el profesor lo escribe aparte.';
@@ -2963,7 +3076,8 @@ function renderPerfil(){
 /* ============ RENDER: INFORME SEMESTRAL ============ */
 function attributeAverages(hist){
   var sums = {}, counts = {};
-  ATTRS.forEach(function(a){ sums[a.key]=0; counts[a.key]=0; });
+  var LIST = attrsFor(activeCategoria());
+  LIST.forEach(function(a){ sums[a.key]=0; counts[a.key]=0; });
   hist.forEach(function(h){
     var qv = h.quickValues || {};
     Object.keys(qv).forEach(function(k){
@@ -2971,7 +3085,7 @@ function attributeAverages(hist){
       sums[k] += qv[k]; counts[k] += 1;
     });
   });
-  return ATTRS.filter(function(a){ return counts[a.key] > 0; })
+  return LIST.filter(function(a){ return counts[a.key] > 0; })
     .map(function(a){ return {key:a.key, label:a.label, avg: sums[a.key]/counts[a.key], count: counts[a.key]}; })
     .sort(function(x,y){ return y.avg-x.avg; });
 }
