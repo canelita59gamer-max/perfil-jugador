@@ -1,0 +1,21 @@
+{
+  "name": "Arena Sports · Perfil de Jugador",
+  "short_name": "Arena Sports",
+  "description": "Cartas, entrenamientos y partidos de los clubes de formación.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#05070f",
+  "theme_color": "#05070f",
+  "lang": "es-CO",
+  "categories": ["sports"],
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Entrar como staff", "url": "./#/staff", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] }
+  ]
+}
