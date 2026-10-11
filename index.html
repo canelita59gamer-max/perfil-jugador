@@ -1142,6 +1142,7 @@
 .sp-or{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:12px;margin:20px 0}
 .sp-or::before,.sp-or::after{content:'';flex:1;height:1px;background:var(--line)}
 .sp-box label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin:0 0 6px}
+.sp-in::placeholder{color:rgba(138,147,171,.55)}
 .sp-in{width:100%;box-sizing:border-box;padding:13px 14px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.03);color:var(--ink);font:inherit;margin-bottom:14px;outline:none;transition:border-color .3s}
 .sp-in:focus{border-color:var(--lime)}
 .sp-err{min-height:18px;font-size:13px;color:#ff7b7b;margin:-4px 0 8px;line-height:1.4}
@@ -1419,7 +1420,7 @@
 <script>
   window.FIREBASE_CONFIG = {
     apiKey: "AIzaSyCnNojR9m7fXWlbOyRgEF7w63B0cmMUxKQ",
-    authDomain: "perfil-jugadores.firebaseapp.com",
+    authDomain: location.hostname === "localhost" ? "perfil-jugadores.firebaseapp.com" : location.hostname,
     projectId: "perfil-jugadores",
     storageBucket: "perfil-jugadores.firebasestorage.app",
     messagingSenderId: "721519743968",
@@ -4032,8 +4033,8 @@ function renderStaffPage(){
           : '<p class="sp-sub">Entra con la cuenta que te dio tu club.</p>' +
             '<button class="sp-g" type="button" id="spGoogle">' + GOOGLE_ICON_SVG + 'Entrar con Google</button>' +
             '<div class="sp-or">o con correo</div>' +
-            '<label for="spEmail">Correo</label><input class="sp-in" id="spEmail" type="email" placeholder="profe@club.com" autocomplete="username" />' +
-            '<label for="spPass">Contraseña</label><input class="sp-in" id="spPass" type="password" placeholder="••••••••" autocomplete="current-password" />' +
+            '<label for="spEmail">Correo</label><input class="sp-in" id="spEmail" type="email" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="tucorreo@ejemplo.com" autocomplete="username" />' +
+            '<label for="spPass">Contraseña</label><input class="sp-in" id="spPass" type="password" placeholder="Tu contraseña" autocomplete="current-password" />' +
             '<div class="sp-err" id="spErr"></div>' +
             '<button class="sp-go" type="button" id="spIn">Entrar <i>→</i></button>' +
             '<a class="sp-forgot" href="#" id="spForgot">¿Olvidaste tu contraseña?</a>') +
