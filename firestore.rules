@@ -84,11 +84,13 @@ service cloud.firestore {
 
     // ---------- recordatorios del staff: cada quien maneja los suyos ----------
     match /avisos/{correo} {
-      allow read, write: if isStaff() && correo == request.auth.token.email.lower()
-        && request.resource.data.keys().hasOnly(['activo','dias','hora','antes','recordar','horaRecordar','partido','club','categoria','zona','token','actualizado'])
+      function esMio() { return isStaff() && correo == myEmail(); }
+      allow read: if esMio() || isCreador();
+      // 'enviados' lo escribe el enviador con permisos de servidor; va en la lista para no romper el guardado del profesor
+      allow write: if esMio()
+        && request.resource.data.keys().hasOnly(['activo','dias','hora','antes','recordar','horaRecordar','partido','club','categoria','zona','token','actualizado','enviados'])
         && request.resource.data.get('token', '') is string
         && request.resource.data.get('token', '').size() < 500;
-      allow read: if isCreador();
     }
 
     // ---------- estructura anterior (antes de multi-club): solo el Creador, para la migración ----------
