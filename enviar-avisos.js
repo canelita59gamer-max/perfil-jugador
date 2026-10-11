@@ -97,7 +97,8 @@ async function enviar(doc, p, clave, titulo, cuerpo, url) {
 
   for (const doc of snap.docs) {
     const p = doc.data() || {};
-    if (!p.activo || !p.token || !p.club || !p.categoria) continue;
+    // la categoría puede faltar (p. ej. el creador): se avisa igual, solo sin revisar el registro
+    if (!p.activo || !p.token || !p.club) continue;
 
     const t = ahoraLocal(typeof p.zona === 'number' ? p.zona : ZONA);
     const entrenaHoy = (p.dias || []).includes(t.dia);
@@ -114,25 +115,28 @@ async function enviar(doc, p, clave, titulo, cuerpo, url) {
       p.enviados = enviados;
     }
 
-    const estado = await registroDeHoy(p.club, p.categoria, t.fecha);
+    const estado = p.categoria
+      ? await registroDeHoy(p.club, p.categoria, t.fecha)
+      : { entreno: false, partido: false, hayAlineacion: false };
+    const dondeTxt = p.categoria || 'Tu categoría';
     const verEntreno = `${SITIO}/#/${p.club}`;
 
     // 1. antes del entreno
     if (entrenaHoy && hora !== null && toca(hora - (+p.antes || 0), t.min)) {
       if (await enviar(doc, p, `antes|${t.fecha}`,
         `Hoy entrenas a las ${en12(p.hora)}`,
-        `${p.categoria}. Cuando termines, marca asistencia y califica.`, verEntreno)) n++;
+        `${dondeTxt}. Cuando termines, marca asistencia y califica.`, verEntreno)) n++;
     }
 
     // 2. si no ha registrado
-    if (entrenaHoy && p.recordar && !estado.entreno && toca(aMin(p.horaRecordar), t.min)) {
+    if (entrenaHoy && p.categoria && p.recordar && !estado.entreno && toca(aMin(p.horaRecordar), t.min)) {
       if (await enviar(doc, p, `recordar|${t.fecha}`,
         'No olvides registrar el entrenamiento de hoy',
         `${p.categoria} todavía no tiene asistencia ni notas de hoy. Te toma 2 minutos.`, verEntreno)) n++;
     }
 
     // 3. día de partido: solo si ya armó la alineación y aún no calificó
-    if (p.partido && estado.hayAlineacion && !estado.partido && toca(aMin(p.hora), t.min)) {
+    if (p.categoria && p.partido && estado.hayAlineacion && !estado.partido && toca(aMin(p.hora), t.min)) {
       if (await enviar(doc, p, `partido|${t.fecha}`,
         'Registra el partido de hoy ⚽',
         `${p.categoria}. Marca quiénes jugaron y califícalos.`, verEntreno)) n++;
