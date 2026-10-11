@@ -13,7 +13,8 @@
 const admin = require('firebase-admin');
 
 const ZONA = -5;                 // Colombia
-const VENTANA = 35;              // minutos: un poco más que el intervalo, para no dejar huecos
+const VENTANA = 9;               // minutos: un poco más que el intervalo, para no dejar huecos
+const AVANCE = 10;               // minutos que el creador recibe el aviso antes que el profesor
 const SITIO = process.env.SITIO || 'https://perfil-jugador-wheat.vercel.app';
 
 admin.initializeApp({
@@ -76,6 +77,8 @@ async function enviar(doc, p, clave, titulo, cuerpo, url) {
       }
     });
     await doc.ref.set({ enviados: { [clave]: Date.now() } }, { merge: true });
+    enviados[clave] = Date.now();
+    p.enviados = enviados;
     console.log('enviado:', doc.id, clave);
     return true;
   } catch (e) {
@@ -94,6 +97,12 @@ async function enviar(doc, p, clave, titulo, cuerpo, url) {
 (async () => {
   const snap = await db.collection('avisos').get();
   let n = 0;
+
+  // el creador no tiene categoría: recibe una copia de cada entreno, 10 minutos antes que el profesor
+  const jefes = snap.docs.filter((d) => {
+    const v = d.data() || {};
+    return v.activo && v.token && !v.categoria;
+  });
 
   for (const doc of snap.docs) {
     const p = doc.data() || {};
@@ -120,6 +129,17 @@ async function enviar(doc, p, clave, titulo, cuerpo, url) {
       : { entreno: false, partido: false, hayAlineacion: false };
     const dondeTxt = p.categoria || 'Tu categoría';
     const verEntreno = `${SITIO}/#/${p.club}`;
+
+    // 0. copia anticipada para el creador
+    if (entrenaHoy && p.categoria && hora !== null && toca(hora - (+p.antes || 0) - AVANCE, t.min)) {
+      for (const jefe of jefes) {
+        if (jefe.id === doc.id) continue;
+        const j = jefe.data() || {};
+        if (await enviar(jefe, j, `sup|${doc.id}|${t.fecha}`,
+          `${p.categoria} entrena a las ${en12(p.hora)}`,
+          `En ${AVANCE + (+p.antes || 0)} minutos le llega el aviso al profesor.`, verEntreno)) n++;
+      }
+    }
 
     // 1. antes del entreno
     if (entrenaHoy && hora !== null && toca(hora - (+p.antes || 0), t.min)) {
