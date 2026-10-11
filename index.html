@@ -1126,6 +1126,10 @@
 .sp-side p{color:var(--muted);max-width:40ch;line-height:1.6;margin:18px 0 0}
 .sp-roles{display:flex;gap:8px;flex-wrap:wrap}
 .sp-roles span{font-size:12px;font-weight:600;padding:7px 12px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.sp-warn{display:block;padding:14px 16px;border-radius:16px;border:1px solid rgba(255,190,60,.45);background:rgba(255,190,60,.1);margin-bottom:18px}
+.sp-warn b{display:block;font-size:14px;color:#ffd37a;margin-bottom:4px}
+.sp-warn span{display:block;font-size:12.5px;line-height:1.5;color:#c7cddc;margin-bottom:10px}
+.sp-warn button{width:100%;padding:10px;border:0;border-radius:999px;background:#ffd37a;color:#1a1200;font:inherit;font-weight:700;font-size:13px;cursor:pointer}
 .sp-main{display:grid;place-items:center;padding:40px 20px}
 .sp-box{width:100%;max-width:400px}
 .sp-kick{display:inline-flex;align-items:center;gap:8px;font-family:var(--d);font-size:11px;font-weight:800;letter-spacing:.14em;color:var(--lime);text-transform:uppercase}
@@ -3874,6 +3878,16 @@ function ntAlEntrar(){
 
 // ---------- Instalar como app (PWA) ----------
 var pwaPrompt = null;
+// WhatsApp, Instagram y otras apps abren los enlaces en su propio navegador, donde iOS no deja instalar ni guardar la sesión
+function enOtraApp(){
+  var u = navigator.userAgent || '';
+  if(/FBAN|FBAV|Instagram|Line\/|MicroMessenger|Snapchat|Twitter|TikTok/i.test(u)) return true;
+  // WhatsApp en iPhone: Safari sin barra de navegación propia
+  if(/WhatsApp/i.test(u)) return true;
+  if(esIOSUA() && /Safari/.test(u) === false && /CriOS|FxiOS|EdgiOS/.test(u) === false && /AppleWebKit/.test(u)) return true;
+  return false;
+}
+function esIOSUA(){ return /iphone|ipad|ipod/i.test(navigator.userAgent); }
 function esIOS(){ return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1); }
 function yaInstalada(){
   return window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
@@ -4004,6 +4018,9 @@ function renderStaffPage(){
         '<div class="sp-roles"><span>Profesores</span><span>Administradores</span><span>Arena Sports</span></div>' +
       '</aside>' +
       '<main class="sp-main"><div class="sp-box">' +
+        (enOtraApp() ? '<div class="sp-warn" id="spWarn"><b>Ábrelo en Safari</b>' +
+          '<span>Estás viendo esto dentro de otra app. Ahí no se puede instalar ni guardar tu sesión.</span>' +
+          '<button type="button" id="spCopy">Copiar el enlace</button></div>' : '') +
         '<span class="sp-kick">Arena Sports</span>' +
         '<h2><span class="sp-X">Bienvenido</span></h2>' +
         (!authReady && window.auth
@@ -4024,6 +4041,22 @@ function renderStaffPage(){
         (PRIV_ON ? '<a class="sp-back" href="#/privacidad" style="margin-top:8px">Política de privacidad</a>' : '') +
       '</div></main>' +
     '</div>';
+  var cp = root.querySelector('#spCopy');
+  if(cp) cp.onclick = function(){
+    var url = location.origin + location.pathname + '#/staff';
+    function ok(){ cp.textContent = '✓ Copiado — pégalo en Safari'; }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(url).then(ok).catch(function(){ pide(); });
+    } else pide();
+    function pide(){
+      var i = document.createElement('input');
+      i.value = url; i.setAttribute('readonly','');
+      i.style.cssText = 'position:fixed;left:0;top:0;opacity:0';
+      document.body.appendChild(i); i.select(); i.setSelectionRange(0, 99999);
+      try{ document.execCommand('copy'); ok(); }catch(e){ cp.textContent = url; }
+      i.remove();
+    }
+  };
   var back = root.querySelector('#spBack');
   back.onclick = function(e){ e.preventDefault(); staffMode = false; goToLanding(); };
   if(logged && currentUser.role && esIOS()) setTimeout(function(){ mostrarInstalar(false); }, 1200);
@@ -4046,7 +4079,22 @@ function renderStaffPage(){
   root.querySelector('#spPass').onkeydown = function(e){ if(e.key==='Enter') go(); };
   root.querySelector('#spGoogle').onclick = function(){
     err.textContent = ''; staffJustSigned = true; pwaGuardar('arena_staff','1');
-    auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(function(e){ err.textContent = staffErr(e); });
+    var prov = new firebase.auth.GoogleAuthProvider();
+    if(esIOS() || yaInstalada()){
+      // en iPhone y en la app instalada la ventanita emergente no funciona bien: se usa redirección
+      staffJustSigned = true; pwaGuardar('arena_staff','1');
+      auth.signInWithRedirect(prov).catch(function(e){ err.textContent = staffErr(e); });
+      return;
+    }
+    auth.signInWithPopup(prov).catch(function(e){
+      var c = String((e && e.code) || '');
+      if(/popup-blocked|operation-not-supported|cancelled-popup-request/.test(c)){
+        staffJustSigned = true; pwaGuardar('arena_staff','1');
+        auth.signInWithRedirect(prov).catch(function(e2){ err.textContent = staffErr(e2); });
+        return;
+      }
+      err.textContent = staffErr(e);
+    });
   };
   root.querySelector('#spForgot').onclick = function(e){
     e.preventDefault();
@@ -4266,7 +4314,7 @@ function renderLanding(){
         '<footer>' +
           '<span><img src="' + ARENA_LOGO_SRC + '" alt="" />Arena Sports · ' + new Date().getFullYear() + (PRIV_ON ? ' · <a href="#/privacidad" style="color:inherit;text-decoration:underline">Privacidad</a>' : '') + '</span>' +
           '<div class="lp-foot"><div class="lp-social" id="socialRow"></div>' +
-            '<div class="lp-staff">' + (currentUser ? escHtml(currentUser.email) + ' · <a href="#" data-act="logout">Cerrar sesión</a>' : '<a href="#" data-act="login">Acceso para clubes</a>') + '</div></div>' +
+            '<div class="lp-staff">' + (currentUser ? escHtml(currentUser.email) + ' · <a href="#" data-act="logout">Cerrar sesión</a>' : '<a href="#/staff" data-act="login">Acceso para clubes</a>') + '</div></div>' +
         '</footer>' +
       '</main>' +
     '</div>';
@@ -4307,7 +4355,7 @@ function renderLanding(){
   var sc = root.querySelector('.lp-scroll');
   sc.onclick = function(e){ e.preventDefault(); var t = root.querySelector('#lpClubes'); if(t) t.scrollIntoView({behavior:'smooth'}); };
   var lg = root.querySelector('[data-act="login"]');
-  if(lg) lg.onclick = function(e){ e.preventDefault(); location.hash = '#/staff'; };
+  if(lg) lg.onclick = function(){ staffMode = true; }; // el href ya cambia la dirección; esto solo adelanta la pantalla
   var lo = root.querySelector('[data-act="logout"]');
   if(lo) lo.onclick = function(e){ e.preventDefault(); auth.signOut(); };
   if(isCreador()) renderCreadorPanel(root.querySelector('#creadorPanel'));
@@ -5207,7 +5255,7 @@ document.getElementById('landingRoot').innerHTML = '<div style="min-height:100vh
 document.getElementById('landingRoot').style.display = 'block';
 
 // La app instalada en el celular de un profe abre directo en su acceso, no en la portada pública
-if(!location.hash && yaInstalada() && pwaGuardado('arena_staff')){
+if(!location.hash && yaInstalada()){
   history.replaceState(null, '', '#/staff');
   staffMode = true;
 }
@@ -5268,6 +5316,7 @@ if(window.firebase && window.FIREBASE_CONFIG){
   }
 } else {
   bootFromLocalOrFresh();
+  routeFromHash();
   if(staffMode) authReady = true; // sin Firebase no hay sesión que esperar
   safeRender();
 }
