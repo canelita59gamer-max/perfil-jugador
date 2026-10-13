@@ -1902,7 +1902,7 @@ var ALL_VIEWS = [
   {id:'partido', label:'Partido del día', icon:'●'},
   {id:'cartas', label:'Cartas de jugadores', icon:'●'},
   {id:'perfil', label:'Perfil de exigencia', icon:'●'},
-  {id:'informe', label:'Informe semestral', icon:'●'},
+  {id:'informe', label:'Informe trimestral', icon:'●'},
   {id:'plantel', label:'Plantel', icon:'●'}
 ];
 function visibleViews(){
@@ -3242,7 +3242,7 @@ function renderPerfil(){
   return el;
 }
 
-/* ============ RENDER: INFORME SEMESTRAL ============ */
+/* ============ RENDER: INFORME TRIMESTRAL ============ */
 function attributeAverages(hist){
   var sums = {}, counts = {};
   var LIST = attrsFor(activeCategoria());
@@ -3263,8 +3263,8 @@ function renderInforme(){
   var el = document.createElement('div');
   el.innerHTML =
     '<div class="view-head"><div>' +
-      '<h1>Informe semestral</h1>' +
-      '<p>Se genera solo, a partir de todo lo que se ha registrado del jugador durante el semestre.</p>' +
+      '<h1>Informe trimestral</h1>' +
+      '<p>Se genera solo, a partir de todo lo que se ha registrado del jugador durante el trimestre.</p>' +
     '</div></div>' +
     '<div class="informe-select"><select class="cat-select" id="playerSelect"></select></div>' +
     '<div id="informeBody"></div>';
@@ -3307,9 +3307,9 @@ function renderInforme(){
     var avgFirst = avgRating(firstHalf), avgSecond = avgRating(secondHalf);
     var tendenciaTxt = 'aún no hay suficientes registros para ver una tendencia clara';
     if(avgFirst!=null && avgSecond!=null && secondHalf.length>=2){
-      if(avgSecond - avgFirst >= 0.5) tendenciaTxt = 'ha ido mejorando: pasó de un promedio de ' + avgFirst.toFixed(1) + '/10 a ' + avgSecond.toFixed(1) + '/10 entre la primera y la segunda mitad del semestre';
-      else if(avgFirst - avgSecond >= 0.5) tendenciaTxt = 'ha bajado un poco: pasó de un promedio de ' + avgFirst.toFixed(1) + '/10 a ' + avgSecond.toFixed(1) + '/10 entre la primera y la segunda mitad del semestre';
-      else tendenciaTxt = 'se ha mantenido estable, alrededor de ' + avgSecond.toFixed(1) + '/10, durante todo el semestre';
+      if(avgSecond - avgFirst >= 0.5) tendenciaTxt = 'ha ido mejorando: pasó de un promedio de ' + avgFirst.toFixed(1) + '/10 a ' + avgSecond.toFixed(1) + '/10 entre la primera y la segunda mitad del trimestre';
+      else if(avgFirst - avgSecond >= 0.5) tendenciaTxt = 'ha bajado un poco: pasó de un promedio de ' + avgFirst.toFixed(1) + '/10 a ' + avgSecond.toFixed(1) + '/10 entre la primera y la segunda mitad del trimestre';
+      else tendenciaTxt = 'se ha mantenido estable, alrededor de ' + avgSecond.toFixed(1) + '/10, durante todo el trimestre';
     }
 
     var avgPartidos = avgRating(partidos);
@@ -3350,7 +3350,7 @@ function renderInforme(){
     body.innerHTML =
       '<div class="informe-card">' +
         '<div class="informe-header">' +
-          '<div><h2>' + p.name + '</h2><div class="sub">' + posName(p.pos) + ' · ' + p.categoria + ' · Semestre en curso</div></div>' +
+          '<div><h2>' + p.name + '</h2><div class="sub">' + posName(p.pos) + ' · ' + p.categoria + ' · Trimestre en curso</div></div>' +
           '<span class="pill">Valoración ' + startVal + ' → ' + p.valoracion + '</span>' +
         '</div>' +
         '<div class="informe-grid">' +
@@ -3361,9 +3361,9 @@ function renderInforme(){
         '</div>' +
         (function(){ var tp = sparkPath(hist); if(!tp) return ''; tp = tp.split(' ').map(function(pt){ var xy=pt.split(','); return xy[0]+','+(parseFloat(xy[1])*1.5).toFixed(1); }).join(' '); return '<svg class="trend-svg" viewBox="0 0 200 40" preserveAspectRatio="none"><polygon points="' + tp + ' 200,40 0,40" fill="rgba(246,83,52,.12)" stroke="none"/><polyline points="' + tp + '" fill="none" stroke="#f65334" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>'; })() +
         '<div class="informe-narrative">' +
-          '<p><b>' + p.name + '</b> juega como <b>' + posName(p.pos) + '</b> en ' + p.categoria + '. En lo que va del semestre acumula ' + hist.length + ' registros — ' + entrenamientos.length + ' entrenamientos y ' + partidos.length + ' partidos — y su valoración pasó de ' + startVal + ' a ' + p.valoracion + ' puntos.</p>' +
+          '<p><b>' + p.name + '</b> juega como <b>' + posName(p.pos) + '</b> en ' + p.categoria + '. En lo que va del trimestre acumula ' + hist.length + ' registros — ' + entrenamientos.length + ' entrenamientos y ' + partidos.length + ' partidos — y su valoración pasó de ' + startVal + ' a ' + p.valoracion + ' puntos.</p>' +
           '<p><b>En los entrenamientos:</b> promedia ' + (avgRating(entrenamientos)!=null ? avgRating(entrenamientos).toFixed(1) : '—') + '/10 en calificación general, y ' + tendenciaTxt + '. En cuanto a asistencia, ' + pctNarrativeTxt + '.' + (topMention ? ' La cualidad que más se repitió en las retroalimentaciones del profesor fue <b>' + topMention + '</b>.' : '') + '</p>' +
-          (partidos.length ? '<p><b>En los partidos:</b> jugó ' + partidos.length + ' con una calificación promedio de ' + avgPartidos.toFixed(1) + '/10, sumando ' + p.goles + ' goles y ' + p.asistencias + ' asistencias.' + (mejorPartido ? ' Su mejor actuación fue el ' + fmtDate(mejorPartido.date) + ', con calificación ' + mejorPartido.rating + '/10.' : '') + '</p>' : '<p><b>En los partidos:</b> todavía no tiene partidos registrados este semestre.</p>') +
+          (partidos.length ? '<p><b>En los partidos:</b> jugó ' + partidos.length + ' con una calificación promedio de ' + avgPartidos.toFixed(1) + '/10, sumando ' + p.goles + ' goles y ' + p.asistencias + ' asistencias.' + (mejorPartido ? ' Su mejor actuación fue el ' + fmtDate(mejorPartido.date) + ', con calificación ' + mejorPartido.rating + '/10.' : '') + '</p>' : '<p><b>En los partidos:</b> todavía no tiene partidos registrados este trimestre.</p>') +
           '<p><b>Fortalezas:</b> ' + fortalezasTxt + '. <b>Puntos a mejorar:</b> ' + mejorarTxt + '.</p>' +
           (mejorSesion ? '<p>Su mejor registro individual fue el ' + fmtDate(mejorSesion.date) + (mejorSesion.type==='partido'?' (partido)':' (entrenamiento)') + ': "' + mejorSesion.comment + '"</p>' : '') +
         '</div>' +
@@ -3952,7 +3952,7 @@ if('serviceWorker' in navigator && (location.protocol==='https:' || location.hos
 // Privacidad lista pero apagada: cambiar a true cuando se decida publicarla
 var PRIV_ON = false;
 var privMode = false;
-var PRIV_HTML = '<span class="pv-kick">Privacidad</span>  <h1><span class="pv-X">Tratamiento de</span> <em class="pv-X">datos</em></h1>  <p class="pv-upd">Política de Tratamiento de Datos Personales · Ley 1581 de 2012 · Última actualización: octubre de 2026</p>  <div class="pv-sum">    <div><b>Qué guardamos</b>Nombre, categoría, posición, foto y evaluaciones deportivas de cada jugador, y el correo del staff.</div>    <div><b>Quién lo ve</b>Lo público: la carta del jugador. Los comentarios del profesor solo los ve el staff de su club.</div>    <div><b>Sin publicidad</b>No vendemos datos, no hay anuncios ni cookies de rastreo.</div>  </div>  <section><h2><span>1</span>Responsable</h2>    <p><b>Arena Sports</b> (C.C. 52.910.702), con domicilio en Bucaramanga, Santander, Colombia. Contacto para temas de datos: <a href="mailto:arenasports.eventos@gmail.com">arenasports.eventos@gmail.com</a> · WhatsApp 322 246 2392.</p>    <p>Cada club que usa la plataforma es responsable de los datos de sus jugadores y de pedir la autorización de los padres. Arena Sports actúa como <b>encargado</b>: guarda y procesa los datos por cuenta del club.</p>  </section>  <section><h2><span>2</span>Datos que tratamos</h2>    <ul>      <li><b>Jugadores:</b> nombre, categoría, posición, foto, asistencia, goles, asistencias y evaluaciones de entrenamientos y partidos.</li>      <li><b>Staff (profesores y administradores):</b> correo electrónico y club o categoría asignados.</li>    </ul>    <p>No pedimos documentos de identidad, direcciones, datos de salud ni datos de pago de los jugadores.</p>  </section>  <section><h2><span>3</span>Menores de edad</h2>    <p>La mayoría de jugadores son niños, niñas y adolescentes. Por eso sus datos solo se cargan con la <b>autorización previa de su padre, madre o representante legal</b>, que el club recoge al inscribirlo. Siempre se respeta el interés superior del menor: lo público es solo su carta deportiva, nunca comentarios negativos ni datos de contacto.</p>  </section>  <section><h2><span>4</span>Para qué los usamos</h2>    <ul>      <li>Mostrar la carta deportiva de cada jugador y su progreso.</li>      <li>Que los profesores registren entrenamientos, partidos y evaluaciones.</li>      <li>Generar los informes del semestre para el club y las familias.</li>      <li>Destacar en la portada a los jugadores que más avanzaron cada semana.</li>    </ul>  </section>  <section><h2><span>5</span>Tus derechos</h2>    <p>Como titular, o como padre o representante del menor, puedes:</p>    <ul>      <li>Conocer, actualizar y corregir los datos.</li>      <li>Pedir prueba de la autorización que se dio.</li>      <li>Saber cómo se han usado los datos.</li>      <li>Revocar la autorización o pedir que se borren los datos, incluida la foto.</li>      <li>Presentar quejas ante la Superintendencia de Industria y Comercio.</li>    </ul>  </section>  <section><h2><span>6</span>Cómo pedirlo</h2>    <p>Escribe a <a href="mailto:arenasports.eventos@gmail.com">arenasports.eventos@gmail.com</a> o al WhatsApp 322 246 2392 con el nombre del jugador, su club y lo que pides. Las consultas se responden en máximo 10 días hábiles y los reclamos en máximo 15 días hábiles, como dice la ley. También puedes hacerlo a través del club.</p>  </section>  <section><h2><span>7</span>Seguridad</h2>    <ul>      <li>La página funciona siempre con conexión cifrada (HTTPS).</li>      <li>Solo el staff con cuenta autorizada puede editar. Cada profesor accede únicamente a su categoría.</li>      <li>Los comentarios privados del profesor nunca se publican.</li>      <li>Los datos se guardan en Google Firebase, con reglas de acceso que impiden que un club vea los datos de otro.</li>    </ul>  </section>  <section><h2><span>8</span>Cookies y almacenamiento</h2>    <p>No usamos cookies de publicidad, analítica ni rastreo. Solo se guarda en el navegador lo necesario para que el staff no pierda su sesión y para recordar que ya viste este aviso.</p>  </section>  <section><h2><span>9</span>Cuánto tiempo y cambios</h2>    <p>Los datos se conservan solo mientras el jugador esté activo en el club. Cuando sale del club, sus datos y su foto se eliminan; también se pueden borrar antes si el padre, madre o representante lo pide. Si esta política cambia, se publicará aquí con su nueva fecha.</p>  </section>  ';
+var PRIV_HTML = '<span class="pv-kick">Privacidad</span>  <h1><span class="pv-X">Tratamiento de</span> <em class="pv-X">datos</em></h1>  <p class="pv-upd">Política de Tratamiento de Datos Personales · Ley 1581 de 2012 · Última actualización: octubre de 2026</p>  <div class="pv-sum">    <div><b>Qué guardamos</b>Nombre, categoría, posición, foto y evaluaciones deportivas de cada jugador, y el correo del staff.</div>    <div><b>Quién lo ve</b>Lo público: la carta del jugador. Los comentarios del profesor solo los ve el staff de su club.</div>    <div><b>Sin publicidad</b>No vendemos datos, no hay anuncios ni cookies de rastreo.</div>  </div>  <section><h2><span>1</span>Responsable</h2>    <p><b>Arena Sports</b> (C.C. 52.910.702), con domicilio en Bucaramanga, Santander, Colombia. Contacto para temas de datos: <a href="mailto:arenasports.eventos@gmail.com">arenasports.eventos@gmail.com</a> · WhatsApp 322 246 2392.</p>    <p>Cada club que usa la plataforma es responsable de los datos de sus jugadores y de pedir la autorización de los padres. Arena Sports actúa como <b>encargado</b>: guarda y procesa los datos por cuenta del club.</p>  </section>  <section><h2><span>2</span>Datos que tratamos</h2>    <ul>      <li><b>Jugadores:</b> nombre, categoría, posición, foto, asistencia, goles, asistencias y evaluaciones de entrenamientos y partidos.</li>      <li><b>Staff (profesores y administradores):</b> correo electrónico y club o categoría asignados.</li>    </ul>    <p>No pedimos documentos de identidad, direcciones, datos de salud ni datos de pago de los jugadores.</p>  </section>  <section><h2><span>3</span>Menores de edad</h2>    <p>La mayoría de jugadores son niños, niñas y adolescentes. Por eso sus datos solo se cargan con la <b>autorización previa de su padre, madre o representante legal</b>, que el club recoge al inscribirlo. Siempre se respeta el interés superior del menor: lo público es solo su carta deportiva, nunca comentarios negativos ni datos de contacto.</p>  </section>  <section><h2><span>4</span>Para qué los usamos</h2>    <ul>      <li>Mostrar la carta deportiva de cada jugador y su progreso.</li>      <li>Que los profesores registren entrenamientos, partidos y evaluaciones.</li>      <li>Generar los informes del trimestre para el club y las familias.</li>      <li>Destacar en la portada a los jugadores que más avanzaron cada semana.</li>    </ul>  </section>  <section><h2><span>5</span>Tus derechos</h2>    <p>Como titular, o como padre o representante del menor, puedes:</p>    <ul>      <li>Conocer, actualizar y corregir los datos.</li>      <li>Pedir prueba de la autorización que se dio.</li>      <li>Saber cómo se han usado los datos.</li>      <li>Revocar la autorización o pedir que se borren los datos, incluida la foto.</li>      <li>Presentar quejas ante la Superintendencia de Industria y Comercio.</li>    </ul>  </section>  <section><h2><span>6</span>Cómo pedirlo</h2>    <p>Escribe a <a href="mailto:arenasports.eventos@gmail.com">arenasports.eventos@gmail.com</a> o al WhatsApp 322 246 2392 con el nombre del jugador, su club y lo que pides. Las consultas se responden en máximo 10 días hábiles y los reclamos en máximo 15 días hábiles, como dice la ley. También puedes hacerlo a través del club.</p>  </section>  <section><h2><span>7</span>Seguridad</h2>    <ul>      <li>La página funciona siempre con conexión cifrada (HTTPS).</li>      <li>Solo el staff con cuenta autorizada puede editar. Cada profesor accede únicamente a su categoría.</li>      <li>Los comentarios privados del profesor nunca se publican.</li>      <li>Los datos se guardan en Google Firebase, con reglas de acceso que impiden que un club vea los datos de otro.</li>    </ul>  </section>  <section><h2><span>8</span>Cookies y almacenamiento</h2>    <p>No usamos cookies de publicidad, analítica ni rastreo. Solo se guarda en el navegador lo necesario para que el staff no pierda su sesión y para recordar que ya viste este aviso.</p>  </section>  <section><h2><span>9</span>Cuánto tiempo y cambios</h2>    <p>Los datos se conservan solo mientras el jugador esté activo en el club. Cuando sale del club, sus datos y su foto se eliminan; también se pueden borrar antes si el padre, madre o representante lo pide. Si esta política cambia, se publicará aquí con su nueva fecha.</p>  </section>  ';
 function renderPrivacidad(){
   var root = document.getElementById('landingRoot');
   root.innerHTML = '<div class="pv"><div class="pv-wrap">' +
@@ -4524,7 +4524,7 @@ function render(){
 /* ============ VALORACIÓN CON BARRA DE PROGRESO ============ */
 // Todos arrancan en 50 y el máximo es 99. Cada sesión da progreso (asistir ya suma algo, jugar bien suma más);
 // llenar la barra sube 1 punto y cada tramo de 10 cuesta más. La exigencia depende de la categoría.
-// Calibrado para que en un semestre un jugador promedio llegue a ~80 y uno muy bueno pueda llegar a 99 en el año.
+// Calibrado para que en medio año un jugador promedio llegue a ~80 y uno muy bueno pueda llegar a 99 en el año.
 var VAL_MIN = 50, VAL_MAX = 99;
 var XP_BASE = 10, XP_PER_DELTA = 8;        // progreso de una sesión = 10 + 8 × puntaje de la sesión
 var LEVEL_COSTS = [20, 28, 37, 70, 133];    // progreso para subir 1 punto en los 50s, 60s, 70s, 80s y 90s (nivel medio)
