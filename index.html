@@ -2936,7 +2936,8 @@ function renderMatchRow(p, dateStr, posJugada, esTitular){
 
 /* ============ RENDER: CARTAS ============ */
 function sparkPath(hist){
-  if(hist.length<2) return '';
+  // con menos de tres registros la gráfica es una raya recta que no dice nada: mejor no dibujarla
+  if(hist.length<3) return '';
   var vals = hist.slice().reverse().map(function(h){return h.delta;});
   var running = [];
   var acc = 0;
