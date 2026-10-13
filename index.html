@@ -5284,6 +5284,13 @@ if(window.firebase && window.FIREBASE_CONFIG){
   try{
     firebase.initializeApp(window.FIREBASE_CONFIG);
     window.db = firebase.firestore();
+    // Sin señal en la cancha: el profesor sigue viendo su categoría y lo que registre se guarda
+    // en el celular; apenas vuelve el internet, se sube solo. synchronizeTabs permite varias pestañas.
+    try{
+      db.enablePersistence({synchronizeTabs:true}).catch(function(e){
+        console.warn('Sin modo sin conexión:', e && e.code);
+      });
+    }catch(e){ console.warn('Sin modo sin conexión', e); }
     window.auth = firebase.auth();
     try{ localStorage.removeItem(STORAGE_KEY); }catch(e){} // con Firebase no se guardan copias locales de datos privados
     // App Check: bloquea pedidos que no vengan de esta página (se activa al pegar la clave de reCAPTCHA arriba)
