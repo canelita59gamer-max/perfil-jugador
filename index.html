@@ -2997,7 +2997,7 @@ function renderCartas(){
       '</div>' +
       (tier.id==='elite' ? '<div class="fut-bolt">' + BOLT_SVG + '</div>' : '') +
       valBlock + xpBar(p) +
-      '<svg class="spark" viewBox="0 0 200 26" preserveAspectRatio="none"><polyline points="' + pts + '" fill="none" stroke="#f65334" stroke-width="2.5"/></svg>' +
+      (pts ? '<svg class="spark" viewBox="0 0 200 26" preserveAspectRatio="none"><polygon points="' + pts + ' 200,26 0,26" fill="rgba(246,83,52,.14)" stroke="none"/><polyline points="' + pts + '" fill="none" stroke="#f65334" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>' : '') +
       '<div class="card-stats"><span><b>' + p.goles + '</b> goles</span><span><b>' + p.asistencias + '</b> asist.</span>' + (publicMode ? (best ? '<span><b>' + best.label + '</b></span>' : '') : '<span><b>' + p.historial.length + '</b> registros</span>') + '</div>';
     c.onclick = function(){ publicMode ? openPublicModal(p) : openPlayerModal(p); };
     grid.appendChild(c);
@@ -3358,7 +3358,7 @@ function renderInforme(){
           '<div class="informe-stat"><div class="n">' + pctTxt + '</div><div class="l">Asistencia a entreno</div></div>' +
           '<div class="informe-stat"><div class="n">' + promedio + '</div><div class="l">Calificación promedio</div></div>' +
         '</div>' +
-        '<svg class="trend-svg" viewBox="0 0 200 40" preserveAspectRatio="none"><polyline points="' + sparkPath(hist).split(' ').map(function(pt){ var xy=pt.split(','); return xy[0]+','+(parseFloat(xy[1])*1.5); }).join(' ') + '" fill="none" stroke="#f65334" stroke-width="2.5"/></svg>' +
+        (function(){ var tp = sparkPath(hist); if(!tp) return ''; tp = tp.split(' ').map(function(pt){ var xy=pt.split(','); return xy[0]+','+(parseFloat(xy[1])*1.5).toFixed(1); }).join(' '); return '<svg class="trend-svg" viewBox="0 0 200 40" preserveAspectRatio="none"><polygon points="' + tp + ' 200,40 0,40" fill="rgba(246,83,52,.12)" stroke="none"/><polyline points="' + tp + '" fill="none" stroke="#f65334" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>'; })() +
         '<div class="informe-narrative">' +
           '<p><b>' + p.name + '</b> juega como <b>' + posName(p.pos) + '</b> en ' + p.categoria + '. En lo que va del semestre acumula ' + hist.length + ' registros — ' + entrenamientos.length + ' entrenamientos y ' + partidos.length + ' partidos — y su valoración pasó de ' + startVal + ' a ' + p.valoracion + ' puntos.</p>' +
           '<p><b>En los entrenamientos:</b> promedia ' + (avgRating(entrenamientos)!=null ? avgRating(entrenamientos).toFixed(1) : '—') + '/10 en calificación general, y ' + tendenciaTxt + '. En cuanto a asistencia, ' + pctNarrativeTxt + '.' + (topMention ? ' La cualidad que más se repitió en las retroalimentaciones del profesor fue <b>' + topMention + '</b>.' : '') + '</p>' +
