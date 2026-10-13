@@ -4111,9 +4111,14 @@ function renderStaffPage(){
 // ---------- Página de inicio: clubes y jugadores de la fecha ----------
 // La fecha va de lunes a domingo y se publica el lunes siguiente (se queda hasta el otro lunes).
 function lpIso(d){ return d.getFullYear() + '-' + ('0'+(d.getMonth()+1)).slice(-2) + '-' + ('0'+d.getDate()).slice(-2); }
-function lpWeekRange(){
+function lpWeekRange(cur){
   var hoy = new Date(); hoy.setHours(0,0,0,0);
   var lunes = new Date(hoy); lunes.setDate(hoy.getDate() - ((hoy.getDay()+6)%7));
+  // la fecha en curso: del lunes de esta semana hasta hoy
+  if(cur){
+    var sig = new Date(lunes); sig.setDate(lunes.getDate()+7);
+    return {ini:lunes, fin:hoy, prox:sig, iniS:lpIso(lunes), finS:lpIso(hoy), cur:true};
+  }
   var ini = new Date(lunes); ini.setDate(lunes.getDate()-7);
   var fin = new Date(lunes); fin.setDate(lunes.getDate()-1);
   var prox = new Date(lunes); prox.setDate(lunes.getDate()+7);
@@ -4143,7 +4148,8 @@ function lpLoadWeekly(clubs){
   var key = wk.iniS + '|' + clubs.map(function(c){ return c.id; }).join(',');
   if(lpWeekly.key===key || lpWeekly.loading) return;
   lpWeekly.loading = true;
-  Promise.all(clubs.map(function(club){
+  function lpEscanear(wk){
+  return Promise.all(clubs.map(function(club){
     return db.collection('clubes/' + club.id + '/publico').get().then(function(snap){
       var out = [];
       snap.forEach(function(d){
@@ -4162,14 +4168,20 @@ function lpLoadWeekly(clubs){
       });
       return out;
     }).catch(function(e){ console.error('No se pudieron leer las cartas de ' + club.id, e); return []; });
-  })).then(function(res){
-    var all = [].concat.apply([], res);
+  })).then(function(res){ return [].concat.apply([], res); });
+  }
+  lpEscanear(wk).then(function(all){
+    // si la semana pasada no tuvo nada registrado, se muestra la fecha en curso
+    if(!all.length){ wk = lpWeekRange(true); return lpEscanear(wk); }
+    return all;
+  }).then(function(all){
     var byU = function(a,b){ return (b.u-a.u) || (b.v-a.v); };
     var data = {
       sube: all.filter(function(x){ return x.u>0; }).sort(byU).slice(0,10),
       carta: all.filter(function(x){ return tierOf(x.v).min > tierOf(x.antes).min; }).sort(byU).slice(0,10),
       gol: all.filter(function(x){ return x.g>0; }).sort(function(a,b){ return (b.g-a.g) || (b.v-a.v); }).slice(0,10),
-      top: all.slice().sort(function(a,b){ return b.v-a.v; }).slice(0,3)
+      top: all.slice().sort(function(a,b){ return b.v-a.v; }).slice(0,3),
+      wk: wk
     };
     // solo se descargan las fotos de los jugadores que salen en la portada
     var need = {};
@@ -4234,13 +4246,20 @@ function lpFillWeekly(){
   var box = document.getElementById('lpWeekly');
   if(!box) return;
   var d = lpWeekly.data;
-  if(!d || !d.sube.length){ box.style.display = 'none'; return; }
-  var wk = lpWeekRange(), x = d.sube[0];
+  if(!d){ box.style.display = 'none'; return; }
+  var wk = d.wk || lpWeekRange();
+  var x = d.sube[0] || d.top[0];
+  box.style.display = '';
+  if(!x){
+    box.innerHTML = '<div class="lp-sh"><div><p class="lp-kick"><b>02</b>Jugadores de la fecha</p><h2><span class="lp-X">Los que más</span> <em>subieron</em></h2></div></div>' +
+      '<div class="lp-empty">Todavía no hay entrenamientos ni partidos registrados en esta fecha. Apenas los profesores empiecen a calificar, aquí salen los jugadores que más subieron.</div>';
+    return;
+  }
   var a = tierOf(x.antes), b = tierOf(x.v);
   box.style.display = '';
   box.innerHTML =
     '<div class="lp-sh"><div><p class="lp-kick"><b>02</b>Jugadores de la fecha</p><h2><span class="lp-X">Los que más</span> <em>subieron</em></h2></div>' +
-      '<div class="lp-week"><b>' + lpFmt(wk.ini) + ' – ' + lpFmt(wk.fin) + '</b> · nueva fecha el lunes ' + lpFmt(wk.prox) + '</div></div>' +
+      '<div class="lp-week"><b>' + lpFmt(wk.ini) + ' – ' + lpFmt(wk.fin) + '</b> · ' + (wk.cur ? 'fecha en curso, cierra el domingo' : 'nueva fecha el lunes ' + lpFmt(wk.prox)) + '</div></div>' +
     '<div class="lp-spot lp-rv">' +
       '<div id="lpSpotCard">' + lpCardHtml({v:x.antes, pos:x.pos, name:x.name, categoria:x.categoria, foto:x.foto}) + '</div>' +
       '<div class="lp-spot-info"><span class="lp-lbl">Jugador de la fecha</span>' +
@@ -4249,7 +4268,7 @@ function lpFillWeekly(){
         '<div class="lp-jump">' + (a.id!==b.id
           ? '<span class="lp-chip lp-' + a.id + '">' + a.label + ' ' + x.antes + '</span><span class="lp-arrow">→</span><span class="lp-chip lp-' + b.id + '">' + b.label + ' ' + x.v + '</span>'
           : '<span class="lp-chip lp-' + b.id + '">' + b.label + ' ' + x.v + '</span>') +
-        '<span class="lp-bigup">+' + x.u + '</span></div>' +
+        (x.u>0 ? '<span class="lp-bigup">+' + x.u + '</span>' : '') + '</div>' +
       '</div>' +
     '</div>' +
     '<div class="lp-railbar"><div class="lp-tabs" id="lpTabs"><span class="lp-pill"></span>' +
