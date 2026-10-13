@@ -4131,6 +4131,38 @@ var LP_BALL = '<svg class="lp-ball" viewBox="0 0 24 24" fill="none" stroke="curr
 var lpWeekly = {key:null, loading:false, data:null, fotos:{}};
 var lpPlayed = false, lpTab = 'sube';
 
+// ---- DEMOSTRACIÓN ----
+// Con esto en true, la sección "Jugadores de la fecha" se llena con jugadores inventados,
+// para mostrar cómo se ve cuando el club ya lleva un tiempo registrando.
+// Para volver a los datos reales: poner false. No afecta nada más de la página.
+var LP_DEMO = true;
+var LP_DEMO_LISTA = [
+  ['Matías Cáceres','Sub-11','DFC',57,50,1],
+  ['Karol Leyva','Sub-11','DFC',56,51,0],
+  ['Juan Esteban Ortíz','Sub-11','POR',55,51,0],
+  ['Samuel Rincón','Sub-13','MCD',68,64,1],
+  ['Tomás Villamizar','Sub-13','EXT',66,64,2],
+  ['Felipe García','Sub-11','DFC',54,50,0],
+  ['Sofía Niño','Sub-9','DC',52,50,3],
+  ['Daniel Suárez','Sub-15','DC',76,74,2],
+  ['Mariana Cote','Sub-13','MC',66,63,0],
+  ['Emiliano Prada','Sub-9','LD',51,50,0]
+];
+function lpDemoData(clubs){
+  var club = clubs[0] || {id:'demo', nombre:'Club'};
+  var all = LP_DEMO_LISTA.map(function(r, i){
+    return {id:'demo'+i, club:club, name:r[0], categoria:r[1], pos:r[2], v:r[3], antes:r[4], u:r[3]-r[4], g:r[5], foto:''};
+  });
+  var byU = function(a,b){ return (b.u-a.u) || (b.v-a.v); };
+  return {
+    sube: all.filter(function(x){ return x.u>0; }).sort(byU),
+    carta: all.filter(function(x){ return tierOf(x.v).min > tierOf(x.antes).min; }).sort(byU),
+    gol: all.filter(function(x){ return x.g>0; }).sort(function(a,b){ return (b.g-a.g) || (b.v-a.v); }),
+    top: all.slice().sort(function(a,b){ return b.v-a.v; }).slice(0,3),
+    wk: lpWeekRange()
+  };
+}
+
 function lpCardHtml(x, cls){
   var t = tierOf(x.v);
   var foto = x.foto ? '<img src="' + x.foto + '" alt="" loading="lazy" />' : LP_SIL;
@@ -4143,6 +4175,12 @@ function lpCardHtml(x, cls){
 
 // Lee las cartas públicas de cada club y calcula cuánto subió cada jugador en la fecha
 function lpLoadWeekly(clubs){
+  if(LP_DEMO){
+    if(lpWeekly.key==='demo') return;
+    lpWeekly.data = lpDemoData(clubs); lpWeekly.key = 'demo';
+    lpFillWeekly(); lpFillFan();
+    return;
+  }
   if(!window.db) return;
   var wk = lpWeekRange();
   var key = wk.iniS + '|' + clubs.map(function(c){ return c.id; }).join(',');
