@@ -48,6 +48,15 @@ service cloud.firestore {
         allow read: if clubActivo(club) || isCreador();
         allow write: if isAdminOf(club) || isProfeDe(club, cat);
       }
+      // Puerta de las familias: el código del jugador ES la dirección del documento.
+      // Se puede ABRIR si se conoce (get), pero la lista NUNCA se entrega (list), así que
+      // nadie puede pedir todos los códigos. El código en claro vive en /categorias, que es privado.
+      match /accesos/{codigo} {
+        allow get: if clubActivo(club);
+        allow list: if false;
+        allow write: if isAdminOf(club) || isProfeDe(club, request.resource.data.get('categoria', ''));
+        allow delete: if isAdminOf(club) || isProfeDe(club, resource.data.get('categoria', ''));
+      }
       // fotos de los jugadores
       match /fotos/{jugador} {
         allow read: if clubActivo(club) || isCreador();
