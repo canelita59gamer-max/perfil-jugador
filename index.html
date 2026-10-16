@@ -1368,6 +1368,45 @@
 .lp .lp-nav button:hover{background:var(--lime);border-color:var(--lime);color:#0a0f02}
 @media (hover:none),(max-width:820px){.lp .lp-nav{display:none}}
 
+/* ---- Vitrina "así se ve dentro de un club": más grande y con más presencia ---- */
+.lp #lpWeekly{padding:104px 0 96px}
+.lp #lpWeekly::after{content:'';position:absolute;left:50%;top:0;width:min(1100px,120vw);height:520px;transform:translateX(-50%);pointer-events:none;
+  background:radial-gradient(60% 70% at 50% 0%,rgba(193,248,7,.09),transparent 70%)}
+.lp #lpWeekly>*{position:relative;z-index:1}
+.lp #lpWeekly h2 .lp-X{font-size:clamp(44px,7.4vw,92px)}
+.lp #lpWeekly h2 em{font-size:clamp(44px,7.4vw,92px)}
+.lp .lp-ej{padding:9px 16px;font-size:13px;align-self:flex-end}
+.lp .lp-lead2{max-width:560px;color:var(--muted);font-size:17px;line-height:1.65;margin:18px 0 0}
+.lp #lpWeekly .lp-spot{padding:34px;border-radius:36px;gap:48px;margin:40px 0 44px;
+  background:radial-gradient(130% 150% at 0% 0%,rgba(242,201,76,.18),transparent 58%),linear-gradient(160deg,#111a2e,#0a0e1c);
+  box-shadow:0 40px 90px rgba(0,0,0,.5)}
+.lp #lpWeekly .lp-spot .lp-rt b{font-size:72px}
+.lp #lpWeekly .lp-spot-info h3 .lp-X{font-size:clamp(42px,6.2vw,76px)}
+.lp #lpWeekly .lp-spot-info .lp-lbl{font-size:23px}
+.lp #lpWeekly .lp-bigup{font-size:clamp(34px,4.6vw,56px)}
+@media (min-width:821px){
+  .lp #lpWeekly .lp-spot{grid-template-columns:minmax(0,360px) 1fr}
+  .lp #lpWeekly .lp-rail{grid-auto-columns:minmax(230px,262px)}
+}
+
+/* ---- Pie: Arena Sports con el tamaño que merece ---- */
+.lp footer{padding:74px 0 78px;flex-direction:column;align-items:stretch;gap:36px}
+.lp footer>span{display:flex;align-items:center;gap:16px;font-size:15px;color:var(--muted)}
+.lp footer img{width:84px;margin-right:0}
+.lp .lp-foot{flex-direction:row;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;
+  padding-top:48px;border-top:1px solid var(--line)}
+.lp .lp-social{gap:14px;position:relative}
+.lp .lp-social::before{content:'SÍGUENOS';position:absolute;top:-28px;left:3px;font-family:var(--d);font-style:italic;font-stretch:85%;font-size:12px;font-weight:900;letter-spacing:.16em;color:#5d6782}
+.lp .lp-social a{width:56px;height:56px;border-radius:18px;background:rgba(255,255,255,.04)}
+.lp .lp-social a:hover{background:var(--lime);color:#0a0f02;border-color:var(--lime);transform:translateY(-3px)}
+.lp .lp-social svg{width:24px;height:24px}
+.lp .lp-staff{font-size:15px}
+@media (max-width:620px){
+  .lp footer img{width:64px}
+  .lp .lp-foot{flex-direction:column;align-items:flex-start}
+  .lp .lp-social a{width:50px;height:50px}
+}
+
 .lp .lp-sc .lp-ph{background:radial-gradient(circle at 50% 38%,rgba(255,255,255,.16),rgba(0,0,0,.45) 78%)}
 .lp .lp-sc .lp-ph::after{background:linear-gradient(180deg,transparent 55%,rgba(0,0,0,.55))}
 .lp .lp-bigpos{position:absolute;left:0;right:0;top:15%;text-align:center;font-family:var(--d);font-style:italic;font-weight:900;font-stretch:78%;font-size:clamp(70px,8vw,112px);line-height:1;color:rgba(255,255,255,.08);z-index:1}
@@ -4178,7 +4217,8 @@ var LP_DEMO_LISTA = [
   ['Emiliano Prada','Sub-9','LD',51,50,0]
 ];
 function lpDemoData(clubs){
-  var club = clubs[0] || {id:'demo', nombre:'Club'};
+  // club inventado a propósito: los jugadores de ejemplo no se le cuelgan a un club real
+  var club = {id:'demo', nombre:'Club de ejemplo'};
   var all = LP_DEMO_LISTA.map(function(r, i){
     return {id:'demo'+i, club:club, name:r[0], categoria:r[1], pos:r[2], v:r[3], antes:r[4], u:r[3]-r[4], g:r[5], foto:''};
   });
@@ -4327,6 +4367,7 @@ function lpFillWeekly(){
   box.innerHTML =
     '<div class="lp-sh"><div><p class="lp-kick"><b>02</b>Así se ve dentro de un club</p><h2><span class="lp-X">Los que más</span> <em>subieron</em></h2></div>' +
       '<div class="lp-ej">◆ Jugadores de ejemplo</div></div>' +
+    '<p class="lp-lead2">Cada semana, el club ve quiénes subieron, quiénes cambiaron de carta y quiénes anotaron. Estos son jugadores inventados: adentro de cada club están los de verdad.</p>' +
     '<div class="lp-spot lp-rv">' +
       '<div id="lpSpotCard">' + lpCardHtml({v:x.antes, pos:x.pos, name:x.name, categoria:x.categoria, foto:x.foto}) + '</div>' +
       '<div class="lp-spot-info"><span class="lp-lbl">Jugador de la fecha</span>' +
