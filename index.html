@@ -1355,6 +1355,18 @@
 .pl-cod:hover{border-color:#c1f807;color:#c1f807}
 .pl-cod.copiado{border-color:#c1f807;background:rgba(193,248,7,.16);color:#c1f807}
 .pl-cod.vacio{opacity:.5;cursor:default;font-style:italic;letter-spacing:0;font-family:inherit}
+.mijug{margin:0 0 26px}
+.mijug-in{display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:18px 20px;border-radius:22px;
+  border:1px solid rgba(193,248,7,.3);background:linear-gradient(130deg,rgba(193,248,7,.1),rgba(255,255,255,.03) 60%)}
+.mijug-foto{width:66px;height:66px;border-radius:18px;overflow:hidden;flex:none;background:rgba(255,255,255,.06);display:grid;place-items:center}
+.mijug-foto img{width:100%;height:100%;object-fit:cover}
+.mijug-txt{flex:1;min-width:150px}
+.mijug-k{display:block;font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#c1f807;margin-bottom:4px}
+.mijug-txt h2{margin:0 0 3px;font-size:21px;line-height:1.2}
+.mijug-txt p{margin:0;font-size:13.5px;opacity:.7}
+.mijug-btn{flex:none;padding:12px 20px;border-radius:999px;border:0;background:#c1f807;color:#0a0f02;font:inherit;font-size:14px;font-weight:800;cursor:pointer}
+.mijug-btn:active{transform:scale(.97)}
+@media (max-width:560px){.mijug-btn{width:100%}}
 .lp .lp-ph img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 
 .lp{overflow-x:clip}
@@ -1698,6 +1710,8 @@ var currentUser = null; // {email, role, categoria} según el inicio de sesión 
 function syncCategories(list){
   CATEGORIES.length = 0;
   (list||[]).forEach(function(c){ CATEGORIES.push(c); });
+  var miCat = miCategoria();
+  if(miCat && CATEGORIES.indexOf(miCat)!==-1 && CATEGORIES.indexOf(visitorCategoria)===-1) visitorCategoria = miCat;
   if(CATEGORIES.indexOf(visitorCategoria)===-1) visitorCategoria = CATEGORIES[0];
 }
 
@@ -3073,6 +3087,10 @@ function recentHighlight(hist){
 }
 
 function renderCartas(){
+  if(abrirMiJugadorAlEntrar){
+    abrirMiJugadorAlEntrar = false;
+    setTimeout(function(){ var m = miJugador(); if(m) openPublicModal(m); }, 420);
+  }
   var el = document.createElement('div');
   var publicMode = isReadOnly();
   el.innerHTML =
@@ -3082,7 +3100,26 @@ function renderCartas(){
         'Vitrina pública de la categoría ' + activeCategoria() + '.' :
         'Cada carta se actualiza sola con lo que registras en Entrenamiento y Partido del día. Toca una para ver su historial completo.') + '</p>' +
     '</div></div>' +
+    '<div id="miJugadorBox"></div>' +
     '<div class="cards-grid" id="cardsGrid"></div>';
+
+  var mio = miJugador();
+  if(mio){
+    var tm = tierOf(mio.valoracion);
+    var caja = el.querySelector('#miJugadorBox');
+    caja.className = 'mijug';
+    caja.innerHTML =
+      '<div class="mijug-in">' +
+        '<div class="mijug-foto">' + avatarInner(mio) + '</div>' +
+        '<div class="mijug-txt">' +
+          '<span class="mijug-k">Tu jugador</span>' +
+          '<h2>' + escHtml(mio.name) + '</h2>' +
+          '<p>' + posName(mio.pos) + ' · ' + escHtml(mio.categoria) + ' · ' + tm.label + ' ' + mio.valoracion + '</p>' +
+        '</div>' +
+        '<button class="mijug-btn" type="button">Ver su perfil</button>' +
+      '</div>';
+    caja.querySelector('.mijug-btn').onclick = function(){ openPublicModal(mio); };
+  }
 
   var grid = el.querySelector('#cardsGrid');
   categoryPlayers().forEach(function(p){
@@ -3539,6 +3576,17 @@ var THEME_VARS = ['--orange-500','--navy-950','--navy-900','--navy-800','--navy-
 function defaultClubLogo(){ var img = document.querySelector('.brand img'); return img ? (img.dataset.defaultSrc || img.src) : ARENA_LOGO_SRC; }
 // Quién entra a un club: la familia con el código que le dio el club, o el staff con su cuenta.
 function codigoLimpio(v){ return String(v||'').toUpperCase().replace(/[^A-Z0-9]/g,''); }
+var abrirMiJugadorAlEntrar = false;
+function miJugador(){
+  if(!sessionEnteredClub || clubRole()) return null;
+  var id; try{ id = localStorage.getItem('arena_jug_' + sessionEnteredClub); }catch(e){ return null; }
+  if(!id || !state) return null;
+  return state.players.find(function(x){ return x.id===id; }) || null;
+}
+function miCategoria(){
+  if(!sessionEnteredClub) return '';
+  try{ return localStorage.getItem('arena_cat_' + sessionEnteredClub) || ''; }catch(e){ return ''; }
+}
 function clubAbierto(id){
   try{ return localStorage.getItem('arena_club_' + id) === '1'; }catch(e){ return false; }
 }
@@ -3597,7 +3645,13 @@ function renderClubCerrado(club){
       if(!d.exists){ err.textContent = 'Ese código no sirve para este club. Revísalo con el profesor.'; return; }
       err.textContent = '';
       abrirClub(club.id);
-      try{ localStorage.setItem('arena_jug_' + club.id, (d.data()||{}).jugador || ''); }catch(e){}
+      var dat = d.data() || {};
+      try{
+        localStorage.setItem('arena_jug_' + club.id, dat.jugador || '');
+        localStorage.setItem('arena_cat_' + club.id, dat.categoria || '');
+      }catch(e){}
+      if(dat.categoria) visitorCategoria = dat.categoria;
+      abrirMiJugadorAlEntrar = true;
       render();
     }).catch(function(){
       btn.style.pointerEvents = '';
