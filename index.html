@@ -1386,6 +1386,72 @@
 .mj-regs .n{font-size:22px;font-weight:800;padding-top:2px}
 .mj-regs .n small{font-size:12px;opacity:.5;font-weight:600}
 .mj-nota{margin-top:30px;padding:16px 18px;border-radius:16px;border:1px dashed rgba(255,255,255,.16);font-size:13px;line-height:1.6;opacity:.7}
+/* ===== Portada del club: la fecha y el nivel del equipo ===== */
+.ch-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:0 0 16px}
+.ch-head h3{margin:0;font-size:19px;letter-spacing:-.01em}
+.ch-head span{font-size:12px;opacity:.5}
+.ch-sec{margin-bottom:40px}
+.ch-tiras{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.1);border-radius:18px;overflow:hidden;margin-bottom:38px}
+@media (min-width:760px){.ch-tiras{grid-template-columns:repeat(4,1fr)}}
+.ch-tiras div{background:#0d1424;padding:18px}
+.ch-tiras b{display:block;font-size:30px;font-weight:800;line-height:1}
+.ch-tiras span{display:block;font-size:11.5px;opacity:.6;margin-top:5px;line-height:1.35}
+.ch-subidas{display:grid;grid-template-columns:1fr;gap:12px}
+@media (min-width:700px){.ch-subidas{grid-template-columns:repeat(3,1fr)}}
+.ch-sub{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:18px;border:1px solid rgba(193,248,7,.26);
+  background:linear-gradient(130deg,rgba(193,248,7,.09),rgba(255,255,255,.02) 65%)}
+.ch-sub .av{width:48px;height:48px;border-radius:14px;overflow:hidden;flex:none;background:rgba(255,255,255,.07);display:grid;place-items:center;font-weight:800;font-size:15px}
+.ch-sub .av img{width:100%;height:100%;object-fit:cover}
+.ch-sub .nm{flex:1;min-width:0}
+.ch-sub .nm b{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ch-sub .nm span{font-size:11.5px;opacity:.6}
+.ch-sub .up{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:17px;font-weight:800;color:#c1f807;white-space:nowrap}
+.ch-cartas{display:flex;gap:16px;flex-wrap:wrap}
+.ch-cartas>div{width:clamp(150px,30vw,214px);flex:none}
+@media (max-width:620px){.ch-cartas{gap:12px}.ch-cartas>div{width:calc(50% - 6px)}}
+.ch-cartas .card-player{cursor:default}
+.ch-rank{display:grid;grid-template-columns:1fr;gap:34px}
+@media (min-width:760px){.ch-rank{grid-template-columns:1fr 1fr;gap:44px}}
+.ch-lista{display:flex;flex-direction:column}
+.ch-lista article{display:grid;grid-template-columns:22px 1fr auto;gap:14px;align-items:center;padding:13px 0;border-top:1px solid rgba(255,255,255,.09)}
+.ch-lista article:last-child{border-bottom:1px solid rgba(255,255,255,.09)}
+.ch-lista .i{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;opacity:.4}
+.ch-lista .n{font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ch-lista .n small{display:block;font-size:11.5px;opacity:.5;margin-top:2px}
+.ch-lista .v{font-size:19px;font-weight:800}
+.ch-vacio{padding:16px 0;font-size:13.5px;opacity:.5;font-style:italic;border-top:1px solid rgba(255,255,255,.09)}
+.ch-cat{padding:22px;border-radius:22px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.025);margin-bottom:16px}
+.ch-cat-top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+.ch-cat-top h4{margin:0;font-size:17px}
+.ch-cat-top em{font-style:normal;font-size:12px;opacity:.55;display:block;margin-top:3px}
+.ch-glob{text-align:right}
+.ch-glob b{font-size:34px;font-weight:800;line-height:1;display:block}
+.stars{position:relative;display:inline-block;line-height:0;margin-top:5px}
+.stars svg{width:16px;height:16px;fill:rgba(255,255,255,.16)}
+.stars .s-on{position:absolute;inset:0;overflow:hidden;white-space:nowrap}
+.stars .s-on svg{fill:#c1f807}
+.ch-grupos{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.09);border-radius:16px;overflow:hidden}
+@media (min-width:620px){.ch-grupos{grid-template-columns:repeat(4,1fr)}}
+.ch-grupos div{background:#0d1424;padding:14px 15px}
+.ch-grupos .k{display:block;font-size:10.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;opacity:.5;margin-bottom:6px}
+.ch-grupos .v{font-size:24px;font-weight:800;line-height:1}
+.ch-grupos .q{font-size:11px;opacity:.45;margin-left:5px;font-weight:600}
+.ch-evo{margin-top:18px;padding-top:18px;border-top:1px solid rgba(255,255,255,.09);display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.ch-evo svg{flex:1;min-width:180px;height:48px}
+.ch-evo .leg{font-size:12px;opacity:.55;line-height:1.5}
+.ch-evo .leg b{color:#c1f807;font-size:14px}
+.ch-ev{margin-top:18px;padding-top:18px;border-top:1px solid rgba(255,255,255,.09)}
+.ch-ev h5{margin:0 0 10px;font-size:13px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;opacity:.55}
+.ch-ev-form{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.ch-ev-form input[type=number]{width:84px}
+.ch-ev-form input{padding:11px 13px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:inherit;font:inherit;font-size:14px}
+.ch-ev-form input[type=text]{flex:1;min-width:190px}
+.ch-ev-form button{padding:11px 18px;border-radius:12px;border:0;background:#c1f807;color:#0a0f02;font:inherit;font-weight:800;font-size:14px;cursor:pointer}
+.ch-ev-list{margin-top:14px;display:flex;flex-direction:column;gap:9px}
+.ch-ev-list article{display:grid;grid-template-columns:auto 1fr auto;gap:13px;align-items:baseline;font-size:13.5px}
+.ch-ev-list .f{font-size:12px;opacity:.45;min-width:60px}
+.ch-ev-list .n{font-weight:800;font-size:16px}
+.ch-ev-list p{margin:0;opacity:.85;line-height:1.45}
 .mijug{margin:0 0 26px}
 .mijug-in{display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:18px 20px;border-radius:22px;
   border:1px solid rgba(193,248,7,.3);background:linear-gradient(130deg,rgba(193,248,7,.1),rgba(255,255,255,.03) 60%)}
@@ -1784,6 +1850,7 @@ function normalizeState(s){
     if(!s.selectedCategoria || s.categories.indexOf(s.selectedCategoria)===-1) s.selectedCategoria = s.categories[0];
     if(!s.profesorCategoria || s.categories.indexOf(s.profesorCategoria)===-1) s.profesorCategoria = s.categories[0];
     if(typeof s.enteredClub === 'undefined') s.enteredClub = null;
+    if(!s.evalsCat || typeof s.evalsCat !== 'object') s.evalsCat = {};
     if(!s.categoryLevels || typeof s.categoryLevels !== 'object') s.categoryLevels = {};
     if(!s.categoryWeights || typeof s.categoryWeights !== 'object') s.categoryWeights = {};
     if(!s.lineups || typeof s.lineups !== 'object') s.lineups = {};
@@ -1863,7 +1930,7 @@ function buildDocs(s){
     docs['categorias/'+cat] = cleanJson({nombre:cat, players:players, trainingDays:td, level:level, weights:weights,
       lineups:lu, formaciones:(s.formacionesCat||{})[cat] || {}, formato:(s.formatoCat||{})[cat] || null,
       profile:(s.categoryProfiles||{})[cat] || {}, schedule:(s.trainingSchedules||{})[cat] || null,
-      attrs:(s.categoryAttrs||{})[cat] || {extra:[], labels:{}}});
+      attrs:(s.categoryAttrs||{})[cat] || {extra:[], labels:{}}, evals:(s.evalsCat||{})[cat] || []});
     docs['publico/'+cat] = cleanJson({nombre:cat, level:level, weights:weights, attrs:(s.categoryAttrs||{})[cat] || {extra:[], labels:{}}, players:players.map(publicPlayer)});
   });
   return docs;
@@ -1930,7 +1997,7 @@ function rebuildFromRemote(){
   var g = remote.general, old = state || {};
   var s = {categories:(g.categories||[]).slice(), profiles:cleanJson(g.profiles||{}), players:[], trainingDays:{},
     categoryLevels:{}, categoryWeights:{}, categoryProfiles:{}, trainingSchedules:{}, lineups:{}, formacionesCat:{}, formatoCat:{},
-    clubAttrs:cleanJson(g.attrs || {extra:[], labels:{}}), categoryAttrs:{},
+    clubAttrs:cleanJson(g.attrs || {extra:[], labels:{}}), categoryAttrs:{}, evalsCat:{},
     activePos:old.activePos, selectedCategoria:old.selectedCategoria, profesorCategoria:old.profesorCategoria, role:old.role, enteredClub:null};
   s.categories.forEach(function(cat){
     var priv = remote.priv[cat], src = priv || remote.pub[cat];
@@ -1946,6 +2013,7 @@ function rebuildFromRemote(){
       if(priv.formato) s.formatoCat[cat] = priv.formato;
       if(priv.profile && Object.keys(priv.profile).length) s.categoryProfiles[cat] = cleanJson(priv.profile);
       if(Array.isArray(priv.schedule)) s.trainingSchedules[cat] = priv.schedule.slice();
+      if(Array.isArray(priv.evals)) s.evalsCat[cat] = cleanJson(priv.evals);
     }
   });
   var n = normalizeState(s);
@@ -2045,6 +2113,7 @@ function persist(){
 }
 
 var ALL_VIEWS = [
+  {id:'club', label:'El club', icon:'●'},
   {id:'entrenamiento', label:'Entrenamiento del día', icon:'●'},
   {id:'partido', label:'Partido del día', icon:'●'},
   {id:'cartas', label:'Cartas de jugadores', icon:'●'},
@@ -2056,6 +2125,7 @@ function visibleViews(){
   if(state.role==='visitante'){
     var vs = ALL_VIEWS.filter(function(v){return v.id==='cartas';});
     if(miJugador()) vs.unshift({id:'mio', label:'Mi jugador', icon:'●'});
+    vs.unshift({id:'club', label:'El club', icon:'●'});
     return vs;
   }
   return ALL_VIEWS;
@@ -3122,6 +3192,133 @@ function recentHighlight(hist){
 }
 
 // La página de la familia: su hijo a fondo. Solo la ve quien entró con el código de ese jugador.
+function renderClubHome(){
+  var el = document.createElement('div');
+  var club = currentClub();
+  var todos = (state.players||[]).slice();
+  var cats = (state.categories||[]).filter(function(c){ return todos.some(function(p){ return p.categoria===c; }); });
+  var staff = !!clubRole(); // solo el cuerpo técnico califica al grupo
+
+  if(!todos.length){
+    el.innerHTML = '<div class="view-head"><div><h1>' + escHtml(club ? club.nombre : 'El club') + '</h1>' +
+      '<p>' + trimLabel() + '</p></div></div>' +
+      '<div class="ch-vacio">Todavía no hay jugadores registrados en este club.</div>';
+    return el;
+  }
+
+  // --- la fecha: lo que se movió en los últimos 7 días ---
+  var desde = fechaHace(7);
+  var subidas = todos.map(function(p){ return {p:p, up: p.valoracion - ratingBefore(p, desde)}; })
+    .filter(function(x){ return x.up > 0; })
+    .sort(function(a,b){ return b.up - a.up || b.p.valoracion - a.p.valoracion; }).slice(0,3);
+
+  var goleadores = todos.map(function(p){ return {p:p, v: sumTrim(p,'goles')}; })
+    .filter(function(x){ return x.v > 0; }).sort(function(a,b){ return b.v - a.v; }).slice(0,5);
+  var asistidores = todos.map(function(p){ return {p:p, v: sumTrim(p,'asistencias')}; })
+    .filter(function(x){ return x.v > 0; }).sort(function(a,b){ return b.v - a.v; }).slice(0,5);
+  var mejores = todos.slice().sort(function(a,b){ return b.valoracion - a.valoracion; }).slice(0,3);
+
+  var ents = 0, fue = 0;
+  todos.forEach(function(p){
+    histTrim(p).forEach(function(h){ if(h.type !== 'partido'){ ents++; if(h.asistio !== false) fue++; } });
+  });
+  var pctAsis = ents ? Math.round(fue/ents*100) + '%' : '—';
+  var regsTrim = todos.reduce(function(a,p){ return a + histTrim(p).length; }, 0);
+  var promClub = promValor(todos);
+
+  function filaLista(arr, unidad){
+    if(!arr.length) return '<div class="ch-vacio">Sin registros todavía este trimestre.</div>';
+    return arr.map(function(x,i){
+      return '<article><div class="i">' + (i+1) + '</div>' +
+        '<div class="n">' + escHtml(x.p.name) + '<small>' + posName(x.p.pos) + ' · ' + escHtml(x.p.categoria) + '</small></div>' +
+        '<div class="v">' + x.v + '<span style="font-size:11px;opacity:.45;font-weight:600"> ' + unidad + '</span></div></article>';
+    }).join('');
+  }
+  function cartaMini(p){
+    var t = tierOf(p.valoracion);
+    return '<div><div class="card-player t-' + t.id + '">' +
+      '<div class="fut-photo' + (photoMap[p.id] ? '' : ' no-photo') + '">' + avatarInner(p) +
+        '<div class="fut-rating"><b>' + p.valoracion + '</b><span>' + escHtml(p.pos) + '</span></div>' +
+        '<div class="fut-tier">' + (t.id==='elite' ? BOLT_SVG : '') + t.label + '</div>' +
+        '<div class="fut-name"><div class="card-name">' + escHtml(p.name) + '</div><div class="card-pos">' + escHtml(p.categoria) + '</div></div>' +
+      '</div>' + (t.id==='elite' ? '<div class="fut-bolt">' + BOLT_SVG + '</div>' : '') + '</div></div>';
+  }
+  function panelCat(nombre, list){
+    var prom = promValor(list), est = estrellasDe(prom);
+    var grupos = GRUPOS_POS.map(function(g){
+      var v = promGrupo(list, g.codes), n = list.filter(function(p){ return g.codes.indexOf(p.pos)!==-1; }).length;
+      return '<div><span class="k">' + g.label + '</span><span class="v">' + (v===null ? '—' : v) +
+        '</span><span class="q">' + n + '</span></div>';
+    }).join('');
+    var evo = evolucionEquipo(list, 7), spark = sparkHtml(evo);
+    var dif = evo.length > 1 ? Math.round(evo[evo.length-1] - evo[0]) : 0;
+    var evoHtml = spark ? '<div class="ch-evo">' + spark +
+      '<div class="leg"><b>' + (dif>0?'+':'') + dif + '</b> en las últimas semanas<br>Promedio del grupo</div></div>' :
+      '<div class="ch-evo"><div class="leg">La evolución del grupo aparece cuando haya varias semanas registradas.</div></div>';
+    return '<div class="ch-cat" data-cat="' + escHtml(nombre) + '">' +
+      '<div class="ch-cat-top"><div><h4>' + escHtml(nombre) + '</h4><em>' + list.length + ' jugador' + (list.length===1?'':'es') + '</em></div>' +
+        '<div class="ch-glob"><b>' + (prom===null ? '—' : prom) + '</b>' + estrellasHtml(est) + '</div></div>' +
+      '<div class="ch-grupos">' + grupos + '</div>' + evoHtml +
+      (staff ? bloqueEval(nombre) : '') +
+    '</div>';
+  }
+  function bloqueEval(cat){
+    var evs = ((state.evalsCat||{})[cat] || []).slice().sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
+    var lista = evs.length ? evs.slice(0,4).map(function(e){
+      return '<article><div class="f">' + fmtDate(e.date) + '</div><p>' + escHtml(e.comment||'Sin comentario.') + '</p>' +
+        '<div class="n">' + e.rating + '<small style="font-size:11px;opacity:.5"> /10</small></div></article>';
+    }).join('') : '<div class="ch-vacio">Aún no has calificado al grupo este trimestre.</div>';
+    return '<div class="ch-ev"><h5>Evaluación colectiva</h5>' +
+      '<div class="ch-ev-form"><input type="number" min="1" max="10" step="0.5" placeholder="Nota" class="ev-n">' +
+      '<input type="text" maxlength="160" placeholder="¿Cómo estuvo el grupo?" class="ev-c">' +
+      '<button type="button" class="ev-b">Guardar</button></div>' +
+      '<div class="ch-ev-list">' + lista + '</div></div>';
+  }
+
+  el.innerHTML =
+    '<div class="view-head"><div><h1>' + escHtml(club ? club.nombre : 'El club') + '</h1>' +
+      '<p>' + trimLabel() + ' · así va el club este trimestre.</p></div></div>' +
+    '<div class="ch-tiras">' +
+      '<div><b>' + todos.length + '</b><span>Jugadores</span></div>' +
+      '<div><b>' + (promClub===null?'—':promClub) + '</b><span>Valoración promedio</span></div>' +
+      '<div><b>' + pctAsis + '</b><span>Asistencia a entrenamientos</span></div>' +
+      '<div><b>' + regsTrim + '</b><span>Registros del trimestre</span></div>' +
+    '</div>' +
+    '<div class="ch-sec"><div class="ch-head"><h3>Los que más subieron</h3><span>Últimos 7 días</span></div>' +
+      (subidas.length ? '<div class="ch-subidas">' + subidas.map(function(x){
+        return '<div class="ch-sub"><div class="av">' + avatarInner(x.p) + '</div>' +
+          '<div class="nm"><b>' + escHtml(x.p.name) + '</b><span>' + escHtml(x.p.categoria) + ' · ' + x.p.valoracion + '</span></div>' +
+          '<div class="up">+' + x.up + '</div></div>';
+      }).join('') + '</div>' : '<div class="ch-vacio">Nadie subió de valoración esta semana.</div>') +
+    '</div>' +
+    '<div class="ch-sec"><div class="ch-head"><h3>Las mejores cartas</h3><span>Del club</span></div>' +
+      '<div class="ch-cartas">' + mejores.map(cartaMini).join('') + '</div></div>' +
+    '<div class="ch-sec ch-rank">' +
+      '<div><div class="ch-head"><h3>Goleadores</h3><span>Trimestre</span></div><div class="ch-lista">' + filaLista(goleadores,'goles') + '</div></div>' +
+      '<div><div class="ch-head"><h3>Asistencias</h3><span>Trimestre</span></div><div class="ch-lista">' + filaLista(asistidores,'asist.') + '</div></div>' +
+    '</div>' +
+    '<div class="ch-sec"><div class="ch-head"><h3>Nivel del equipo</h3><span>Promedio por línea, como en el FIFA</span></div>' +
+      cats.map(function(c){ return panelCat(c, todos.filter(function(p){ return p.categoria===c; })); }).join('') +
+    '</div>';
+
+  if(staff){
+    el.querySelectorAll('.ch-cat').forEach(function(box){
+      var cat = box.getAttribute('data-cat'), b = box.querySelector('.ev-b');
+      if(!b) return;
+      b.onclick = function(){
+        var n = parseFloat(box.querySelector('.ev-n').value);
+        if(!(n >= 1 && n <= 10)){ showToast('Ponle una nota del 1 al 10 al grupo.'); return; }
+        if(window.db && !canWriteDoc('categorias/' + cat)){ showToast('Tu cuenta no puede calificar esta categoría.'); return; }
+        if(!state.evalsCat) state.evalsCat = {};
+        if(!state.evalsCat[cat]) state.evalsCat[cat] = [];
+        state.evalsCat[cat].unshift({date: todayStr(), rating: n, comment: String(box.querySelector('.ev-c').value||'').replace(/[<>]/g,'').trim()});
+        state.evalsCat[cat] = state.evalsCat[cat].slice(0,40);
+        persist(); render();
+      };
+    });
+  }
+  return el;
+}
 function renderMiJugador(){
   var el = document.createElement('div');
   var p = miJugador();
@@ -3629,8 +3826,8 @@ function goToLanding(){
 }
 function enterClub(clubId){
   sessionEnteredClub = clubId;
-  // la familia cae en su hijo; el staff y el visitante suelto, en las cartas
-  currentView = (!clubRole() && miJugadorId(clubId)) ? 'mio' : 'cartas';
+  // todos entran por la portada del club
+  currentView = 'club';
   applyClubTheme(currentClub());
   if(location.hash !== '#/' + clubId) history.replaceState(null, '', '#/' + clubId);
   if(window.db) attachClub();
@@ -4865,7 +5062,8 @@ function render(){
   inner.className = 'main-inner';
   main.appendChild(inner);
   var view;
-  if(currentView==='entrenamiento') view = renderEntrenamiento();
+  if(currentView==='club') view = renderClubHome();
+  else if(currentView==='entrenamiento') view = renderEntrenamiento();
   else if(currentView==='partido') view = renderPartido();
   else if(currentView==='mio') view = renderMiJugador();
   else if(currentView==='cartas') view = renderCartas();
@@ -4949,6 +5147,62 @@ var TIERS = [
   {id:'elite',  label:'Élite',  min:90}
 ];
 function tierOf(v){ var t = TIERS[0]; TIERS.forEach(function(x){ if(v>=x.min) t = x; }); return t; }
+
+/* ===== Trimestre en curso, grupos por posición y estrellas del equipo ===== */
+var TRIM_LABELS = ['Enero – marzo','Abril – junio','Julio – septiembre','Octubre – diciembre'];
+function trimIni(){ var d = new Date(); return new Date(d.getFullYear(), Math.floor(d.getMonth()/3)*3, 1).toISOString().slice(0,10); }
+function trimLabel(){ var d = new Date(); return TRIM_LABELS[Math.floor(d.getMonth()/3)] + ' ' + d.getFullYear(); }
+function histTrim(p){ var ini = trimIni(); return (p.historial||[]).filter(function(h){ return (h.date||'') >= ini; }); }
+function sumTrim(p, campo){ return histTrim(p).reduce(function(a,h){ return a + (h[campo]||0); }, 0); }
+function fechaHace(dias){ var d = new Date(); d.setDate(d.getDate()-dias); return d.toISOString().slice(0,10); }
+// Los grupos de la carta de equipo, al estilo del FIFA
+var GRUPOS_POS = [
+  {id:'ata', label:'Ataque',   codes:['DC','EXT']},
+  {id:'med', label:'Medio',    codes:['MCD','MC','MCO']},
+  {id:'def', label:'Defensa',  codes:['DFC','LD','LI']},
+  {id:'por', label:'Portería', codes:['POR']}
+];
+function promValor(list){ return list.length ? Math.round(list.reduce(function(a,p){ return a + (p.valoracion||0); },0) / list.length) : null; }
+function promGrupo(list, codes){ return promValor(list.filter(function(p){ return codes.indexOf(p.pos)!==-1; })); }
+// De promedio a estrellas, con medias estrellas: 54 es una, 80 o más son cinco
+function estrellasDe(prom){
+  if(prom===null) return 0;
+  var cortes = [[80,5],[76,4.5],[72,4],[68,3.5],[65,3],[61,2.5],[58,2],[54,1.5]];
+  for(var i=0;i<cortes.length;i++) if(prom >= cortes[i][0]) return cortes[i][1];
+  return 1;
+}
+var STAR_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.4L12 17.4 6.2 20.4l1.1-6.4L2.6 9.4l6.5-.9z"/></svg>';
+function estrellasHtml(n){
+  var cinco = STAR_SVG + STAR_SVG + STAR_SVG + STAR_SVG + STAR_SVG;
+  return '<div class="stars" role="img" aria-label="' + n + ' de 5 estrellas"><div class="s-off">' + cinco + '</div>' +
+    '<div class="s-on" style="width:' + (n/5*100) + '%">' + cinco + '</div></div>';
+}
+// Cómo venía el equipo: promedio del grupo semana a semana, reconstruido del historial
+function evolucionEquipo(list, semanas){
+  var pts = [], i, f, vals;
+  for(i=semanas;i>=1;i--){
+    f = fechaHace(i*7);
+    vals = list.map(function(p){ return ratingBefore(p, f); }).filter(function(v){ return typeof v === 'number'; });
+    if(vals.length) pts.push(vals.reduce(function(a,b){ return a+b; },0) / vals.length);
+  }
+  var hoy = promValor(list);
+  if(hoy !== null) pts.push(hoy);
+  return pts;
+}
+function sparkHtml(pts){
+  if(pts.length < 3) return '';
+  var min = Math.min.apply(null, pts), max = Math.max.apply(null, pts);
+  var rango = (max - min) || 1, w = 100, h = 34, d = '', area = '';
+  var xy = pts.map(function(v,i){
+    return [ (i/(pts.length-1))*w, h - ((v-min)/rango)*(h-6) - 3 ];
+  });
+  xy.forEach(function(q,i){ d += (i?' L':'M') + q[0].toFixed(1) + ' ' + q[1].toFixed(1); });
+  area = d + ' L' + w + ' ' + h + ' L0 ' + h + ' Z';
+  return '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none" aria-hidden="true">' +
+    '<path d="' + area + '" fill="rgba(193,248,7,.12)"/>' +
+    '<path d="' + d + '" fill="none" stroke="#c1f807" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>' +
+  '</svg>';
+}
 var LOCK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="#0a0f02" stroke-width="2.4" stroke-linecap="round" aria-hidden="true" style="width:13px;height:13px"><rect x="4.5" y="10.5" width="15" height="10" rx="2.2"/><path d="M8 10.5V7.4a4 4 0 0 1 8 0v3.1"/></svg>';
 var BOLT_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13.5 1.5 4 13.2h6.2L9 22.5l10-12.2h-6.3z"/></svg>';
 function xpBar(p){
