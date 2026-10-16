@@ -1356,8 +1356,9 @@
 .pl-cod.copiado{border-color:#c1f807;background:rgba(193,248,7,.16);color:#c1f807}
 .pl-cod.vacio{opacity:.5;cursor:default;font-style:italic;letter-spacing:0;font-family:inherit}
 .mj-top{display:flex;gap:24px;align-items:center;flex-wrap:wrap;margin-bottom:26px}
-.mj-foto{width:118px;height:118px;border-radius:26px;overflow:hidden;flex:none;background:rgba(255,255,255,.06);display:grid;place-items:center}
-.mj-foto img{width:100%;height:100%;object-fit:cover}
+.mj-carta{width:clamp(200px,42vw,250px);flex:none}
+.mj-carta .card-player{cursor:default}
+@media (max-width:620px){.mj-top{justify-content:center}.mj-info{text-align:center}.mj-xp{margin:0 auto}}
 .mj-info{flex:1;min-width:220px}
 .mj-k{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#c1f807;
   border:1px solid rgba(193,248,7,.35);border-radius:999px;padding:5px 11px;margin-bottom:9px}
@@ -3140,7 +3141,16 @@ function renderMiJugador(){
     '<div class="view-head"><div><h1>Mi jugador</h1>' +
       '<p>Todo lo que su profesor ha registrado este trimestre.</p></div></div>' +
     '<div class="mj-top">' +
-      '<div class="mj-foto">' + avatarInner(p) + '</div>' +
+      '<div class="mj-carta"><div class="card-player t-' + t.id + '">' +
+        '<div class="fut-photo' + (photoMap[p.id] ? '' : ' no-photo') + '">' + avatarInner(p) +
+          '<div class="fut-rating"><b>' + p.valoracion + '</b><span>' + escHtml(p.pos) + '</span></div>' +
+          '<div class="fut-tier">' + (t.id==='elite' ? BOLT_SVG : '') + t.label + '</div>' +
+          '<div class="fut-name"><div class="card-name">' + escHtml(p.name) + '</div><div class="card-pos">' + posName(p.pos) + '</div></div>' +
+        '</div>' +
+        (t.id==='elite' ? '<div class="fut-bolt">' + BOLT_SVG + '</div>' : '') +
+        xpBar(p) +
+        '<div class="card-stats"><span><b>' + (p.goles||0) + '</b> goles</span><span><b>' + (p.asistencias||0) + '</b> asist.</span><span><b>' + hist.length + '</b> registros</span></div>' +
+      '</div></div>' +
       '<div class="mj-info">' +
         '<span class="mj-k">' + escHtml(t.label) + ' · ' + p.valoracion + '</span>' +
         '<h2>' + escHtml(p.name) + '</h2>' +
@@ -3200,7 +3210,7 @@ function renderCartas(){
         '</div>' +
         '<button class="mijug-btn" type="button">Ver su perfil</button>' +
       '</div>';
-    caja.querySelector('.mijug-btn').onclick = function(){ openPublicModal(mio); };
+    caja.querySelector('.mijug-btn').onclick = function(){ currentView = 'mio'; render(); };
   }
 
   var grid = el.querySelector('#cardsGrid');
@@ -3619,7 +3629,8 @@ function goToLanding(){
 }
 function enterClub(clubId){
   sessionEnteredClub = clubId;
-  currentView = 'cartas';
+  // la familia cae en su hijo; el staff y el visitante suelto, en las cartas
+  currentView = (!clubRole() && miJugadorId(clubId)) ? 'mio' : 'cartas';
   applyClubTheme(currentClub());
   if(location.hash !== '#/' + clubId) history.replaceState(null, '', '#/' + clubId);
   if(window.db) attachClub();
@@ -3658,9 +3669,12 @@ var THEME_VARS = ['--orange-500','--navy-950','--navy-900','--navy-800','--navy-
 function defaultClubLogo(){ var img = document.querySelector('.brand img'); return img ? (img.dataset.defaultSrc || img.src) : ARENA_LOGO_SRC; }
 // Quién entra a un club: la familia con el código que le dio el club, o el staff con su cuenta.
 function codigoLimpio(v){ return String(v||'').toUpperCase().replace(/[^A-Z0-9]/g,''); }
+function miJugadorId(club){
+  try{ return localStorage.getItem('arena_jug_' + club) || ''; }catch(e){ return ''; }
+}
 function miJugador(){
   if(!sessionEnteredClub || clubRole()) return null;
-  var id; try{ id = localStorage.getItem('arena_jug_' + sessionEnteredClub); }catch(e){ return null; }
+  var id = miJugadorId(sessionEnteredClub);
   if(!id || !state) return null;
   return state.players.find(function(x){ return x.id===id; }) || null;
 }
