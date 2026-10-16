@@ -1336,6 +1336,25 @@
 .cerrado .acc a.p{background:var(--lime);color:#0a0f02}
 .cerrado .acc a.s{border:1px solid var(--line);color:var(--ink);background:rgba(255,255,255,.03)}
 .cerrado .hint{margin-top:26px;font-size:13px;color:#5d6782;line-height:1.7}
+.cerrado .quien{display:grid;grid-template-columns:1fr;gap:10px;margin:0 0 26px}
+@media (min-width:560px){.cerrado .quien{grid-template-columns:1fr 1fr}}
+.cerrado .quien button{font:inherit;text-align:left;padding:18px;border-radius:18px;border:1px solid var(--line);background:rgba(255,255,255,.03);color:var(--ink);cursor:pointer;transition:border-color .3s,transform .3s var(--ease),background .3s}
+.cerrado .quien button:hover{border-color:rgba(193,248,7,.45);transform:translateY(-2px)}
+.cerrado .quien button.on{border-color:var(--lime);background:rgba(193,248,7,.08)}
+.cerrado .quien b{display:block;font-size:15.5px;margin-bottom:4px}
+.cerrado .quien span{display:block;font-size:12.5px;color:var(--muted);line-height:1.45}
+.cerrado .campo{text-align:left;margin-bottom:14px}
+.cerrado .campo label{display:block;font-size:13px;font-weight:700;color:#c7cddc;margin-bottom:7px}
+.cerrado .campo input{width:100%;padding:15px 17px;border-radius:15px;border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--ink);font:inherit;font-size:22px;font-weight:700;text-align:center;letter-spacing:6px;text-transform:uppercase}
+.cerrado .campo input::placeholder{color:#5d6782;font-size:15px;font-weight:400;letter-spacing:0;text-transform:none}
+.cerrado .campo .ayuda{font-size:12.5px;color:#5d6782;margin-top:7px;line-height:1.5}
+.cerrado .err{color:#ff8f7a;font-size:13.5px;min-height:19px;margin-top:8px;text-align:left}
+.cerrado .oculto{display:none}
+.cm-cod{display:flex;gap:8px}
+.cm-cod input{flex:1;min-width:0;text-transform:uppercase;letter-spacing:3px;font-weight:700}
+.cm-cod button{flex:none;padding:0 16px;border-radius:12px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.05);color:#f1f3f8;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.cm-cod button:hover{border-color:#c1f807;color:#c1f807}
+.cm-nota{display:block;margin-top:7px;font-size:12px;line-height:1.5;color:#8a93ab}
 .lp .lp-ph img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 
 .lp{overflow-x:clip}
@@ -3504,21 +3523,75 @@ function shadeHex(hex, f){ // f negativo oscurece, positivo aclara
 function hexLuma(hex){ var n = parseInt(String(hex||'').replace('#',''), 16); return (0.299*((n>>16)&255) + 0.587*((n>>8)&255) + 0.114*(n&255)) / 255; }
 var THEME_VARS = ['--orange-500','--navy-950','--navy-900','--navy-800','--navy-700'];
 function defaultClubLogo(){ var img = document.querySelector('.brand img'); return img ? (img.dataset.defaultSrc || img.src) : ARENA_LOGO_SRC; }
+// Quién entra a un club: la familia con el código que le dio el club, o el staff con su cuenta.
+function codigoLimpio(v){ return String(v||'').toUpperCase().replace(/[^A-Z0-9]/g,''); }
+// Código corto para las familias. Sin letras ni números que se confundan al copiarlos de un papel (0/O, 1/I/L).
+function codigoNuevo(clubId){
+  var ABC = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789', s = '';
+  var r = (window.crypto && crypto.getRandomValues) ? crypto.getRandomValues(new Uint32Array(4)) : null;
+  for(var i=0;i<4;i++){ s += ABC[(r ? r[i] : Math.floor(Math.random()*1e9)) % ABC.length]; }
+  var pre = String(clubId||'').replace(/[^a-z0-9]/gi,'').slice(0,2).toUpperCase() || 'AR';
+  return pre + '-' + s;
+}
+function clubAbierto(id){
+  try{ return localStorage.getItem('arena_club_' + id) === '1'; }catch(e){ return false; }
+}
+function abrirClub(id){
+  try{ localStorage.setItem('arena_club_' + id, '1'); }catch(e){}
+}
 function renderClubCerrado(club){
   var root = document.getElementById('landingRoot');
+  var tieneCodigo = !!codigoLimpio(club.codigo);
   root.innerHTML =
     '<div class="lp lp-ready"><div class="cerrado"><div class="in">' +
       '<div class="crest"><img src="' + clubLogo(club) + '" alt="Escudo de ' + escHtml(club.nombre) + '" /></div>' +
       '<p class="lp-kick"><b>' + LOCK_SVG + '</b>Club privado</p>' +
       '<h2><span class="lp-X">' + escHtml(club.nombre) + '</span></h2>' +
-      '<p class="sub">Los jugadores de este club solo los ven sus familias y su cuerpo técnico. Entra con tu cuenta para verlos.</p>' +
-      '<div class="acc">' +
-        '<a class="p" href="#/staff" data-act="staff">Entrar con mi cuenta</a>' +
-        '<a class="s" href="#" data-act="home">Ver los clubes</a>' +
+      '<p class="sub">Los jugadores de este club solo los ven sus familias y su cuerpo técnico.</p>' +
+      '<div class="quien">' +
+        '<button type="button" data-q="familia" class="on"><b>Soy la familia</b><span>Tengo el código del club</span></button>' +
+        '<button type="button" data-q="staff"><b>Soy del cuerpo técnico</b><span>Entro con mi cuenta</span></button>' +
       '</div>' +
-      '<p class="hint">Si eres papá o mamá y todavía no tienes cuenta, pídele al club el código de tu hijo.<br>El cuerpo técnico entra con su correo y contraseña.</p>' +
+      '<div id="ccFamilia">' +
+        (tieneCodigo
+          ? '<div class="campo"><label for="ccCod">Código de acceso</label>' +
+              '<input id="ccCod" maxlength="12" placeholder="Escríbelo aquí" autocomplete="off" />' +
+              '<div class="ayuda">Te lo entrega el club, o el profesor de la categoría de tu hijo.</div></div>' +
+            '<div class="err" id="ccErr"></div>' +
+            '<div class="acc"><a class="p" href="#" id="ccEntrar">Entrar al club</a></div>'
+          : '<p class="sub">Este club todavía no tiene código de acceso. Pídeselo a Arena Sports.</p>') +
+      '</div>' +
+      '<div id="ccStaff" class="oculto">' +
+        '<div class="acc"><a class="p" href="#/staff">Entrar con mi cuenta</a></div>' +
+        '<p class="hint">Entras con tu correo y tu contraseña, y caes directo en tu categoría.<br>El código del club no es para ti.</p>' +
+      '</div>' +
+      '<div class="acc" style="margin-top:14px"><a class="s" href="#" data-act="home">Ver los clubes</a></div>' +
     '</div></div></div>';
+
   root.querySelector('[data-act="home"]').onclick = function(e){ e.preventDefault(); goToLanding(); };
+  var fam = root.querySelector('#ccFamilia'), stf = root.querySelector('#ccStaff');
+  [].slice.call(root.querySelectorAll('.quien button')).forEach(function(b){
+    b.onclick = function(){
+      [].slice.call(root.querySelectorAll('.quien button')).forEach(function(z){ z.classList.remove('on'); });
+      b.classList.add('on');
+      var esFam = b.dataset.q === 'familia';
+      fam.classList.toggle('oculto', !esFam);
+      stf.classList.toggle('oculto', esFam);
+    };
+  });
+  var inp = root.querySelector('#ccCod'), btn = root.querySelector('#ccEntrar'), err = root.querySelector('#ccErr');
+  if(!btn) return;
+  function intentar(){
+    var v = codigoLimpio(inp.value);
+    if(!v){ err.textContent = 'Escribe el código que te dio el club.'; return; }
+    if(v !== codigoLimpio(club.codigo)){ err.textContent = 'Ese código no es el de este club. Revísalo con el profesor.'; return; }
+    err.textContent = '';
+    abrirClub(club.id);
+    render();
+  }
+  btn.onclick = function(e){ e.preventDefault(); intentar(); };
+  inp.addEventListener('keydown', function(e){ if(e.key === 'Enter') intentar(); });
+  setTimeout(function(){ try{ inp.focus(); }catch(e){} }, 120);
 }
 function clubLogo(c){ return (c && c.escudo) || (c && c.id===DEFAULT_CLUB_ID ? defaultClubLogo() : ARENA_LOGO_SRC); }
 function applyClubTheme(club){
@@ -3686,6 +3759,11 @@ function openClubModal(club){
         '<label>Color de detalles<input type="color" id="cmAcento" value="' + col.acento + '" /></label>' +
         '<label>Color de fondo<input type="color" id="cmBase" value="' + col.base + '" /></label></div>' +
       '<label>Cupos de jugadores<input type="number" min="0" id="cmCupos" value="' + (club ? (club.cupos||0) : 60) + '" /></label>' +
+      '<label>Código para las familias' +
+        '<span class="cm-cod"><input id="cmCodigo" maxlength="12" autocomplete="off" placeholder="Sin código: el club queda cerrado" value="' + escHtml(club ? (club.codigo||'') : codigoNuevo(club ? club.id : '')) + '" />' +
+        '<button type="button" id="cmCodGen">Otro</button></span>' +
+        '<small class="cm-nota">Con este código entran los papás a ver las cartas. El cuerpo técnico no lo necesita: ellos entran con su cuenta. Si se te filtra, genera otro y el anterior deja de servir.</small>' +
+      '</label>' +
       '<label>Estado<select id="cmEstado">' + ['activo','prueba','suspendido'].map(function(e){ return '<option value="' + e + '"' + ((club ? club.estado||'activo' : 'prueba')===e?' selected':'') + '>' + {activo:'Activo', prueba:'En prueba', suspendido:'Suspendido (nadie lo ve ni lo edita)'}[e] + '</option>'; }).join('') + '</select></label>' +
       (isNew ?
         '<label>Correo del administrador del club (opcional)<input type="email" id="cmAdmin" autocomplete="off" /></label>' +
@@ -3696,6 +3774,9 @@ function openClubModal(club){
     '</div>';
   var errBox = body.querySelector('#cmError');
   function fail(msg){ errBox.textContent = msg; errBox.style.display = 'block'; }
+  body.querySelector('#cmCodGen').onclick = function(){
+    body.querySelector('#cmCodigo').value = codigoNuevo(club ? club.id : body.querySelector('#cmNombre').value);
+  };
   body.querySelector('#cmEscudo').onchange = function(e){
     var f = e.target.files && e.target.files[0];
     if(!f) return;
@@ -3723,6 +3804,7 @@ function openClubModal(club){
       colores: {acento: body.querySelector('#cmAcento').value, base: body.querySelector('#cmBase').value},
       cupos: Math.max(0, parseInt(body.querySelector('#cmCupos').value, 10) || 0),
       estado: body.querySelector('#cmEstado').value,
+      codigo: codigoLimpio(body.querySelector('#cmCodigo').value),
       actualizado: Date.now()
     };
     if(escudo) data.escudo = escudo;
@@ -4607,7 +4689,7 @@ function render(){
     return;
   }
   // Los jugadores de un club solo los ve su gente. Sin cuenta no se entra.
-  if(window.db && clubsLoaded && club && !clubRole() && !isCreador()){
+  if(window.db && clubsLoaded && club && !clubRole() && !isCreador() && !clubAbierto(club.id)){
     document.getElementById('appRoot').style.display = 'none';
     var lrc = document.getElementById('landingRoot');
     lrc.style.display = 'block';
