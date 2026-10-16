@@ -1386,70 +1386,121 @@
 .mj-regs .n{font-size:22px;font-weight:800;padding-top:2px}
 .mj-regs .n small{font-size:12px;opacity:.5;font-weight:600}
 .mj-nota{margin-top:30px;padding:16px 18px;border-radius:16px;border:1px dashed rgba(255,255,255,.16);font-size:13px;line-height:1.6;opacity:.7}
-/* ===== Portada del club: la fecha y el nivel del equipo ===== */
-.ch-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:0 0 16px}
-.ch-head h3{margin:0;font-size:19px;letter-spacing:-.01em}
-.ch-head span{font-size:12px;opacity:.5}
-.ch-sec{margin-bottom:40px}
-.ch-tiras{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.1);border-radius:18px;overflow:hidden;margin-bottom:38px}
-@media (min-width:760px){.ch-tiras{grid-template-columns:repeat(4,1fr)}}
-.ch-tiras div{background:#0d1424;padding:18px}
-.ch-tiras b{display:block;font-size:30px;font-weight:800;line-height:1}
-.ch-tiras span{display:block;font-size:11.5px;opacity:.6;margin-top:5px;line-height:1.35}
-.ch-subidas{display:grid;grid-template-columns:1fr;gap:12px}
-@media (min-width:700px){.ch-subidas{grid-template-columns:repeat(3,1fr)}}
-.ch-sub{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:18px;border:1px solid rgba(193,248,7,.26);
-  background:linear-gradient(130deg,rgba(193,248,7,.09),rgba(255,255,255,.02) 65%)}
-.ch-sub .av{width:48px;height:48px;border-radius:14px;overflow:hidden;flex:none;background:rgba(255,255,255,.07);display:grid;place-items:center;font-weight:800;font-size:15px}
-.ch-sub .av img{width:100%;height:100%;object-fit:cover}
-.ch-sub .nm{flex:1;min-width:0}
-.ch-sub .nm b{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ch-sub .nm span{font-size:11.5px;opacity:.6}
-.ch-sub .up{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:17px;font-weight:800;color:#c1f807;white-space:nowrap}
-.ch-cartas{display:flex;gap:16px;flex-wrap:wrap}
-.ch-cartas>div{width:clamp(150px,30vw,214px);flex:none}
-@media (max-width:620px){.ch-cartas{gap:12px}.ch-cartas>div{width:calc(50% - 6px)}}
-.ch-cartas .card-player{cursor:default}
+/* ===== Portada del club, estilo FIFA ===== */
+.ch{--chd:'Saira',system-ui,sans-serif;--chl:#c1f807;--chg:#2fe37a}
+.ch-x{font-family:var(--chd);font-style:italic;font-weight:900;font-stretch:80%;text-transform:uppercase;letter-spacing:-.01em}
+.ch-hero{position:relative;overflow:hidden;border-radius:26px;padding:24px;margin-bottom:12px;border:1px solid rgba(255,255,255,.1);
+  background:radial-gradient(70% 120% at 100% 0%,rgba(193,248,7,.15),transparent 60%),
+    repeating-linear-gradient(115deg,rgba(255,255,255,.022) 0 2px,transparent 2px 15px),linear-gradient(160deg,#111b33,#060a15);
+  display:grid;grid-template-columns:1fr;gap:22px}
+.ch-hero::before{content:'';position:absolute;right:-70px;top:-60px;width:170px;height:380px;pointer-events:none;
+  background:linear-gradient(180deg,rgba(193,248,7,.2),rgba(193,248,7,0));transform:skewX(-20deg)}
+@media (min-width:980px){.ch-hero{grid-template-columns:1.25fr auto 1fr;align-items:center;padding:30px 34px;gap:36px}}
+.ch-hero>*{position:relative;z-index:1}
+.ch-id{display:flex;align-items:center;gap:18px;min-width:0}
+.ch-id img{width:80px;height:80px;object-fit:contain;flex:none;filter:drop-shadow(0 10px 22px rgba(0,0,0,.55))}
+.ch-kick{display:inline-flex;align-items:center;gap:8px;font-family:var(--chd);font-size:11px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--chl)}
+.ch-kick::before{content:'';width:16px;height:3px;background:var(--chl);transform:skewX(-20deg)}
+.ch-id h1{margin:7px 0 5px;font-size:clamp(28px,4vw,46px);line-height:.95}
+.ch-id p{margin:0;font-size:13px;opacity:.6}
+.ch-ovr{display:flex;align-items:center;gap:18px;padding:14px 20px;border-radius:20px;background:rgba(0,0,0,.3);border:1px solid rgba(193,248,7,.32)}
+.ch-ovr .ovr-t span{margin:0 0 8px;text-align:left}
+@media (min-width:980px){.ch-ovr{display:block;text-align:center;justify-self:center;padding:14px 26px 16px}.ch-ovr .ovr-t span{margin:6px 0 9px;text-align:center}}
+@media (max-width:620px){.ch-id img{width:62px;height:62px}}
+.ch-ovr b{display:block;font-size:82px;line-height:.86}
+.ch-ovr span{display:block;font-size:12px;letter-spacing:.22em;color:var(--chl);margin:6px 0 9px}
+.ch-ovr .stars svg{width:18px;height:18px}
+.ch-lines{display:flex;flex-direction:column;gap:12px}
+.ch-line{display:grid;grid-template-columns:38px 1fr 36px;gap:12px;align-items:center}
+.ch-line .k{font-size:15px;opacity:.75}
+.ch-line .bar{height:8px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden}
+.ch-line .bar i{display:block;height:100%;border-radius:99px}
+.ch-line .v{font-size:23px;text-align:right}
+.ch-board{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:46px}
+@media (min-width:760px){.ch-board{grid-template-columns:repeat(4,1fr)}}
+.ch-board div{position:relative;padding:16px 18px 16px 20px;border-radius:16px;overflow:hidden;
+  background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.08)}
+.ch-board div::before{content:'';position:absolute;left:0;top:14px;bottom:14px;width:3px;border-radius:0 3px 3px 0;background:var(--chl)}
+.ch-board b{display:block;font-size:34px;line-height:1}
+.ch-board span{display:block;margin-top:6px;font-size:10.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;opacity:.55}
+.ch-sec{margin-bottom:48px}
+.ch-h{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:0 0 16px}
+.ch-h h3{margin:0;font-size:23px;display:flex;align-items:center;gap:11px}
+.ch-h h3::before{content:'';width:6px;height:22px;border-radius:2px;background:var(--chl);transform:skewX(-18deg)}
+.ch-h span{font-size:10.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;opacity:.45}
+.ch-av{width:52px;height:52px;border-radius:14px;overflow:hidden;flex:none;display:grid;place-items:center;font-weight:800;font-size:15px;background:rgba(255,255,255,.08)}
+.ch-av img{width:100%;height:100%;object-fit:cover}
+.ch-nm{flex:1;min-width:0}
+.ch-nm b{display:block;font-size:15.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ch-nm span{display:block;font-size:11.5px;opacity:.55;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ch-ups{display:grid;grid-template-columns:1fr;gap:10px}
+@media (min-width:760px){.ch-ups{grid-template-columns:repeat(3,1fr)}}
+.ch-up{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:18px;
+  background:linear-gradient(120deg,rgba(47,227,122,.13),rgba(255,255,255,.02) 62%);border:1px solid rgba(47,227,122,.3)}
+.ch-up-r{text-align:right;flex:none}
+.ch-up-r .tag{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:7px;background:var(--chg);color:#03200e;font-size:13px}
+.ch-up-r .tag svg{width:10px;height:10px;fill:currentColor}
+.ch-up-r .vv{display:block;margin-top:5px;font-size:24px;line-height:1}
+.ch-up-r .vv small{font-size:15px;opacity:.38;margin-right:5px}
+.ch-podio{display:flex;justify-content:center;align-items:flex-end;gap:18px;padding-top:16px}
+.ch-podio>div{position:relative;width:clamp(160px,21vw,210px);flex:none}
+.ch-podio>div:nth-child(1){order:2;width:clamp(180px,24vw,240px)}
+.ch-podio>div:nth-child(2){order:1}
+.ch-podio>div:nth-child(3){order:3}
+.ch-podio .card-player{cursor:default}
+.ch-podio .pz{position:absolute;top:-13px;left:50%;transform:translateX(-50%);z-index:3;padding:4px 13px;border-radius:8px;
+  font-size:13px;background:#0a0f1d;border:1px solid rgba(255,255,255,.2)}
+.ch-podio>div:nth-child(1) .pz{background:var(--chl);color:#0a0f02;border-color:var(--chl)}
+@media (max-width:700px){
+  .ch-podio{justify-content:flex-start;align-items:stretch;overflow-x:auto;scroll-snap-type:x mandatory;gap:12px;padding:16px 2px 6px;scrollbar-width:none}
+  .ch-podio::-webkit-scrollbar{display:none}
+  .ch-podio>div,.ch-podio>div:nth-child(1){order:0;width:58%;scroll-snap-align:start}
+}
 .ch-rank{display:grid;grid-template-columns:1fr;gap:34px}
-@media (min-width:760px){.ch-rank{grid-template-columns:1fr 1fr;gap:44px}}
-.ch-lista{display:flex;flex-direction:column}
-.ch-lista article{display:grid;grid-template-columns:22px 1fr auto;gap:14px;align-items:center;padding:13px 0;border-top:1px solid rgba(255,255,255,.09)}
-.ch-lista article:last-child{border-bottom:1px solid rgba(255,255,255,.09)}
-.ch-lista .i{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;opacity:.4}
-.ch-lista .n{font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ch-lista .n small{display:block;font-size:11.5px;opacity:.5;margin-top:2px}
-.ch-lista .v{font-size:19px;font-weight:800}
-.ch-vacio{padding:16px 0;font-size:13.5px;opacity:.5;font-style:italic;border-top:1px solid rgba(255,255,255,.09)}
-.ch-cat{padding:22px;border-radius:22px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.025);margin-bottom:16px}
-.ch-cat-top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px}
-.ch-cat-top h4{margin:0;font-size:17px}
-.ch-cat-top em{font-style:normal;font-size:12px;opacity:.55;display:block;margin-top:3px}
-.ch-glob{text-align:right}
-.ch-glob b{font-size:34px;font-weight:800;line-height:1;display:block}
-.stars{position:relative;display:inline-block;line-height:0;margin-top:5px}
-.stars svg{width:16px;height:16px;fill:rgba(255,255,255,.16)}
+@media (min-width:860px){.ch-rank{grid-template-columns:1fr 1fr;gap:28px}}
+.ch-l1{display:flex;align-items:center;gap:14px;padding:16px;border-radius:18px;margin-bottom:4px;
+  background:linear-gradient(120deg,rgba(193,248,7,.15),rgba(255,255,255,.02) 70%);border:1px solid rgba(193,248,7,.32)}
+.ch-l1 .rk{font-size:38px;color:var(--chl);width:28px;text-align:center}
+.ch-l1 .big{text-align:right;flex:none}
+.ch-l1 .big b{display:block;font-size:42px;line-height:.9}
+.ch-l1 .big small{font-size:10px;font-weight:800;letter-spacing:.14em;opacity:.55}
+.ch-lr{display:grid;grid-template-columns:28px 1fr auto;gap:14px;align-items:center;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.07)}
+.ch-lr .rk{font-size:18px;opacity:.4;text-align:center}
+.ch-lr .n{font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ch-lr .n small{display:block;font-size:11.5px;opacity:.5;margin-top:2px}
+.ch-lr .v{font-size:22px}
+.ch-vacio{padding:18px;border-radius:16px;border:1px dashed rgba(255,255,255,.14);font-size:13.5px;opacity:.6}
+.ch-cats{display:grid;grid-template-columns:1fr;gap:14px}
+@media (min-width:1080px){.ch-cats{grid-template-columns:1fr 1fr}}
+.ch-cat{position:relative;overflow:hidden;padding:22px;border-radius:22px;border:1px solid rgba(255,255,255,.1);
+  background:repeating-linear-gradient(115deg,rgba(255,255,255,.018) 0 2px,transparent 2px 15px),linear-gradient(160deg,#101a31,#080c18)}
+.ch-cat-top{display:flex;align-items:center;gap:16px;margin-bottom:20px}
+.ch-cat-ovr{width:72px;height:80px;flex:none;display:grid;place-items:center;align-content:center;border-radius:16px;
+  background:linear-gradient(180deg,#d6ff3a,#9fd100);color:#0a0f02;box-shadow:0 10px 26px rgba(193,248,7,.18)}
+.ch-cat-ovr b{font-size:36px;line-height:.9}
+.ch-cat-ovr span{font-size:9.5px;letter-spacing:.16em;margin-top:3px}
+.ch-cat-top h4{margin:0;font-size:24px;line-height:1}
+.ch-cat-top em{display:block;font-style:normal;font-size:12px;opacity:.55;margin:5px 0 6px}
+.stars{position:relative;display:inline-block;line-height:0}
+.stars svg{width:15px;height:15px;fill:rgba(255,255,255,.16)}
 .stars .s-on{position:absolute;inset:0;overflow:hidden;white-space:nowrap}
-.stars .s-on svg{fill:#c1f807}
-.ch-grupos{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.09);border-radius:16px;overflow:hidden}
-@media (min-width:620px){.ch-grupos{grid-template-columns:repeat(4,1fr)}}
-.ch-grupos div{background:#0d1424;padding:14px 15px}
-.ch-grupos .k{display:block;font-size:10.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;opacity:.5;margin-bottom:6px}
-.ch-grupos .v{font-size:24px;font-weight:800;line-height:1}
-.ch-grupos .q{font-size:11px;opacity:.45;margin-left:5px;font-weight:600}
-.ch-evo{margin-top:18px;padding-top:18px;border-top:1px solid rgba(255,255,255,.09);display:flex;align-items:center;gap:18px;flex-wrap:wrap}
-.ch-evo svg{flex:1;min-width:180px;height:48px}
-.ch-evo .leg{font-size:12px;opacity:.55;line-height:1.5}
-.ch-evo .leg b{color:#c1f807;font-size:14px}
-.ch-ev{margin-top:18px;padding-top:18px;border-top:1px solid rgba(255,255,255,.09)}
-.ch-ev h5{margin:0 0 10px;font-size:13px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;opacity:.55}
+.stars .s-on svg{fill:var(--chl,#c1f807)}
+.ch-forma{margin-top:18px;padding-top:16px;border-top:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:14px}
+.ch-forma .k{font-size:13px;opacity:.6;flex:none}
+.ch-forma svg{flex:1;min-width:0;height:40px}
+.ch-forma .d{font-size:22px;color:var(--chg);flex:none}
+.ch-forma .d.neg{color:#ff8a4c}
+.ch-forma p{margin:0;font-size:12.5px;opacity:.5}
+.ch-ev{margin-top:18px;padding-top:18px;border-top:1px solid rgba(255,255,255,.08)}
+.ch-ev h5{margin:0 0 10px;font-size:14px;opacity:.7}
 .ch-ev-form{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-.ch-ev-form input[type=number]{width:84px}
 .ch-ev-form input{padding:11px 13px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:inherit;font:inherit;font-size:14px}
-.ch-ev-form input[type=text]{flex:1;min-width:190px}
-.ch-ev-form button{padding:11px 18px;border-radius:12px;border:0;background:#c1f807;color:#0a0f02;font:inherit;font-weight:800;font-size:14px;cursor:pointer}
-.ch-ev-list{margin-top:14px;display:flex;flex-direction:column;gap:9px}
-.ch-ev-list article{display:grid;grid-template-columns:auto 1fr auto;gap:13px;align-items:baseline;font-size:13.5px}
-.ch-ev-list .f{font-size:12px;opacity:.45;min-width:60px}
+.ch-ev-form input[type=number]{width:84px}
+.ch-ev-form input[type=text]{flex:1;min-width:170px}
+.ch-ev-form button{padding:11px 18px;border-radius:12px;border:0;background:var(--chl);color:#0a0f02;font-family:var(--chd);font-style:italic;font-weight:900;font-size:15px;text-transform:uppercase;cursor:pointer}
+.ch-ev-list{margin-top:12px;display:flex;flex-direction:column;gap:8px}
+.ch-ev-list article{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:baseline;font-size:13.5px}
+.ch-ev-list .f{font-size:12px;opacity:.45;min-width:56px}
 .ch-ev-list .n{font-weight:800;font-size:16px}
 .ch-ev-list p{margin:0;opacity:.85;line-height:1.45}
 .mijug{margin:0 0 26px}
@@ -3194,111 +3245,133 @@ function recentHighlight(hist){
 // La página de la familia: su hijo a fondo. Solo la ve quien entró con el código de ese jugador.
 function renderClubHome(){
   var el = document.createElement('div');
+  el.className = 'ch';
   var club = currentClub();
   var todos = (state.players||[]).slice();
   var cats = (state.categories||[]).filter(function(c){ return todos.some(function(p){ return p.categoria===c; }); });
   var staff = !!clubRole(); // solo el cuerpo técnico califica al grupo
+  var nombreClub = club ? club.nombre : 'El club';
+  var CORTO = {ata:'ATA', med:'CEN', def:'DEF', por:'POR'};
+  var FLECHA = '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 1l5 6H8v4H4V7H1z"/></svg>';
+
+  function colorVal(v){ return v>=80 ? '#2fe37a' : v>=70 ? '#c1f807' : v>=60 ? '#f5d33b' : '#ff8a4c'; }
+  function lineas(list){
+    return '<div class="ch-lines">' + GRUPOS_POS.map(function(g){
+      var v = promGrupo(list, g.codes);
+      var pct = v===null ? 0 : Math.max(5, Math.min(100, (v-40)/59*100));
+      return '<div class="ch-line"><span class="k ch-x">' + CORTO[g.id] + '</span>' +
+        '<div class="bar"><i style="width:' + pct + '%;background:' + (v===null ? 'transparent' : colorVal(v)) + '"></i></div>' +
+        '<span class="v ch-x">' + (v===null ? '—' : v) + '</span></div>';
+    }).join('') + '</div>';
+  }
+
+  var promClub = promValor(todos);
+  var hero =
+    '<section class="ch-hero">' +
+      '<div class="ch-id"><img src="' + escHtml(clubLogo(club)) + '" alt="" />' +
+        '<div><span class="ch-kick">' + trimLabel() + '</span>' +
+        '<h1 class="ch-x">' + escHtml(nombreClub) + '</h1>' +
+        '<p>' + todos.length + ' jugador' + (todos.length===1?'':'es') + ' · ' + cats.length + ' categoría' + (cats.length===1?'':'s') + '</p></div></div>' +
+      '<div class="ch-ovr"><b class="ch-x">' + (promClub===null ? '—' : promClub) + '</b><div class="ovr-t"><span class="ch-x">General</span>' + estrellasHtml(estrellasDe(promClub)) + '</div></div>' +
+      lineas(todos) +
+    '</section>';
 
   if(!todos.length){
-    el.innerHTML = '<div class="view-head"><div><h1>' + escHtml(club ? club.nombre : 'El club') + '</h1>' +
-      '<p>' + trimLabel() + '</p></div></div>' +
-      '<div class="ch-vacio">Todavía no hay jugadores registrados en este club.</div>';
+    el.innerHTML = hero + '<div class="ch-vacio">Todavía no hay jugadores registrados en este club.</div>';
     return el;
   }
 
-  // --- la fecha: lo que se movió en los últimos 7 días ---
+  // --- la fecha ---
   var desde = fechaHace(7);
   var subidas = todos.map(function(p){ return {p:p, up: p.valoracion - ratingBefore(p, desde)}; })
     .filter(function(x){ return x.up > 0; })
     .sort(function(a,b){ return b.up - a.up || b.p.valoracion - a.p.valoracion; }).slice(0,3);
-
   var goleadores = todos.map(function(p){ return {p:p, v: sumTrim(p,'goles')}; })
     .filter(function(x){ return x.v > 0; }).sort(function(a,b){ return b.v - a.v; }).slice(0,5);
   var asistidores = todos.map(function(p){ return {p:p, v: sumTrim(p,'asistencias')}; })
     .filter(function(x){ return x.v > 0; }).sort(function(a,b){ return b.v - a.v; }).slice(0,5);
   var mejores = todos.slice().sort(function(a,b){ return b.valoracion - a.valoracion; }).slice(0,3);
 
-  var ents = 0, fue = 0;
+  var ents = 0, fue = 0, regs = 0, partidos = 0;
   todos.forEach(function(p){
-    histTrim(p).forEach(function(h){ if(h.type !== 'partido'){ ents++; if(h.asistio !== false) fue++; } });
+    histTrim(p).forEach(function(h){
+      regs++;
+      if(h.type === 'partido') partidos++; else { ents++; if(h.asistio !== false) fue++; }
+    });
   });
-  var pctAsis = ents ? Math.round(fue/ents*100) + '%' : '—';
-  var regsTrim = todos.reduce(function(a,p){ return a + histTrim(p).length; }, 0);
-  var promClub = promValor(todos);
 
-  function filaLista(arr, unidad){
+  function lider(arr, unidad){
     if(!arr.length) return '<div class="ch-vacio">Sin registros todavía este trimestre.</div>';
-    return arr.map(function(x,i){
-      return '<article><div class="i">' + (i+1) + '</div>' +
-        '<div class="n">' + escHtml(x.p.name) + '<small>' + posName(x.p.pos) + ' · ' + escHtml(x.p.categoria) + '</small></div>' +
-        '<div class="v">' + x.v + '<span style="font-size:11px;opacity:.45;font-weight:600"> ' + unidad + '</span></div></article>';
-    }).join('');
+    var a = arr[0];
+    return '<div class="ch-l1"><span class="rk ch-x">1</span><div class="ch-av">' + avatarInner(a.p) + '</div>' +
+        '<div class="ch-nm"><b>' + escHtml(a.p.name) + '</b><span>' + posName(a.p.pos) + ' · ' + escHtml(a.p.categoria) + '</span></div>' +
+        '<div class="big"><b class="ch-x">' + a.v + '</b><small>' + unidad + '</small></div></div>' +
+      arr.slice(1).map(function(x,i){
+        return '<div class="ch-lr"><span class="rk ch-x">' + (i+2) + '</span>' +
+          '<div class="n">' + escHtml(x.p.name) + '<small>' + posName(x.p.pos) + ' · ' + escHtml(x.p.categoria) + '</small></div>' +
+          '<span class="v ch-x">' + x.v + '</span></div>';
+      }).join('');
   }
-  function cartaMini(p){
+  function carta(p, i){
     var t = tierOf(p.valoracion);
-    return '<div><div class="card-player t-' + t.id + '">' +
+    return '<div><span class="pz ch-x">' + (i+1) + 'º</span><div class="card-player t-' + t.id + '">' +
       '<div class="fut-photo' + (photoMap[p.id] ? '' : ' no-photo') + '">' + avatarInner(p) +
         '<div class="fut-rating"><b>' + p.valoracion + '</b><span>' + escHtml(p.pos) + '</span></div>' +
         '<div class="fut-tier">' + (t.id==='elite' ? BOLT_SVG : '') + t.label + '</div>' +
         '<div class="fut-name"><div class="card-name">' + escHtml(p.name) + '</div><div class="card-pos">' + escHtml(p.categoria) + '</div></div>' +
       '</div>' + (t.id==='elite' ? '<div class="fut-bolt">' + BOLT_SVG + '</div>' : '') + '</div></div>';
   }
-  function panelCat(nombre, list){
-    var prom = promValor(list), est = estrellasDe(prom);
-    var grupos = GRUPOS_POS.map(function(g){
-      var v = promGrupo(list, g.codes), n = list.filter(function(p){ return g.codes.indexOf(p.pos)!==-1; }).length;
-      return '<div><span class="k">' + g.label + '</span><span class="v">' + (v===null ? '—' : v) +
-        '</span><span class="q">' + n + '</span></div>';
-    }).join('');
-    var evo = evolucionEquipo(list, 7), spark = sparkHtml(evo);
-    var dif = evo.length > 1 ? Math.round(evo[evo.length-1] - evo[0]) : 0;
-    var evoHtml = spark ? '<div class="ch-evo">' + spark +
-      '<div class="leg"><b>' + (dif>0?'+':'') + dif + '</b> en las últimas semanas<br>Promedio del grupo</div></div>' :
-      '<div class="ch-evo"><div class="leg">La evolución del grupo aparece cuando haya varias semanas registradas.</div></div>';
-    return '<div class="ch-cat" data-cat="' + escHtml(nombre) + '">' +
-      '<div class="ch-cat-top"><div><h4>' + escHtml(nombre) + '</h4><em>' + list.length + ' jugador' + (list.length===1?'':'es') + '</em></div>' +
-        '<div class="ch-glob"><b>' + (prom===null ? '—' : prom) + '</b>' + estrellasHtml(est) + '</div></div>' +
-      '<div class="ch-grupos">' + grupos + '</div>' + evoHtml +
-      (staff ? bloqueEval(nombre) : '') +
-    '</div>';
-  }
   function bloqueEval(cat){
     var evs = ((state.evalsCat||{})[cat] || []).slice().sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
     var lista = evs.length ? evs.slice(0,4).map(function(e){
       return '<article><div class="f">' + fmtDate(e.date) + '</div><p>' + escHtml(e.comment||'Sin comentario.') + '</p>' +
         '<div class="n">' + e.rating + '<small style="font-size:11px;opacity:.5"> /10</small></div></article>';
-    }).join('') : '<div class="ch-vacio">Aún no has calificado al grupo este trimestre.</div>';
-    return '<div class="ch-ev"><h5>Evaluación colectiva</h5>' +
+    }).join('') : '<p style="margin:12px 0 0;font-size:13px;opacity:.5">Aún no has calificado al grupo este trimestre.</p>';
+    return '<div class="ch-ev"><h5 class="ch-x">Evaluación colectiva</h5>' +
       '<div class="ch-ev-form"><input type="number" min="1" max="10" step="0.5" placeholder="Nota" class="ev-n">' +
       '<input type="text" maxlength="160" placeholder="¿Cómo estuvo el grupo?" class="ev-c">' +
       '<button type="button" class="ev-b">Guardar</button></div>' +
       '<div class="ch-ev-list">' + lista + '</div></div>';
   }
+  function panelCat(nombre, list){
+    var prom = promValor(list);
+    var evo = evolucionEquipo(list, 7), spark = sparkHtml(evo);
+    var dif = evo.length > 1 ? Math.round(evo[evo.length-1] - evo[0]) : 0;
+    return '<div class="ch-cat" data-cat="' + escHtml(nombre) + '">' +
+      '<div class="ch-cat-top"><div class="ch-cat-ovr"><b class="ch-x">' + (prom===null ? '—' : prom) + '</b><span class="ch-x">General</span></div>' +
+        '<div><h4 class="ch-x">' + escHtml(nombre) + '</h4><em>' + list.length + ' jugador' + (list.length===1?'':'es') + '</em>' +
+        estrellasHtml(estrellasDe(prom)) + '</div></div>' +
+      lineas(list) +
+      '<div class="ch-forma"><span class="k ch-x">Forma</span>' +
+        (spark ? spark + '<span class="d ch-x' + (dif<0?' neg':'') + '">' + (dif>0?'+':'') + dif + '</span>'
+               : '<p>Aparece cuando haya varias semanas registradas.</p>') + '</div>' +
+      (staff ? bloqueEval(nombre) : '') +
+    '</div>';
+  }
 
-  el.innerHTML =
-    '<div class="view-head"><div><h1>' + escHtml(club ? club.nombre : 'El club') + '</h1>' +
-      '<p>' + trimLabel() + ' · así va el club este trimestre.</p></div></div>' +
-    '<div class="ch-tiras">' +
-      '<div><b>' + todos.length + '</b><span>Jugadores</span></div>' +
-      '<div><b>' + (promClub===null?'—':promClub) + '</b><span>Valoración promedio</span></div>' +
-      '<div><b>' + pctAsis + '</b><span>Asistencia a entrenamientos</span></div>' +
-      '<div><b>' + regsTrim + '</b><span>Registros del trimestre</span></div>' +
+  el.innerHTML = hero +
+    '<div class="ch-board">' +
+      '<div><b class="ch-x">' + (ents ? Math.round(fue/ents*100) + '%' : '—') + '</b><span>Asistencia</span></div>' +
+      '<div><b class="ch-x">' + ents + '</b><span>Entrenamientos</span></div>' +
+      '<div><b class="ch-x">' + partidos + '</b><span>Partidos</span></div>' +
+      '<div><b class="ch-x">' + regs + '</b><span>Registros</span></div>' +
     '</div>' +
-    '<div class="ch-sec"><div class="ch-head"><h3>Los que más subieron</h3><span>Últimos 7 días</span></div>' +
-      (subidas.length ? '<div class="ch-subidas">' + subidas.map(function(x){
-        return '<div class="ch-sub"><div class="av">' + avatarInner(x.p) + '</div>' +
-          '<div class="nm"><b>' + escHtml(x.p.name) + '</b><span>' + escHtml(x.p.categoria) + ' · ' + x.p.valoracion + '</span></div>' +
-          '<div class="up">+' + x.up + '</div></div>';
+    '<div class="ch-sec"><div class="ch-h"><h3 class="ch-x">En forma</h3><span>Últimos 7 días</span></div>' +
+      (subidas.length ? '<div class="ch-ups">' + subidas.map(function(x){
+        return '<div class="ch-up"><div class="ch-av">' + avatarInner(x.p) + '</div>' +
+          '<div class="ch-nm"><b>' + escHtml(x.p.name) + '</b><span>' + escHtml(x.p.pos) + ' · ' + escHtml(x.p.categoria) + '</span></div>' +
+          '<div class="ch-up-r"><span class="tag ch-x">' + FLECHA + '+' + x.up + '</span>' +
+          '<span class="vv ch-x"><small>' + (x.p.valoracion - x.up) + '</small>' + x.p.valoracion + '</span></div></div>';
       }).join('') + '</div>' : '<div class="ch-vacio">Nadie subió de valoración esta semana.</div>') +
     '</div>' +
-    '<div class="ch-sec"><div class="ch-head"><h3>Las mejores cartas</h3><span>Del club</span></div>' +
-      '<div class="ch-cartas">' + mejores.map(cartaMini).join('') + '</div></div>' +
+    '<div class="ch-sec"><div class="ch-h"><h3 class="ch-x">Las mejores del club</h3><span>Valoración</span></div>' +
+      '<div class="ch-podio">' + mejores.map(carta).join('') + '</div></div>' +
     '<div class="ch-sec ch-rank">' +
-      '<div><div class="ch-head"><h3>Goleadores</h3><span>Trimestre</span></div><div class="ch-lista">' + filaLista(goleadores,'goles') + '</div></div>' +
-      '<div><div class="ch-head"><h3>Asistencias</h3><span>Trimestre</span></div><div class="ch-lista">' + filaLista(asistidores,'asist.') + '</div></div>' +
+      '<div><div class="ch-h"><h3 class="ch-x">Goleadores</h3><span>Trimestre</span></div>' + lider(goleadores, 'GOLES') + '</div>' +
+      '<div><div class="ch-h"><h3 class="ch-x">Asistencias</h3><span>Trimestre</span></div>' + lider(asistidores, 'ASIST.') + '</div>' +
     '</div>' +
-    '<div class="ch-sec"><div class="ch-head"><h3>Nivel del equipo</h3><span>Promedio por línea, como en el FIFA</span></div>' +
-      cats.map(function(c){ return panelCat(c, todos.filter(function(p){ return p.categoria===c; })); }).join('') +
+    '<div class="ch-sec"><div class="ch-h"><h3 class="ch-x">Nivel por categoría</h3><span>Promedio por línea</span></div>' +
+      '<div class="ch-cats">' + cats.map(function(c){ return panelCat(c, todos.filter(function(p){ return p.categoria===c; })); }).join('') + '</div>' +
     '</div>';
 
   if(staff){
