@@ -1422,9 +1422,9 @@
 .ch-line .v{font-size:23px;text-align:right}
 .ch-board{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:46px}
 @media (min-width:760px){.ch-board{grid-template-columns:repeat(4,1fr)}}
-.ch-board div{position:relative;padding:16px 18px 16px 20px;border-radius:16px;overflow:hidden;
+.ch-board>div{position:relative;padding:16px 18px 16px 20px;border-radius:16px;overflow:hidden;
   background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.08)}
-.ch-board div::before{content:'';position:absolute;left:0;top:14px;bottom:14px;width:3px;border-radius:0 3px 3px 0;background:var(--chl)}
+.ch-board>div::before{content:'';position:absolute;left:0;top:14px;bottom:14px;width:3px;border-radius:0 3px 3px 0;background:var(--chl)}
 .ch-board b{display:block;font-size:34px;line-height:1}
 .ch-board span{display:block;margin-top:6px;font-size:10.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;opacity:.55}
 .ch-sec{margin-bottom:48px}
@@ -1507,6 +1507,12 @@
 .ch-ev-list .f{font-size:12px;opacity:.45;min-width:56px}
 .ch-ev-list .n{font-weight:800;font-size:16px}
 .ch-ev-list p{margin:0;opacity:.85;line-height:1.45}
+.mj-salir{display:block;margin:18px auto 0;padding:11px 18px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:transparent;color:inherit;font:inherit;font-size:13px;opacity:.6;cursor:pointer;transition:opacity .2s,border-color .2s,color .2s}
+.mj-salir:hover{opacity:1}
+.mj-salir.ok{opacity:1;border-color:#ff8f7a;color:#ff8f7a}
+.ch-inf{margin-bottom:34px}
+.ch-inf .ch-board{margin-bottom:16px}
+.ch-inf .stars{margin:8px 0 5px}.ch-inf .stars svg{width:21px;height:21px}
 .mijug{margin:0 0 26px}
 .mijug-in{display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:18px 20px;border-radius:22px;
   border:1px solid rgba(193,248,7,.3);background:linear-gradient(130deg,rgba(193,248,7,.1),rgba(255,255,255,.03) 60%)}
@@ -3469,7 +3475,21 @@ function renderMiJugador(){
         '</article>';
       }).join('') : '<div class="pl-summary">Todavía no hay registros de ' + escHtml(p.name.split(' ')[0]) + ' este trimestre.</div>') +
     '</div>' +
-    '<div class="mj-nota">Los comentarios que ves aquí son los que su profesor escribió sobre él. De los demás jugadores solo se ve la carta.</div>';
+    '<div class="mj-nota">Los comentarios que ves aquí son los que su profesor escribió sobre él. De los demás jugadores solo se ve la carta.</div>' +
+    '<button type="button" class="mj-salir">No soy esta familia</button>';
+  var salir = el.querySelector('.mj-salir');
+  salir.onclick = function(){
+    if(!salir.classList.contains('ok')){ // dos toques, para que nadie lo active sin querer
+      salir.classList.add('ok');
+      salir.textContent = 'Toca otra vez para desconectar este celular';
+      setTimeout(function(){ salir.classList.remove('ok'); salir.textContent = 'No soy esta familia'; }, 4000);
+      return;
+    }
+    var c = sessionEnteredClub;
+    try{ ['arena_jug_','arena_cat_','arena_club_'].forEach(function(k){ localStorage.removeItem(k + c); }); }catch(e){}
+    currentView = 'club';
+    render();
+  };
   return el;
 }
 function renderCartas(){
@@ -3780,6 +3800,28 @@ function attributeAverages(hist){
     .sort(function(x,y){ return y.avg-x.avg; });
 }
 
+// El grupo completo en el informe: lo que el profesor calificó del equipo este trimestre
+function informeGrupo(){
+  var cat = activeCategoria();
+  var list = categoryPlayers();
+  var ini = trimIni();
+  var evs = ((state.evalsCat||{})[cat] || []).filter(function(e){ return (e.date||'') >= ini; })
+    .sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
+  var prom = promValor(list);
+  var promEv = evs.length ? (evs.reduce(function(a,e){ return a + (+e.rating||0); },0) / evs.length).toFixed(1) : '\u2014';
+  return '<div class="ch ch-inf"><div class="ch-h"><h3 class="ch-x">El grupo \u00b7 ' + escHtml(cat) + '</h3><span>' + trimLabel() + '</span></div>' +
+    '<div class="ch-board">' +
+      '<div><b class="ch-x">' + (prom===null ? '\u2014' : prom) + '</b><span>Media del grupo</span></div>' +
+      '<div>' + estrellasHtml(estrellasDe(prom)) + '<span>Nivel</span></div>' +
+      '<div><b class="ch-x">' + promEv + '</b><span>Evaluaci\u00f3n colectiva</span></div>' +
+      '<div><b class="ch-x">' + evs.length + '</b><span>Veces calificado</span></div>' +
+    '</div>' +
+    (evs.length ? '<div class="ch-ev-list">' + evs.slice(0,5).map(function(e){
+      return '<article><div class="f">' + fmtDate(e.date) + '</div><p>' + escHtml(e.comment||'Sin comentario.') + '</p>' +
+        '<div class="n">' + e.rating + '<small style="font-size:11px;opacity:.5"> /10</small></div></article>';
+    }).join('') + '</div>' : '<p style="margin:0;font-size:13px;opacity:.55">El grupo a\u00fan no tiene evaluaci\u00f3n colectiva este trimestre. Se califica desde la portada del club.</p>') +
+  '</div>';
+}
 function renderInforme(){
   var el = document.createElement('div');
   el.innerHTML =
@@ -3787,6 +3829,7 @@ function renderInforme(){
       '<h1>Informe trimestral</h1>' +
       '<p>Se genera solo, a partir de todo lo que se ha registrado del jugador durante el trimestre.</p>' +
     '</div></div>' +
+    informeGrupo() +
     '<div class="informe-select"><select class="cat-select" id="playerSelect"></select></div>' +
     '<div id="informeBody"></div>';
 
@@ -5032,7 +5075,8 @@ function renderLanding(){
     grid.appendChild(card);
   });
   var add = document.createElement('a');
-  add.href = 'mailto:contacto@arenasports.co';
+  add.href = 'https://wa.me/573222462392?text=' + encodeURIComponent('Hola, quiero el sistema de cartas para mi club.');
+  add.target = '_blank'; add.rel = 'noopener';
   add.className = 'lp-club lp-join lp-rv';
   add.innerHTML = '<div class="lp-club-in"><div class="lp-plus">+</div><h3>Tu club aquí</h3><p>Escríbenos para unirte</p></div>';
   grid.appendChild(add);
