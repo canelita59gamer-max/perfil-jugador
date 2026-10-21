@@ -1397,6 +1397,10 @@
   background:linear-gradient(180deg,rgba(193,248,7,.2),rgba(193,248,7,0));transform:skewX(-20deg)}
 @media (min-width:980px){.ch-hero{grid-template-columns:1.25fr auto 1fr;align-items:center;padding:30px 34px;gap:36px}}
 .ch-hero>*{position:relative;z-index:1}
+.ch-heros{display:flex;flex-direction:column;gap:14px;margin-bottom:12px}
+.ch-heros .ch-hero{margin-bottom:0}
+.ch-hero-foot{grid-column:1/-1}
+.ch-hero-foot .ch-forma{margin-top:0}
 .ch-id{display:flex;align-items:center;gap:18px;min-width:0}
 .ch-id img{width:80px;height:80px;object-fit:contain;flex:none;filter:drop-shadow(0 10px 22px rgba(0,0,0,.55))}
 .ch-kick{display:inline-flex;align-items:center;gap:8px;font-family:var(--chd);font-size:11px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--chl)}
@@ -3333,6 +3337,23 @@ function renderClubHome(){
       '<button type="button" class="ev-b">Guardar</button></div>' +
       '<div class="ch-ev-list">' + lista + '</div></div>';
   }
+  function heroCat(nombre, list){
+    var prom = promValor(list);
+    var evo = evolucionEquipo(list, 7), spark = sparkHtml(evo);
+    var dif = evo.length > 1 ? Math.round(evo[evo.length-1] - evo[0]) : 0;
+    return '<section class="ch-hero ch-cat" data-cat="' + escHtml(nombre) + '">' +
+      '<div class="ch-id"><img src="' + escHtml(clubLogo(club)) + '" alt="" />' +
+        '<div><span class="ch-kick">' + escHtml(nombreClub) + '</span>' +
+        '<h1 class="ch-x">' + escHtml(nombre) + '</h1>' +
+        '<p>' + list.length + ' jugador' + (list.length===1?'':'es') + ' \u00b7 ' + trimLabel() + '</p></div></div>' +
+      '<div class="ch-ovr"><b class="ch-x">' + (prom===null ? '\u2014' : prom) + '</b><div class="ovr-t"><span class="ch-x">General</span>' + estrellasHtml(estrellasDe(prom)) + '</div></div>' +
+      lineas(list) +
+      '<div class="ch-hero-foot"><div class="ch-forma"><span class="k ch-x">Forma</span>' +
+        (spark ? spark + '<span class="d ch-x' + (dif<0?' neg':'') + '">' + (dif>0?'+':'') + dif + '</span>'
+               : '<p>Aparece cuando haya varias semanas registradas.</p>') + '</div>' +
+        (staff ? bloqueEval(nombre) : '') + '</div>' +
+    '</section>';
+  }
   function panelCat(nombre, list){
     var prom = promValor(list);
     var evo = evolucionEquipo(list, 7), spark = sparkHtml(evo);
@@ -3349,7 +3370,8 @@ function renderClubHome(){
     '</div>';
   }
 
-  el.innerHTML = hero +
+  el.innerHTML =
+    '<div class="ch-heros">' + cats.map(function(c){ return heroCat(c, todos.filter(function(p){ return p.categoria===c; })); }).join('') + '</div>' +
     '<div class="ch-board">' +
       '<div><b class="ch-x">' + (ents ? Math.round(fue/ents*100) + '%' : '—') + '</b><span>Asistencia</span></div>' +
       '<div><b class="ch-x">' + ents + '</b><span>Entrenamientos</span></div>' +
@@ -3370,9 +3392,7 @@ function renderClubHome(){
       '<div><div class="ch-h"><h3 class="ch-x">Goleadores</h3><span>Trimestre</span></div>' + lider(goleadores, 'GOLES') + '</div>' +
       '<div><div class="ch-h"><h3 class="ch-x">Asistencias</h3><span>Trimestre</span></div>' + lider(asistidores, 'ASIST.') + '</div>' +
     '</div>' +
-    '<div class="ch-sec"><div class="ch-h"><h3 class="ch-x">Nivel por categoría</h3><span>Promedio por línea</span></div>' +
-      '<div class="ch-cats">' + cats.map(function(c){ return panelCat(c, todos.filter(function(p){ return p.categoria===c; })); }).join('') + '</div>' +
-    '</div>';
+    '';
 
   if(staff){
     el.querySelectorAll('.ch-cat').forEach(function(box){
