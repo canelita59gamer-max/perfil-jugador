@@ -1508,6 +1508,20 @@
 .ch-ev-list .f{font-size:12px;opacity:.45;min-width:56px}
 .ch-ev-list .n{font-weight:800;font-size:16px}
 .ch-ev-list p{margin:0;opacity:.85;line-height:1.45}
+.mj-av{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:16px 18px;border-radius:18px;margin:0 0 18px;
+  border:1px solid rgba(193,248,7,.3);background:linear-gradient(120deg,rgba(193,248,7,.09),rgba(255,255,255,.02) 65%)}
+.mj-av.on{border-color:rgba(47,227,122,.35);background:linear-gradient(120deg,rgba(47,227,122,.1),rgba(255,255,255,.02) 65%)}
+.mj-av .t{flex:1;min-width:200px}
+.mj-av b{display:block;font-size:15px;margin-bottom:3px}
+.mj-av.on b{color:#2fe37a}
+.mj-av span{display:block;font-size:12.5px;opacity:.65;line-height:1.45}
+.mj-av input{margin-top:10px;width:100%;max-width:220px;padding:10px 12px;border-radius:11px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.05);
+  color:inherit;font:inherit;font-size:15px;font-weight:700;letter-spacing:3px;text-transform:uppercase}
+.mj-av input::placeholder{letter-spacing:0;text-transform:none;font-weight:400;font-size:14px}
+.mj-av em{display:block;font-style:normal;font-size:12.5px;color:#ff8f7a;margin-top:6px}
+.mj-av em:empty{display:none}
+.mj-av-btn{padding:11px 18px;border-radius:12px;border:0;background:#c1f807;color:#0a0f02;font:inherit;font-weight:800;font-size:14px;cursor:pointer}
+.mj-av.on .mj-av-btn{background:transparent;color:inherit;border:1px solid rgba(255,255,255,.18);font-weight:600;opacity:.75}
 .mj-salir{display:block;margin:18px auto 0;padding:11px 18px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:transparent;color:inherit;font:inherit;font-size:13px;opacity:.6;cursor:pointer;transition:opacity .2s,border-color .2s,color .2s}
 .mj-salir:hover{opacity:1}
 .mj-salir.ok{opacity:1;border-color:#ff8f7a;color:#ff8f7a}
@@ -2311,7 +2325,7 @@ function renderChrome(){
          (clubRole()==='admin' ? '<button class="staff-link" data-act="panel">Administradores</button>' : '') +
          '<button class="staff-link" data-act="logout">Cerrar sesión</button>' +
          (clubRole() || isCreador() ? ntCampanaHtml() : ''))
-      : '');
+      : (miJugador() ? famCampanaHtml() : ''));
   [desktop, mobile].forEach(function(target){
     var box = document.createElement('div');
     box.className = 'staff-box';
@@ -2323,6 +2337,7 @@ function renderChrome(){
     var panelBtn = box.querySelector('[data-act="panel"]');
     if(panelBtn) panelBtn.onclick = openStaffPanel;
     ntConectarCampana(box);
+    famConectarCampana(box);
     target.appendChild(box);
   });
 
@@ -3420,6 +3435,71 @@ function renderClubHome(){
   }
   return el;
 }
+// Avisos para la familia: el celular queda amarrado a SU jugador (clubes/{club}/familias/{token}).
+// El envío lo hace la misma tarea automática de los profesores.
+// La campanita de la familia, igual a la del profesor: lleva a "Mi jugador" y activa los avisos
+function famCampanaHtml(){
+  var on = false; try{ on = !!localStorage.getItem('arena_fam_' + sessionEnteredClub); }catch(e){}
+  return '<button class="bell-btn' + (on ? '' : ' pulse') + '" id="famBell" title="' + (on ? 'Avisos activados' : 'Activa los avisos de tu hijo') + '">' +
+    '<svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>' +
+    (on ? '<i></i>' : '') + '</button>';
+}
+function famConectarCampana(root){
+  var b = root.querySelector('#famBell');
+  if(!b) return;
+  b.onclick = function(){
+    var p = miJugador();
+    if(!p) return;
+    currentView = 'mio';
+    render();
+    var av = document.querySelector('.mj-av');
+    if(!av) return;
+    av.scrollIntoView({behavior:'smooth', block:'center'});
+    if(!av.classList.contains('on')) famToggle(p, av); // pide el permiso de una vez
+  };
+}
+function famBox(p){
+  var club = sessionEnteredClub, on = false, cod = '';
+  try{ on = !!localStorage.getItem('arena_fam_' + club); cod = localStorage.getItem('arena_cod_' + club) || ''; }catch(e){}
+  var nm = escHtml(String(p.name||'').split(' ')[0]);
+  return '<div class="mj-av' + (on ? ' on' : '') + '"><div class="t">' +
+      '<b>' + (on ? 'Avisos activados' : 'Avisos de ' + nm) + '</b>' +
+      '<span>' + (on ? 'Te llega una notificaci\u00f3n cuando su profesor lo califique o cuando suba su carta.'
+                     : 'Recibe una notificaci\u00f3n cuando su profesor lo califique o cuando suba su carta.') + '</span>' +
+      (!on && !cod ? '<input class="mj-av-cod" maxlength="9" autocomplete="off" placeholder="C\u00f3digo del jugador">' : '') +
+      '<em class="mj-av-err"></em></div>' +
+    '<button type="button" class="mj-av-btn">' + (on ? 'Desactivar' : 'Activar avisos') + '</button></div>';
+}
+function famToggle(p, av){
+  var club = sessionEnteredClub, btn = av.querySelector('.mj-av-btn'), err = av.querySelector('.mj-av-err');
+  var tok = '', cod = '';
+  try{ tok = localStorage.getItem('arena_fam_' + club) || ''; cod = localStorage.getItem('arena_cod_' + club) || ''; }catch(e){}
+  if(tok){
+    btn.textContent = 'Desactivando\u2026';
+    var fin = function(){ try{ localStorage.removeItem('arena_fam_' + club); }catch(e){} render(); };
+    if(window.db) db.doc('clubes/' + club + '/familias/' + tok).delete().then(fin, fin); else fin();
+    return;
+  }
+  var inp = av.querySelector('.mj-av-cod');
+  cod = codigoLimpio(inp ? inp.value : cod);
+  if(!cod){ err.textContent = 'Escribe el c\u00f3digo que te dio el profesor.'; return; }
+  if(!window.db || !ntSoportado()){ err.textContent = 'Este navegador no recibe avisos. En iPhone, primero agrega la p\u00e1gina a la pantalla de inicio (Compartir \u2192 Agregar a inicio).'; return; }
+  err.textContent = ''; btn.textContent = 'Activando\u2026';
+  ntPedirPermiso().then(function(t){
+    return db.doc('clubes/' + club + '/familias/' + t)
+      .set({token: t, codigo: cod, jugador: p.id, categoria: p.categoria, creado: Date.now()})
+      .then(function(){ return t; });
+  }).then(function(t){
+    try{ localStorage.setItem('arena_fam_' + club, t); localStorage.setItem('arena_cod_' + club, cod); }catch(e){}
+    render();
+  }).catch(function(e){
+    btn.textContent = 'Activar avisos';
+    var m = String(e && e.message);
+    err.textContent = m === 'negado' ? 'Bloqueaste las notificaciones. Perm\u00edtelas en la configuraci\u00f3n del navegador e intenta otra vez.'
+      : m === 'nosoporta' ? 'Este navegador no recibe avisos. En iPhone, primero agrega la p\u00e1gina a la pantalla de inicio.'
+      : 'No se pudo activar. Revisa el c\u00f3digo e intenta otra vez.';
+  });
+}
 function renderMiJugador(){
   var el = document.createElement('div');
   var p = miJugador();
@@ -3457,6 +3537,7 @@ function renderMiJugador(){
         '<div class="mj-xptxt">' + (p.valoracion>=VAL_MAX ? 'Valoración máxima' : pctXp + '% hacia ' + (p.valoracion+1)) + '</div>' +
       '</div>' +
     '</div>' +
+    famBox(p) +
     '<div class="mj-nums">' +
       '<div><b>' + (p.goles||0) + '</b><span>' + ((p.goles||0)===1?'Gol':'Goles') + '</span></div>' +
       '<div><b>' + (p.asistencias||0) + '</b><span>Asistencias</span></div>' +
@@ -3479,6 +3560,8 @@ function renderMiJugador(){
     '</div>' +
     '<div class="mj-nota">Los comentarios que ves aquí son los que su profesor escribió sobre él. De los demás jugadores solo se ve la carta.</div>' +
     '<button type="button" class="mj-salir">No soy esta familia</button>';
+  var av = el.querySelector('.mj-av');
+  if(av) av.querySelector('.mj-av-btn').onclick = function(){ famToggle(p, av); };
   var salir = el.querySelector('.mj-salir');
   salir.onclick = function(){
     if(!salir.classList.contains('ok')){ // dos toques, para que nadie lo active sin querer
@@ -3488,7 +3571,9 @@ function renderMiJugador(){
       return;
     }
     var c = sessionEnteredClub;
-    try{ ['arena_jug_','arena_cat_','arena_club_'].forEach(function(k){ localStorage.removeItem(k + c); }); }catch(e){}
+    var tokFam = ''; try{ tokFam = localStorage.getItem('arena_fam_' + c) || ''; }catch(e){}
+    if(tokFam && window.db) db.doc('clubes/' + c + '/familias/' + tokFam).delete().catch(function(){});
+    try{ ['arena_jug_','arena_cat_','arena_club_','arena_cod_','arena_fam_'].forEach(function(k){ localStorage.removeItem(k + c); }); }catch(e){}
     currentView = 'club';
     render();
   };
@@ -4079,6 +4164,7 @@ function renderClubCerrado(club){
       try{
         localStorage.setItem('arena_jug_' + club.id, dat.jugador || '');
         localStorage.setItem('arena_cat_' + club.id, dat.categoria || '');
+        localStorage.setItem('arena_cod_' + club.id, v);
       }catch(e){}
       if(dat.categoria) visitorCategoria = dat.categoria;
       currentView = 'mio';
