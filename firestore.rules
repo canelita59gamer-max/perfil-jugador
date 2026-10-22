@@ -57,6 +57,18 @@ service cloud.firestore {
         allow write: if isAdminOf(club) || isProfeDe(club, request.resource.data.get('categoria', ''));
         allow delete: if isAdminOf(club) || isProfeDe(club, resource.data.get('categoria', ''));
       }
+      // Avisos de las familias: el celular del papá (su token) amarrado a SU jugador.
+      // Solo se registra quien tenga el código de ese jugador. Nadie los lee desde la página:
+      // los lee la tarea automática, que entra con la cuenta de servicio.
+      match /familias/{tok} {
+        allow create, update: if clubActivo(club)
+          && request.resource.data.keys().hasOnly(['token', 'codigo', 'jugador', 'categoria', 'creado'])
+          && request.resource.data.token == tok
+          && request.resource.data.codigo is string
+          && get(/databases/$(database)/documents/clubes/$(club)/accesos/$(request.resource.data.codigo)).data.jugador == request.resource.data.jugador;
+        allow delete: if true;
+        allow read: if false;
+      }
       // fotos de los jugadores
       match /fotos/{jugador} {
         allow read: if clubActivo(club) || isCreador();

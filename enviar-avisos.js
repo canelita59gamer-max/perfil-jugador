@@ -94,6 +94,84 @@ async function enviar(doc, p, clave, titulo, cuerpo, url) {
   }
 }
 
+// ---------- Familias ----------
+// Un aviso cuando el profesor califica al niño (entreno o partido) y cuando su carta sube.
+// La primera vez que se ve un celular solo se anota cómo está todo, para no avisar de cosas viejas.
+async function mandarFamilia(doc, token, titulo, cuerpo, url) {
+  try {
+    await fcm.send({
+      token,
+      notification: { title: titulo, body: cuerpo },
+      data: { url, tag: 'familia' },
+      webpush: { fcmOptions: { link: url }, notification: { icon: '/icon-192.png', badge: '/icon-192.png' } }
+    });
+    console.log('familia avisada:', doc.ref.path.split('/')[1]);
+    return true;
+  } catch (e) {
+    const c = e.errorInfo && e.errorInfo.code;
+    if (c === 'messaging/registration-token-not-registered' || c === 'messaging/invalid-argument') {
+      await doc.ref.delete().catch(() => {});
+      console.log('celular de familia vencido, borrado');
+    } else {
+      console.error('falló familia', c || e.message);
+    }
+    return false;
+  }
+}
+
+async function avisarFamilias() {
+  let n = 0, vistos = 0;
+  const clubes = await db.collection('clubes').get();
+  for (const club of clubes.docs) {
+    const fams = await db.collection(`clubes/${club.id}/familias`).get();
+    if (fams.empty) continue;
+    const jugadoresDe = {};
+    for (const f of fams.docs) {
+      const v = f.data() || {};
+      if (!v.token || !v.jugador || !v.categoria) continue;
+      vistos++;
+      if (!(v.categoria in jugadoresDe)) {
+        const d = await db.doc(`clubes/${club.id}/categorias/${v.categoria}`).get().catch(() => null);
+        jugadoresDe[v.categoria] = d && d.exists ? (d.data().players || []) : [];
+      }
+      const p = jugadoresDe[v.categoria].find((x) => x.id === v.jugador);
+      if (!p) continue;
+
+      const conNota = (p.historial || []).filter((h) => typeof h.rating === 'number' && h.asistio !== false);
+      const ult = conNota.slice().sort((a, b) => String(b.date).localeCompare(String(a.date)))[0];
+      const claveUlt = ult ? `${ult.type}|${ult.date}` : '';
+      const val = typeof p.valoracion === 'number' ? p.valoracion : null;
+
+      if (!v.visto) { // primera vez: solo anotar
+        await f.ref.set({ visto: Date.now(), ultimo: claveUlt, val }, { merge: true });
+        continue;
+      }
+      const nuevaNota = ult && claveUlt !== v.ultimo;
+      const subio = val !== null && typeof v.val === 'number' && val > v.val;
+      if (nuevaNota || subio) {
+        const nombre = String(p.name || 'Tu hijo').split(' ')[0];
+        const url = `${SITIO}/#/${club.id}`;
+        let titulo, cuerpo;
+        if (nuevaNota) {
+          const donde = ult.type === 'partido' ? 'el partido' : 'el entrenamiento';
+          titulo = `${nombre} fue calificado: ${ult.rating}/10`;
+          cuerpo = `Su profesor lo calificó en ${donde}.` + (subio ? ` Y su carta subió de ${v.val} a ${val}.` : ' Toca para ver el comentario.');
+        } else {
+          titulo = `${nombre} subió a ${val}`;
+          cuerpo = `Su carta pasó de ${v.val} a ${val}. Toca para verla.`;
+        }
+        if (await mandarFamilia(f, v.token, titulo, cuerpo, url)) n++;
+        else continue; // si falló, se reintenta en la próxima vuelta
+      }
+      if (claveUlt !== v.ultimo || val !== v.val) {
+        await f.ref.set({ ultimo: claveUlt, val }, { merge: true }).catch(() => {});
+      }
+    }
+  }
+  console.log(`Revisadas ${vistos} familias, ${n} avisos enviados.`);
+  return n;
+}
+
 (async () => {
   const snap = await db.collection('avisos').get();
   let n = 0;
@@ -164,6 +242,7 @@ async function enviar(doc, p, clave, titulo, cuerpo, url) {
   }
 
   console.log(`Revisados ${snap.size} profesores, ${n} avisos enviados.`);
+  await avisarFamilias().catch((e) => console.error('familias:', e.message));
   process.exit(0);
 })().catch((e) => {
   console.error(e);
