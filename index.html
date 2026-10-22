@@ -1397,6 +1397,7 @@
   background:linear-gradient(180deg,rgba(193,248,7,.2),rgba(193,248,7,0));transform:skewX(-20deg)}
 @media (min-width:980px){.ch-hero{grid-template-columns:1.25fr auto 1fr;align-items:center;padding:30px 34px;gap:36px}}
 .ch-hero>*{position:relative;z-index:1}
+.ch-solo{margin:6px 0 26px}
 .ch-heros{display:flex;flex-direction:column;gap:14px;margin-bottom:12px}
 .ch-heros .ch-hero{margin-bottom:0}
 .ch-hero-foot{grid-column:1/-1}
@@ -3377,6 +3378,7 @@ function renderClubHome(){
   }
 
   el.innerHTML =
+    // las cartas por categoría las ve todo el club; la evaluación colectiva adentro solo sale al cuerpo técnico
     '<div class="ch-heros">' + cats.map(function(c){ return heroCat(c, todos.filter(function(p){ return p.categoria===c; })); }).join('') + '</div>' +
     '<div class="ch-board">' +
       '<div><b class="ch-x">' + (ents ? Math.round(fue/ents*100) + '%' : '—') + '</b><span>Asistencia</span></div>' +
