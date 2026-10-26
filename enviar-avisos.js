@@ -119,6 +119,39 @@ async function mandarFamilia(doc, token, titulo, cuerpo, url) {
   }
 }
 
+// ---------- Mensajes del profe al grupo ----------
+// Cada mensaje nuevo se manda una sola vez a las familias de su categoría.
+// Si por algo quedó sin enviar más de un día, se marca como enviado sin avisar (ya no sirve).
+async function avisarMensajes() {
+  let n = 0;
+  const clubes = await db.collection('clubes').get();
+  for (const club of clubes.docs) {
+    const pend = await db.collection(`clubes/${club.id}/mensajes`).where('enviado', '==', false).get();
+    for (const m of pend.docs) {
+      const v = m.data() || {};
+      if (!v.categoria || !v.texto || Date.now() - (v.creado || 0) > 864e5) {
+        await m.ref.update({ enviado: true, enviadoA: 0 }).catch(() => {});
+        continue;
+      }
+      const fams = await db.collection(`clubes/${club.id}/familias`).where('categoria', '==', v.categoria).get();
+      const vistos = new Set();
+      let a = 0;
+      for (const f of fams.docs) {
+        const t = (f.data() || {}).token;
+        if (!t || vistos.has(t)) continue;
+        vistos.add(t);
+        const titulo = `${v.categoria} · Mensaje del profe`;
+        const cuerpo = String(v.texto).slice(0, 180);
+        if (await mandarFamilia(f, t, titulo, cuerpo, `${SITIO}/#/${club.id}`)) a++;
+      }
+      await m.ref.update({ enviado: true, enviadoA: a, enviadoEn: Date.now() });
+      console.log(`mensaje de ${v.categoria} (${club.id}): ${a} familias`);
+      n += a;
+    }
+  }
+  return n;
+}
+
 async function avisarFamilias() {
   let n = 0, vistos = 0;
   const clubes = await db.collection('clubes').get();
@@ -242,6 +275,7 @@ async function avisarFamilias() {
   }
 
   console.log(`Revisados ${snap.size} profesores, ${n} avisos enviados.`);
+  await avisarMensajes().catch((e) => console.error('mensajes:', e.message));
   await avisarFamilias().catch((e) => console.error('familias:', e.message));
   process.exit(0);
 })().catch((e) => {

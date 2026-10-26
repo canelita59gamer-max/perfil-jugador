@@ -69,6 +69,18 @@ service cloud.firestore {
         allow delete: if true;
         allow read: if false;
       }
+      // Mensajes del profe a su categoría. Los lee el club; los escribe el profe de esa categoría
+      // o el administrador. Nadie los edita desde la página: la tarea automática marca "enviado".
+      match /mensajes/{id} {
+        allow read: if clubActivo(club) || isCreador();
+        allow create: if (isAdminOf(club) || isProfeDe(club, request.resource.data.get('categoria', '')))
+          && request.resource.data.keys().hasOnly(['categoria', 'texto', 'autor', 'creado', 'enviado'])
+          && request.resource.data.texto is string
+          && request.resource.data.texto.size() > 0 && request.resource.data.texto.size() <= 280
+          && request.resource.data.enviado == false;
+        allow delete: if isAdminOf(club) || isProfeDe(club, resource.data.get('categoria', ''));
+        allow update: if false;
+      }
       // fotos de los jugadores
       match /fotos/{jugador} {
         allow read: if clubActivo(club) || isCreador();
