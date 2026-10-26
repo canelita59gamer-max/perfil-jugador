@@ -1,7 +1,7 @@
 /* Arena Sports — service worker
    Guarda la app en el celular para que abra al instante.
    Los datos (Firebase) NUNCA se guardan aquí: siempre van por la red, para que nadie vea cartas viejas. */
-var VERSION = 'arena-v1';
+var VERSION = 'arena-v2';
 var SHELL = [
   './',
   './index.html',
@@ -11,11 +11,34 @@ var SHELL = [
   './icon-512.png',
   './manifest.webmanifest'
 ];
+// Las piezas de Firebase y la librería de Excel vienen de otros servidores. Sin ellas guardadas,
+// la app no arranca sin señal. Tienen la versión en la dirección, así que nunca cambian.
+var EXTERNOS = [
+  'https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js',
+  'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js',
+  'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js',
+  'https://www.gstatic.com/firebasejs/10.7.1/firebase-app-check-compat.js',
+  'https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
+];
+function esEstaticoExterno(url){
+  return (url.hostname === 'www.gstatic.com' && url.pathname.indexOf('/firebasejs/') === 0)
+      || url.hostname === 'cdnjs.cloudflare.com'
+      || url.hostname === 'fonts.gstatic.com';
+}
+// Se pide con CORS (no ocupa espacio de más); si el servidor no lo permite, se guarda igual
+function traerExterno(u){
+  return fetch(u, {mode:'cors', credentials:'omit'}).catch(function(){ return fetch(u, {mode:'no-cors'}); });
+}
 
 self.addEventListener('install', function(e){
   // addAll falla entero si un archivo falta; se guarda uno por uno para que eso no rompa la instalación
   e.waitUntil(caches.open(VERSION).then(function(c){
-    return Promise.all(SHELL.map(function(u){ return c.add(u).catch(function(){}); }));
+    return Promise.all(SHELL.map(function(u){ return c.add(u).catch(function(){}); }).concat(
+      EXTERNOS.map(function(u){
+        return traerExterno(u).then(function(r){ if(r && (r.ok || r.type==='opaque')) return c.put(u, r); }).catch(function(){});
+      })
+    ));
   }).then(function(){ return self.skipWaiting(); }));
 });
 
@@ -33,7 +56,30 @@ self.addEventListener('fetch', function(e){
   var url;
   try { url = new URL(req.url); } catch(err){ return; }
 
-  // Todo lo de Firebase y Google va siempre por la red, sin guardar nada
+  // Piezas fijas de otros servidores (Firebase, Excel, letras): primero la copia guardada
+  if(esEstaticoExterno(url)){
+    e.respondWith(caches.match(req.url).then(function(hit){
+      if(hit) return hit;
+      return traerExterno(req.url).then(function(res){
+        if(res && (res.ok || res.type==='opaque')){
+          var copy = res.clone();
+          caches.open(VERSION).then(function(c){ c.put(req.url, copy); });
+        }
+        return res;
+      });
+    }));
+    return;
+  }
+  // Las letras de Google: primero la red (cambian según el celular) y sin señal, la copia
+  if(url.hostname === 'fonts.googleapis.com'){
+    e.respondWith(fetch(req).then(function(res){
+      var copy = res.clone();
+      caches.open(VERSION).then(function(c){ c.put(req.url, copy); });
+      return res;
+    }).catch(function(){ return caches.match(req.url); }));
+    return;
+  }
+  // Los datos de Firebase y todo lo demás de Google va siempre por la red, sin guardar nada
   if(url.origin !== self.location.origin) return;
 
   // La página: primero la red (para que un cambio se vea de una), y si no hay señal, la copia guardada

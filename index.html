@@ -1522,6 +1522,16 @@
 .mj-av em:empty{display:none}
 .mj-av-btn{padding:11px 18px;border-radius:12px;border:0;background:#c1f807;color:#0a0f02;font:inherit;font-weight:800;font-size:14px;cursor:pointer}
 .mj-av.on .mj-av-btn{background:transparent;color:inherit;border:1px solid rgba(255,255,255,.18);font-weight:600;opacity:.75}
+#senalBar{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 10px);transform:translate(-50%,-160%);z-index:9998;
+  display:flex;align-items:center;gap:9px;width:max-content;max-width:calc(100vw - 32px);box-sizing:border-box;padding:10px 16px;border-radius:14px;font-size:13px;font-weight:600;line-height:1.35;
+  background:#2a2410;color:#f2c94c;border:1px solid rgba(242,201,76,.4);box-shadow:0 10px 30px rgba(0,0,0,.45);transition:transform .35s cubic-bezier(.2,1.2,.4,1)}
+#senalBar.on{transform:translate(-50%,0)}
+#senalBar i{flex:none;width:8px;height:8px;border-radius:50%;background:currentColor}
+#senalBar.off i{animation:senalPulso 1.4s ease-in-out infinite}
+#senalBar.sube{background:#0f1a2e;color:#9cc3ff;border-color:rgba(156,195,255,.35)}
+#senalBar.ok{background:#0b2216;color:#2fe37a;border-color:rgba(47,227,122,.35)}
+@keyframes senalPulso{50%{opacity:.25}}
+@media (prefers-reduced-motion:reduce){#senalBar{transition:none}#senalBar.off i{animation:none}}
 .mj-salir{display:block;margin:18px auto 0;padding:11px 18px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:transparent;color:inherit;font:inherit;font-size:13px;opacity:.6;cursor:pointer;transition:opacity .2s,border-color .2s,color .2s}
 .mj-salir:hover{opacity:1}
 .mj-salir.ok{opacity:1;border-color:#ff8f7a;color:#ff8f7a}
@@ -2048,6 +2058,7 @@ function syncToFirestore(){
     batch.set(db.doc(clubPath('accesos/' + codigoLimpio(p.cod))), {jugador:p.id, categoria:p.categoria, actualizado:Date.now()});
     accesosPuestos[p.cod] = 1; n++;
   });
+  if(n && !navigator.onLine){ senal.pend++; senalPintar(); }
   if(n) batch.commit().catch(function(err){ console.error('No se pudo guardar', err); showToast('No se pudo guardar el último cambio (sin permiso o sin conexión). Recarga la página.'); });
 }
 function showToast(msg){
@@ -2182,6 +2193,39 @@ function attachClub(){
   attachPrivate();
   attachPhotos();
 }
+// ---------- Sin señal ----------
+// Firebase guarda en el celular lo que se registre sin internet y lo sube solo al volver la señal.
+// Esta barra le cuenta al profe qué está pasando, para que no crea que se perdió algo.
+var senal = {pend:0, el:null, t:null};
+function senalBar(txt, tipo){
+  clearTimeout(senal.t);
+  if(!senal.el){
+    if(!txt) return;
+    senal.el = document.createElement('div'); senal.el.id = 'senalBar'; senal.el.setAttribute('role','status');
+    document.body.appendChild(senal.el);
+  }
+  if(!txt){ senal.el.className = ''; return; }
+  senal.el.className = 'on ' + (tipo||'');
+  senal.el.innerHTML = '<i></i><span>' + txt + '</span>';
+}
+function senalPintar(){
+  if(navigator.onLine) return;
+  senalBar('Sin se\u00f1al \u00b7 ' + (senal.pend
+    ? senal.pend + (senal.pend===1 ? ' cambio guardado' : ' cambios guardados') + ' en el celular. Se suben solos.'
+    : 'lo que guardes se sube solo al volver.'), 'off');
+}
+window.addEventListener('offline', senalPintar);
+window.addEventListener('online', function(){
+  if(!window.db || !senal.pend){ senalBar(''); return; }
+  senalBar('Volvi\u00f3 la se\u00f1al \u00b7 subiendo cambios\u2026', 'sube');
+  db.waitForPendingWrites().then(function(){
+    senal.pend = 0;
+    senalBar('Todo subido \u2713', 'ok');
+    senal.t = setTimeout(function(){ senalBar(''); }, 2500);
+  });
+});
+window.addEventListener('load', senalPintar);
+
 function persist(){
   recomputeAllRatings();
   if(window.db){ syncToFirestore(); return; }
