@@ -345,6 +345,7 @@
     border-radius:var(--radius-s);padding:8px 10px;margin-bottom:16px;
   }
   .chrome-mobile{display:none;}
+  .tabs-mobile{display:none;} /* el menú del celular solo aparece en pantallas pequeñas (ver @media max-width:880px) */
 
   .topbar-mobile{display:none;cursor:pointer;}
 
@@ -7300,7 +7301,7 @@ function openStaffPanel(){
         '</select>' +
       '</label>' +
       '<label id="staffCatWrap">Categoría asignada' +
-        '<select id="staffCat">' + CATEGORIES.map(function(c){return '<option value="' + c + '">' + c + '</option>';}).join('') + '</select>' +
+        '<select id="staffCat">' + ((state && state.categories && state.categories.length) ? state.categories : CATEGORIES).map(function(c){return '<option value="' + escHtml(c) + '">' + escHtml(c) + '</option>';}).join('') + '</select>' +
       '</label>' +
       '<div class="staff-error" id="staffError" style="display:none;"></div>' +
       '<button class="staff-submit" id="staffSubmit">Crear acceso</button>' +
