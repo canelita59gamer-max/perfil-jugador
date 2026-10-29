@@ -7408,7 +7408,12 @@ if(window.firebase && window.FIREBASE_CONFIG){
     }
 
     // Lista de clubes de la plataforma (pública: la página de inicio la necesita)
+    // Sin internet: timeout de 4s para no quedarse en "Cargando…" para siempre
+    var clubsTimer = setTimeout(function(){
+      if(!clubsLoaded){ clubsLoaded = true; safeRender(); }
+    }, 4000);
     db.collection('clubes').onSnapshot(function(snap){
+      clearTimeout(clubsTimer);
       CLUBS = [];
       snap.forEach(function(d){ CLUBS.push(Object.assign({id:d.id}, d.data())); });
       CLUBS.sort(function(a,b){ return String(a.nombre).localeCompare(String(b.nombre)); });
@@ -7416,7 +7421,7 @@ if(window.firebase && window.FIREBASE_CONFIG){
       if(isCreador() && !CLUBS.some(function(c){ return c.id===DEFAULT_CLUB_ID; })) migrateToMultiClub();
       if(sessionEnteredClub) applyClubTheme(currentClub());
       if(!isTyping()) safeRender();
-    }, function(err){ console.error('No se pudo leer la lista de clubes', err); clubsLoaded = true; safeRender(); });
+    }, function(err){ clearTimeout(clubsTimer); console.error('No se pudo leer la lista de clubes', err); clubsLoaded = true; safeRender(); });
 
     function afterAuthChange(){
       authReady = true;
