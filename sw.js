@@ -1,7 +1,7 @@
 /* Arena Sports — service worker
    Guarda la app en el celular para que abra al instante.
    Los datos (Firebase) NUNCA se guardan aquí: siempre van por la red, para que nadie vea cartas viejas. */
-var VERSION = 'arena-v3';
+var VERSION = 'arena-v2';
 var SHELL = [
   './',
   './index.html',
@@ -82,16 +82,15 @@ self.addEventListener('fetch', function(e){
   // Los datos de Firebase y todo lo demás de Google va siempre por la red, sin guardar nada
   if(url.origin !== self.location.origin) return;
 
-  // La página: caché primero (Safari iOS offline), actualiza por atrás cuando hay señal
+  // La página: primero la red (para que un cambio se vea de una), y si no hay señal, la copia guardada
   if(req.mode === 'navigate'){
     e.respondWith(
-      caches.match('./index.html').then(function(cached){
-        var netFetch = fetch(req).then(function(res){
-          var copy = res.clone();
-          caches.open(VERSION).then(function(c){ c.put('./index.html', copy); });
-          return res;
-        }).catch(function(){ return cached; });
-        return cached || netFetch;
+      fetch(req).then(function(res){
+        var copy = res.clone();
+        caches.open(VERSION).then(function(c){ c.put('./index.html', copy); });
+        return res;
+      }).catch(function(){
+        return caches.match('./index.html').then(function(r){ return r || caches.match('./'); });
       })
     );
     return;
