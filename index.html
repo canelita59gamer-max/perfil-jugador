@@ -235,6 +235,16 @@
   .fi-grid .rm{background:none;border:none;color:var(--bad);cursor:pointer;font-size:11px;padding:0;align-self:flex-start;}
   .fi-add{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:14px;padding-top:12px;border-top:1px solid var(--border);}
   .fi-add input, .fi-add select{background:var(--navy-950);border:1px solid var(--border-strong);color:var(--ink);border-radius:var(--radius-s);padding:7px 9px;font-size:13px;font-family:var(--font-body);}
+  .fi-docs{margin-top:16px;padding-top:12px;border-top:1px solid var(--border);}
+  .fi-docs h4{margin:0 0 10px;font-size:14px;font-weight:600;}
+  .fi-doc{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);}
+  .fi-doc img, .fi-doc .ic{width:44px;height:44px;border-radius:8px;object-fit:cover;flex-shrink:0;background:#fff;}
+  .fi-doc .ic{display:flex;align-items:center;justify-content:center;background:rgba(239,106,106,.18);color:var(--bad);font:700 11px var(--font-body);}
+  .fi-doc b{flex:1;min-width:0;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .fi-up{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0 6px;}
+  .fi-up input[type=text], .fi-up input:not([type]){flex:1;min-width:160px;background:var(--navy-950);border:1px solid var(--border-strong);color:var(--ink);border-radius:var(--radius-s);padding:7px 9px;font-size:13px;font-family:var(--font-body);}
+  .fi-up label input{display:none;}
+  .fi-up label{cursor:pointer;}
   @media (max-width:520px){ .fi-grid{grid-template-columns:1fr;} }
   .pl-cat-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;}
   .pl-cat-row .nm{font-weight:600;flex:1;min-width:90px;}
@@ -6061,7 +6071,7 @@ if('serviceWorker' in navigator && (location.protocol==='https:' || location.hos
 // Privacidad lista pero apagada: cambiar a true cuando se decida publicarla
 var PRIV_ON = false;
 var privMode = false;
-var PRIV_HTML = '<span class="pv-kick">Privacidad</span>  <h1><span class="pv-X">Tratamiento de</span> <em class="pv-X">datos</em></h1>  <p class="pv-upd">Política de Tratamiento de Datos Personales · Ley 1581 de 2012 · Última actualización: noviembre de 2026</p>  <div class="pv-sum">    <div><b>Qué guardamos</b>Nombre, categoría, posición, foto y evaluaciones deportivas de cada jugador, su ficha personal si el club la usa, y el correo del staff.</div>    <div><b>Quién lo ve</b>Lo público: la carta del jugador. Los comentarios del profesor solo los ve el staff de su club, y la ficha personal solo el administrador del club.</div>    <div><b>Sin publicidad</b>No vendemos datos, no hay anuncios ni cookies de rastreo.</div>  </div>  <section><h2><span>1</span>Responsable</h2>    <p><b>Arena Sports</b> (C.C. 52.910.702), con domicilio en Bucaramanga, Santander, Colombia. Contacto para temas de datos: <a href="mailto:arenasports.eventos@gmail.com">arenasports.eventos@gmail.com</a> · WhatsApp 322 246 2392.</p>    <p>Cada club que usa la plataforma es responsable de los datos de sus jugadores y de pedir la autorización de los padres. Arena Sports actúa como <b>encargado</b>: guarda y procesa los datos por cuenta del club.</p>  </section>  <section><h2><span>2</span>Datos que tratamos</h2>    <ul>      <li><b>Jugadores:</b> nombre, categoría, posición, foto, asistencia, goles, asistencias y evaluaciones de entrenamientos y partidos.</li>      <li><b>Ficha personal del jugador (opcional, la llena el club):</b> tipo y número de documento, fecha de nacimiento, EPS, tipo de sangre, alergias o condiciones de salud, dirección y barrio, colegio y nombre, parentesco y teléfono del acudiente, más los campos que el club agregue.</li>      <li><b>Staff (profesores y administradores):</b> correo electrónico y club o categoría asignados.</li>    </ul>    <p>La EPS, el tipo de sangre y las condiciones de salud son <b>datos sensibles</b>: entregarlos es voluntario, solo se registran con autorización expresa del padre, madre o representante y sirven únicamente para atender al jugador en una emergencia o lesión durante la actividad deportiva. No pedimos datos de pago de los jugadores.</p>  </section>  <section><h2><span>3</span>Menores de edad</h2>    <p>La mayoría de jugadores son niños, niñas y adolescentes. Por eso sus datos solo se cargan con la <b>autorización previa de su padre, madre o representante legal</b>, que el club recoge al inscribirlo. Siempre se respeta el interés superior del menor: lo público es solo su carta deportiva, nunca comentarios negativos ni datos de contacto.</p>  </section>  <section><h2><span>4</span>Para qué los usamos</h2>    <ul>      <li>Mostrar la carta deportiva de cada jugador y su progreso.</li>      <li>Que los profesores registren entrenamientos, partidos y evaluaciones.</li>      <li>Generar los informes del trimestre para el club y las familias.</li>      <li>Destacar en la portada a los jugadores que más avanzaron cada semana.</li>      <li>Con la ficha personal: identificar al jugador en inscripciones a torneos, contactar a su acudiente y atenderlo en caso de emergencia.</li>    </ul>  </section>  <section><h2><span>5</span>Tus derechos</h2>    <p>Como titular, o como padre o representante del menor, puedes:</p>    <ul>      <li>Conocer, actualizar y corregir los datos.</li>      <li>Pedir prueba de la autorización que se dio.</li>      <li>Saber cómo se han usado los datos.</li>      <li>Revocar la autorización o pedir que se borren los datos, incluida la foto.</li>      <li>Presentar quejas ante la Superintendencia de Industria y Comercio.</li>    </ul>  </section>  <section><h2><span>6</span>Cómo pedirlo</h2>    <p>Escribe a <a href="mailto:arenasports.eventos@gmail.com">arenasports.eventos@gmail.com</a> o al WhatsApp 322 246 2392 con el nombre del jugador, su club y lo que pides. Las consultas se responden en máximo 10 días hábiles y los reclamos en máximo 15 días hábiles, como dice la ley. También puedes hacerlo a través del club.</p>  </section>  <section><h2><span>7</span>Seguridad</h2>    <ul>      <li>La página funciona siempre con conexión cifrada (HTTPS).</li>      <li>Solo el staff con cuenta autorizada puede editar. Cada profesor accede únicamente a su categoría.</li>      <li>Los comentarios privados del profesor nunca se publican.</li>      <li>La ficha personal solo la puede abrir el administrador del club: no la ven los profesores, las familias ni el público.</li>      <li>Los datos se guardan en Google Firebase, con reglas de acceso que impiden que un club vea los datos de otro.</li>    </ul>  </section>  <section><h2><span>8</span>Cookies y almacenamiento</h2>    <p>No usamos cookies de publicidad, analítica ni rastreo. Solo se guarda en el navegador lo necesario para que el staff no pierda su sesión y para recordar que ya viste este aviso.</p>  </section>  <section><h2><span>9</span>Cuánto tiempo y cambios</h2>    <p>Los datos se conservan solo mientras el jugador esté activo en el club. Cuando sale del club, sus datos y su foto se eliminan; también se pueden borrar antes si el padre, madre o representante lo pide. Si esta política cambia, se publicará aquí con su nueva fecha.</p>  </section>  ';
+var PRIV_HTML = '<span class="pv-kick">Privacidad</span>  <h1><span class="pv-X">Tratamiento de</span> <em class="pv-X">datos</em></h1>  <p class="pv-upd">Política de Tratamiento de Datos Personales · Ley 1581 de 2012 · Última actualización: noviembre de 2026</p>  <div class="pv-sum">    <div><b>Qué guardamos</b>Nombre, categoría, posición, foto y evaluaciones deportivas de cada jugador, su ficha personal si el club la usa, y el correo del staff.</div>    <div><b>Quién lo ve</b>Lo público: la carta del jugador. Los comentarios del profesor solo los ve el staff de su club, y la ficha personal solo el administrador del club.</div>    <div><b>Sin publicidad</b>No vendemos datos, no hay anuncios ni cookies de rastreo.</div>  </div>  <section><h2><span>1</span>Responsable</h2>    <p><b>Arena Sports</b> (C.C. 52.910.702), con domicilio en Bucaramanga, Santander, Colombia. Contacto para temas de datos: <a href="mailto:arenasports.eventos@gmail.com">arenasports.eventos@gmail.com</a> · WhatsApp 322 246 2392.</p>    <p>Cada club que usa la plataforma es responsable de los datos de sus jugadores y de pedir la autorización de los padres. Arena Sports actúa como <b>encargado</b>: guarda y procesa los datos por cuenta del club.</p>  </section>  <section><h2><span>2</span>Datos que tratamos</h2>    <ul>      <li><b>Jugadores:</b> nombre, categoría, posición, foto, asistencia, goles, asistencias y evaluaciones de entrenamientos y partidos.</li>      <li><b>Ficha personal del jugador (opcional, la llena el club):</b> tipo y número de documento, fecha de nacimiento, EPS, tipo de sangre, alergias o condiciones de salud, dirección y barrio, colegio y nombre, parentesco y teléfono del acudiente, más los campos que el club agregue y las fotos o copias de documentos que adjunte (por ejemplo la tarjeta de identidad, el carné de la EPS o la autorización firmada).</li>      <li><b>Staff (profesores y administradores):</b> correo electrónico y club o categoría asignados.</li>    </ul>    <p>La EPS, el tipo de sangre y las condiciones de salud son <b>datos sensibles</b>: entregarlos es voluntario, solo se registran con autorización expresa del padre, madre o representante y sirven únicamente para atender al jugador en una emergencia o lesión durante la actividad deportiva. No pedimos datos de pago de los jugadores.</p>  </section>  <section><h2><span>3</span>Menores de edad</h2>    <p>La mayoría de jugadores son niños, niñas y adolescentes. Por eso sus datos solo se cargan con la <b>autorización previa de su padre, madre o representante legal</b>, que el club recoge al inscribirlo. Siempre se respeta el interés superior del menor: lo público es solo su carta deportiva, nunca comentarios negativos ni datos de contacto.</p>  </section>  <section><h2><span>4</span>Para qué los usamos</h2>    <ul>      <li>Mostrar la carta deportiva de cada jugador y su progreso.</li>      <li>Que los profesores registren entrenamientos, partidos y evaluaciones.</li>      <li>Generar los informes del trimestre para el club y las familias.</li>      <li>Destacar en la portada a los jugadores que más avanzaron cada semana.</li>      <li>Con la ficha personal: identificar al jugador en inscripciones a torneos, contactar a su acudiente y atenderlo en caso de emergencia.</li>    </ul>  </section>  <section><h2><span>5</span>Tus derechos</h2>    <p>Como titular, o como padre o representante del menor, puedes:</p>    <ul>      <li>Conocer, actualizar y corregir los datos.</li>      <li>Pedir prueba de la autorización que se dio.</li>      <li>Saber cómo se han usado los datos.</li>      <li>Revocar la autorización o pedir que se borren los datos, incluida la foto.</li>      <li>Presentar quejas ante la Superintendencia de Industria y Comercio.</li>    </ul>  </section>  <section><h2><span>6</span>Cómo pedirlo</h2>    <p>Escribe a <a href="mailto:arenasports.eventos@gmail.com">arenasports.eventos@gmail.com</a> o al WhatsApp 322 246 2392 con el nombre del jugador, su club y lo que pides. Las consultas se responden en máximo 10 días hábiles y los reclamos en máximo 15 días hábiles, como dice la ley. También puedes hacerlo a través del club.</p>  </section>  <section><h2><span>7</span>Seguridad</h2>    <ul>      <li>La página funciona siempre con conexión cifrada (HTTPS).</li>      <li>Solo el staff con cuenta autorizada puede editar. Cada profesor accede únicamente a su categoría.</li>      <li>Los comentarios privados del profesor nunca se publican.</li>      <li>La ficha personal solo la puede abrir el administrador del club: no la ven los profesores, las familias ni el público.</li>      <li>Los datos se guardan en Google Firebase, con reglas de acceso que impiden que un club vea los datos de otro.</li>    </ul>  </section>  <section><h2><span>8</span>Cookies y almacenamiento</h2>    <p>No usamos cookies de publicidad, analítica ni rastreo. Solo se guarda en el navegador lo necesario para que el staff no pierda su sesión y para recordar que ya viste este aviso.</p>  </section>  <section><h2><span>9</span>Cuánto tiempo y cambios</h2>    <p>Los datos se conservan solo mientras el jugador esté activo en el club. Cuando sale del club, sus datos y su foto se eliminan; también se pueden borrar antes si el padre, madre o representante lo pide. Si esta política cambia, se publicará aquí con su nueva fecha.</p>  </section>  ';
 function renderPrivacidad(){
   var root = document.getElementById('landingRoot');
   root.innerHTML = '<div class="pv"><div class="pv-wrap">' +
@@ -6895,7 +6905,47 @@ var FICHA_BASE = [
 ];
 var fichaCampos = null; // se carga una vez por club
 function deleteFicha(playerId){
-  if(window.db && clubRole()==='admin') db.collection(clubPath('fichas')).doc(playerId).delete().catch(function(){});
+  if(!window.db || clubRole()!=='admin') return;
+  var ref = db.collection(clubPath('fichas')).doc(playerId);
+  ref.collection('adjuntos').get().then(function(snap){ snap.forEach(function(d){ d.ref.delete(); }); }).catch(function(){});
+  ref.delete().catch(function(){});
+}
+// Documentos y fotos de la ficha: se guardan dentro de Firestore (como las fotos de los jugadores),
+// un documento por archivo en fichas/{jugador}/adjuntos. Firestore aguanta ~1 MB por documento, así que
+// las fotos se reducen (máx. 1600 px, JPG) y los PDF deben pesar menos de 700 KB.
+var ADJ_MAX = 700 * 1024;
+function prepararAdjunto(file){
+  if(file.type==='application/pdf'){
+    if(file.size > ADJ_MAX) return Promise.reject(new Error('El PDF "' + file.name + '" pesa ' + Math.round(file.size/1024) + ' KB; el máximo es 700 KB. Tómale una foto o comprímelo.'));
+    return fileToDataUrl(file).then(function(url){ return {tipo:'application/pdf', data:url}; });
+  }
+  if(!/^image\//.test(file.type)) return Promise.reject(new Error('"' + file.name + '" no es una foto ni un PDF.'));
+  return new Promise(function(ok, bad){
+    var url = URL.createObjectURL(file), img = new Image();
+    img.onload = function(){
+      URL.revokeObjectURL(url);
+      var lado = 1600, calidad = 0.82, out = '';
+      do { // se va bajando hasta que quepa
+        var k = Math.min(1, lado / Math.max(img.naturalWidth, img.naturalHeight));
+        var c = document.createElement('canvas');
+        c.width = Math.max(1, Math.round(img.naturalWidth*k)); c.height = Math.max(1, Math.round(img.naturalHeight*k));
+        var ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); ctx.drawImage(img, 0, 0, c.width, c.height);
+        out = c.toDataURL('image/jpeg', calidad);
+        lado = Math.round(lado*0.8); calidad = Math.max(0.5, calidad - 0.08);
+      } while(out.length > ADJ_MAX*1.3 && lado > 400);
+      ok({tipo:'image/jpeg', data:out});
+    };
+    img.onerror = function(){ URL.revokeObjectURL(url); bad(new Error('No se pudo abrir "' + file.name + '". Si es una foto HEIC de iPhone, mándala por WhatsApp y descárgala de ahí.')); };
+    img.src = url;
+  });
+}
+function verAdjunto(a){
+  var bin = atob(a.data.split(',')[1] || ''), arr = new Uint8Array(bin.length);
+  for(var i=0;i<bin.length;i++) arr[i] = bin.charCodeAt(i);
+  var url = URL.createObjectURL(new Blob([arr], {type:a.tipo}));
+  var w = window.open(url, '_blank');
+  if(!w){ var l = document.createElement('a'); l.href = url; l.download = a.nombre + (a.tipo==='application/pdf' ? '.pdf' : '.jpg'); document.body.appendChild(l); l.click(); l.remove(); }
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 60000);
 }
 function cargarCamposFicha(){
   if(fichaCampos) return Promise.resolve(fichaCampos);
@@ -6919,9 +6969,12 @@ function openFicha(p){
   overlay.onclick = function(e){ if(e.target===overlay) cerrar(); };
   var box = body.querySelector('#fiBox');
   if(!window.db || clubRole()!=='admin'){ box.innerHTML = '<p class="fi-note">La ficha personal solo la puede ver el administrador del club con su cuenta.</p>'; return; }
-  var valores = {};
-  Promise.all([cargarCamposFicha(), db.doc(clubPath('fichas/' + p.id)).get()]).then(function(r){
+  var valores = {}, adjuntos = [];
+  var adjCol = db.collection(clubPath('fichas/' + p.id + '/adjuntos'));
+  Promise.all([cargarCamposFicha(), db.doc(clubPath('fichas/' + p.id)).get(), adjCol.get()]).then(function(r){
     if(r[1].exists) valores = r[1].data().valores || {};
+    r[2].forEach(function(d){ adjuntos.push(Object.assign({id:d.id}, d.data())); });
+    adjuntos.sort(function(a, b){ return (a.creado||0) - (b.creado||0); });
     pintar();
   }).catch(function(err){
     console.error('No se pudo abrir la ficha', err);
@@ -6947,12 +7000,41 @@ function openFicha(p){
     box.innerHTML = '<p class="fi-note">Solo la ve el administrador del club. No aparece en la carta, ni la ven los profesores ni las familias. Llena solo lo que el acudiente autorizó.</p>' +
       '<div class="fi-grid">' + fichaCampos.map(campoHtml).join('') + '</div>' +
       '<div class="pl-inline"><button class="pl-btn" id="fiSave">Guardar ficha</button><span class="pl-count" id="fiMsg"></span></div>' +
+      '<div class="fi-docs"><h4>Documentos y fotos</h4><div id="fiDocs"></div>' +
+        '<div class="fi-up"><input id="fiDocNom" placeholder="Qué es, ej. Registro civil (opcional)" maxlength="40" />' +
+        '<label class="pl-btn small">Adjuntar foto o PDF<input type="file" id="fiDocFile" accept="image/*,application/pdf" multiple /></label></div>' +
+        '<span class="pl-count" id="fiDocMsg">Fotos de cualquier tamaño (se reducen solas) o PDF de hasta 700 KB.</span></div>' +
       '<div class="fi-add"><input id="fiNewL" placeholder="Nuevo campo, ej. Talla de uniforme" maxlength="50" style="flex:1;min-width:160px;" />' +
         '<select id="fiNewT">' + Object.keys(FICHA_TIPOS).map(function(t){ return '<option value="' + t + '">' + FICHA_TIPOS[t] + '</option>'; }).join('') + '</select>' +
         '<input id="fiNewO" placeholder="Opciones separadas por coma" style="display:none;flex:1;min-width:160px;" />' +
         '<button class="pl-btn ghost small" id="fiAdd">Agregar campo</button></div>';
     var tSel = box.querySelector('#fiNewT'), oIn = box.querySelector('#fiNewO');
     tSel.onchange = function(){ oIn.style.display = tSel.value==='opcion' ? '' : 'none'; };
+    pintarDocs();
+    box.querySelector('#fiDocFile').onchange = function(e){
+      var files = [].slice.call(e.target.files || []), msg = box.querySelector('#fiDocMsg');
+      var nomIn = box.querySelector('#fiDocNom'), nom = cleanLabel(nomIn.value);
+      e.target.value = '';
+      if(!files.length) return;
+      if(adjuntos.length + files.length > 30){ window.alert('Cada ficha guarda hasta 30 archivos.'); return; }
+      leer(); // no perder lo que se haya escrito en los campos
+      msg.textContent = 'Subiendo…';
+      var cadena = Promise.resolve(), errores = [];
+      files.forEach(function(f, i){
+        cadena = cadena.then(function(){
+          return prepararAdjunto(f).then(function(x){
+            var a = {nombre: (nom ? nom + (files.length > 1 ? ' ' + (i+1) : '') : cleanLabel(f.name.replace(/\.[^.]+$/, ''))) || 'Documento',
+              tipo:x.tipo, data:x.data, creado:Date.now()};
+            return adjCol.add(a).then(function(ref){ a.id = ref.id; adjuntos.push(a); });
+          }).catch(function(err){ console.error(err); errores.push(err && err.message ? err.message : 'No se pudo subir ' + f.name); });
+        });
+      });
+      cadena.then(function(){
+        nomIn.value = '';
+        pintarDocs();
+        msg.textContent = errores.length ? errores.join(' ') : 'Listo, archivo' + (files.length>1?'s':'') + ' guardado' + (files.length>1?'s':'') + '.';
+      });
+    };
     box.querySelector('#fiSave').onclick = function(){
       leer();
       var msg = box.querySelector('#fiMsg'), btn = this;
@@ -6987,6 +7069,28 @@ function openFicha(p){
         fichaCampos = fichaCampos.filter(function(x){ return x.k!==k; });
         guardarCamposFicha().catch(function(){ showToast('No se pudo quitar el campo.'); });
         pintar();
+      };
+    });
+  }
+  function pintarDocs(){
+    var cont = box.querySelector('#fiDocs');
+    if(!cont) return;
+    cont.innerHTML = adjuntos.length ? adjuntos.map(function(a, i){
+      var pdf = a.tipo==='application/pdf';
+      return '<div class="fi-doc" data-i="' + i + '">' +
+        (pdf ? '<span class="ic">PDF</span>' : '<img src="' + a.data + '" alt="" />') +
+        '<b title="' + escHtml(a.nombre) + '">' + escHtml(a.nombre) + '</b>' +
+        '<button class="pl-btn ghost small" data-a="ver">Ver</button><button class="pl-btn danger small" data-a="rm">Quitar</button></div>';
+    }).join('') : '<p class="fi-note" style="margin:0">Todavía no hay documentos. Puedes adjuntar fotos de la tarjeta de identidad, el carné de la EPS, la autorización firmada…</p>';
+    cont.querySelectorAll('.fi-doc').forEach(function(row){
+      var a = adjuntos[+row.getAttribute('data-i')];
+      row.querySelector('[data-a="ver"]').onclick = function(){ verAdjunto(a); };
+      row.querySelector('[data-a="rm"]').onclick = function(){
+        if(!window.confirm('¿Quitar "' + a.nombre + '" de la ficha? Se borra y no se puede recuperar.')) return;
+        adjCol.doc(a.id).delete().then(function(){
+          adjuntos = adjuntos.filter(function(x){ return x!==a; });
+          pintarDocs();
+        }).catch(function(){ showToast('No se pudo quitar el archivo.'); });
       };
     });
   }
