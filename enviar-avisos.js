@@ -1,6 +1,6 @@
 /*
  * Arena Sports — enviador de recordatorios
- * Corre solo cada media hora (GitHub Actions) y manda los avisos que toquen en ese rato.
+ * Corre solo cada 5 minutos (GitHub Actions) y manda los avisos que toquen en ese rato.
  * No necesita plan de pago de Firebase.
  *
  * Mira cada documento de "avisos" y decide, en hora de Colombia:

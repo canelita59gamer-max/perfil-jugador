@@ -1,4 +1,4 @@
-# Manda los recordatorios a los profesores. Corre solo cada media hora.
+# Manda los recordatorios a los profesores. Corre solo cada 5 minutos.
 name: Recordatorios
 
 on:
