@@ -1,0 +1,8 @@
+# Lo que está en el repo pero NO se publica en la página (Vercel sirve todo lo demás tal cual)
+.claude/
+.github/
+CLAUDE.md
+README.md
+enviar-avisos.js
+firestore.rules
+contenido-videos/
