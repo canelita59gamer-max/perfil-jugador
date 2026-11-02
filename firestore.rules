@@ -43,6 +43,15 @@ service cloud.firestore {
       match /categorias/{cat} {
         allow read, write: if isAdminOf(club) || isProfeDe(club, cat);
       }
+      // Ficha personal del jugador (documento, salud, vivienda, acudiente): SOLO el administrador del club.
+      // Ni los profesores ni las familias la pueden leer. "_campos" guarda qué campos usa el club.
+      match /fichas/{f} {
+        allow read, delete: if isAdminOf(club);
+        allow write: if isAdminOf(club) && (
+          (f == '_campos' && request.resource.data.keys().hasOnly(['campos']) && request.resource.data.campos is list && request.resource.data.campos.size() <= 80)
+          || (f != '_campos' && request.resource.data.keys().hasOnly(['jugador', 'categoria', 'valores', 'actualizado'])
+              && request.resource.data.valores is map && request.resource.data.valores.size() <= 80));
+      }
       // lo que muestran las cartas públicas (sin comentarios privados); un club suspendido no se ve
       match /publico/{cat} {
         allow read: if clubActivo(club) || isCreador();
