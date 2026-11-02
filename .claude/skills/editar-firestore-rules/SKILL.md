@@ -37,13 +37,23 @@ Helpers ya definidos arriba del archivo — reusarlos, no duplicar lógica:
    tienen `allow list: if false` / `allow read: if false` a propósito — el código
    es la única llave, nunca se debe poder listar o enumerar. No agregar un `list`
    a estas sin preguntar primero, es una decisión de seguridad deliberada.
-5. Las colecciones sin prefijo `clubes/{club}` al final del archivo (`/club/{doc}`,
+5. `fichas/{f}` (ficha personal: documento, salud, vivienda, acudiente) es **solo del admin**
+   (`isAdminOf(club)`). Ni profesores ni familias. No abrirla a otro rol sin preguntar: son
+   datos sensibles de menores (Ley 1581) y la política de privacidad lo promete así.
+6. Las colecciones sin prefijo `clubes/{club}` al final del archivo (`/club/{doc}`,
    `/categorias/{cat}`, `/publico/{cat}`, `/fotosJugadores/{f}`, `/appState/{doc}`)
    son la estructura **pre-multi-club**, solo para migración — no agregar
    funcionalidad nueva ahí.
 
 ## Al terminar
 
-Avisar al usuario: "Pega `firestore.rules` completo en Firebase Console → Firestore
-Database → Reglas → Publicar — esto no se sube solo." Es el único paso de este
-proyecto que no es automático.
+Las reglas no se suben solas con el push: hay que publicarlas en Firebase Console →
+Firestore → Reglas → Publicar. Es el único paso de este proyecto que no es automático.
+
+Si el usuario lo pide y el navegador integrado tiene abierta su sesión de Firebase, se puede
+hacer desde ahí:
+1. Antes de cambiar nada, comparar lo publicado con `git show HEAD:firestore.rules`. Si
+   alguien editó directo en la consola, no pisarlo sin avisar.
+2. Aplicar solo el cambio en el editor (CodeMirror: `view.dispatch`), comprobar que el texto
+   quedó igual a `firestore.rules`, tocar **Publicar** y recargar para confirmar.
+Si no hay sesión, pasarle el archivo al usuario (por ejemplo copiado al portapapeles).

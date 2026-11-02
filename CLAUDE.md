@@ -1,6 +1,13 @@
 # Perfil de Jugador
 
-App de hojas de vida / cards de jugadores y entrenamientos para clubes de fútbol, con branding de Arena Sports. Sitio estático (`index.html`) + Firebase, deploy en Vercel.
+App de hojas de vida / cards de jugadores y entrenamientos para clubes de fútbol y voleibol (cada categoría elige su deporte), con ficha personal de cada jugador solo para el admin. Branding de Arena Sports. Sitio estático (`index.html`) + Firebase, deploy en Vercel.
+
+## Skills del proyecto (`.claude/skills/`)
+- `mapa-del-codigo` — contexto, reglas de trabajo y mapa de `index.html`. Cargarla al empezar.
+- `revision` — checklist después de cada cambio.
+- `deploy` — qué se publica solo (Vercel) y qué no (reglas de Firebase).
+- `editar-firestore-rules` — cómo tocar las reglas sin romper roles ni clubes.
+- `reels-perfil-jugador`, `pipeline-video-promo`, `remotion-best-practices` — videos promocionales.
 
 ## Stack
 - Frontend: HTML/CSS/JS plano (sin framework), PWA (`manifest.webmanifest`, `sw.js`, iconos)

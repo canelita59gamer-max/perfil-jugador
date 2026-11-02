@@ -1,66 +1,81 @@
 ---
 name: mapa-del-codigo
-description: Mapa de secciones de index.html (7468 líneas, app de una sola página) para ubicar código sin tener que leer o grepear el archivo completo. Úsalo antes de tocar cualquier parte de la UI, el modelo de datos o el guardado en Firestore.
+description: Contexto y mapa de Arena Sports · Perfil de Jugador (index.html de ~7700 líneas, app de una sola página con Firebase). Úsalo al empezar cualquier sesión en este repo y antes de tocar la UI, el modelo de datos, el guardado en Firestore, sw.js o enviar-avisos.js.
 ---
 
-# Mapa de index.html
+# Perfil de Jugador — contexto y mapa
 
-Todo el front (HTML + CSS + JS) vive en un solo archivo. Para no gastar tokens
-releyéndolo completo, usa estas líneas como punto de entrada y lee solo el
-rango que necesitas con `Read offset/limit`.
+PWA de un solo archivo para clubes de formación (fútbol y voleibol): cartas de jugador,
+entrenamientos, partidos, alineaciones, ficha personal y roles.
+
+## Archivos
+- `index.html` — toda la app (CSS en `<style>`, JS en un `<script>` al final). Sin build ni
+  framework; JS estilo ES5 (`var`, `function`). No introducir bundlers, módulos ni librerías.
+- `sw.js` — service worker: caché del shell, Firebase/Excel offline, notificaciones push.
+  Subir `VERSION` cada vez que cambie `index.html` u otro archivo del shell.
+- `firestore.rules` — reglas por club/rol (ver skill `editar-firestore-rules`).
+- `enviar-avisos.js` + `.github/workflows/avisos.yml` — recordatorios push cada 5 min.
+- `vercel.json` (cabeceras y CSP), `.vercelignore` (lo que NO se publica), `manifest.webmanifest` + iconos.
+
+## Reglas de trabajo
+- Responder y comentar en español; textos de interfaz en español (es-CO).
+- Ediciones puntuales (Edit con el texto exacto), no reescribir el archivo.
+- Integrar en las pantallas que ya existen; no crear vistas paralelas.
+- No borrar nada que el usuario no haya pedido; lo que sale va a la papelera, no a `rm -rf`.
+- Nunca pegar claves, tokens ni URLs firmadas en archivos versionados.
+- Al terminar un cambio, correr la skill `revision`.
+
+## Mapa de index.html
+Las líneas se mueven con cada cambio: úsalas como punto de partida y confirma con
+`grep -n "============ NOMBRE"` (cada sección empieza con un comentario así).
 
 | Línea | Sección |
 |---|---|
-| 357 | CSS landing premium |
-| 1390 | CSS portada del club (estilo FIFA) |
-| 1561 | CSS Fase 2: carta especial, sobre, destacados, insignias |
-| 2038 | **DATA MODEL** — forma de los datos en memoria |
-| 2135 | Plataforma multi-club: `CLUBS`, `clubPath()`, `currentClub()` — colección Firestore `clubes` |
-| 2308 | **GUARDADO SEGURO EN FIRESTORE** |
-| 2603 | Helpers generales |
-| 2673 | Render: chrome (rol + categoría) |
-| 2753 | Render: nav |
-| 2772 | Render: entrenamiento |
-| 3080 | Render: partido del día |
-| 3122 | Alineación del partido |
-| 3615 | Render: cartas |
-| 4035 | Destacados |
-| 4121 | Insignias y rachas |
-| 4273 | El sobre |
-| 4382 | Carta para compartir |
-| 4547 | Mensajes del profe al grupo |
-| 4896 | Render: perfil de exigencia |
-| 5073 | Render: informe trimestral |
-| 5242 | **MAIN RENDER** |
-| 5503–5609 | Panel del Creador: alta/edición de clubes (botón "Crear club") |
-| 5622 | Recordatorios para el profesor |
-| 5825 | Instalar como app (PWA) |
-| 5899 | Aviso de cookies / política de datos (`#/privacidad`) |
-| 5927 | Acceso staff: un solo link para todos los clubes (`#/staff`) |
-| 6059 | Página de inicio: clubes y jugadores de la fecha |
-| 6514 | Valoración con barra de progreso |
-| 6647 | Fotos de jugadores |
-| 6703 | Render: plantel y categorías (solo administrador) — incluye alta de categorías (6875), importar (6932), jugadores de la categoría (7050), fotos en lote (7115) |
+| 207 | CSS plantel y categorías · 226 ficha personal · 258 alineación (incluye `.pitch.voley`) |
+| 372 | CSS landing premium |
+| 1405 | CSS portada del club (estilo FIFA) |
+| 1576 | CSS Fase 2: carta especial, sobre, destacados, insignias |
+| 2053 | **DATA MODEL**: `BASE_ATTRS` (fútbol), `VOLEY_ATTRS`, `DEPORTES` / `sportOf(cat)`, `attrsFor(cat, sport)`, `POSITIONS`, `VOLEY_POSITIONS`, `ALL_POSITIONS`, `normalizePos(raw, sport)`, `DEFAULT_PROFILES` |
+| 2203 | Plataforma multi-club: `CLUBS`, `clubPath()`, `currentClub()`, `clubRole()` |
+| 2378 | **GUARDADO SEGURO EN FIRESTORE**: `buildDocs`, `syncToFirestore`, `rebuildFromRemote` |
+| 2674 | Helpers |
+| 2744 | Render: chrome (rol + categoría) · 2824 nav |
+| 2843 | Render: entrenamiento |
+| 3151 | Render: partido del día |
+| 3193 | Alineación del partido: `FORMACIONES` (5/7/8/9/11 fútbol, 6 = voleibol), `formatosDe(cat)` |
+| 3699 | Render: cartas |
+| 4119 | Destacados · 4205 insignias y rachas · 4357 el sobre · 4466 carta para compartir |
+| 4631 | Mensajes del profe al grupo |
+| 4983 | Render: perfil de exigencia (selector de deporte en el predeterminado del club) |
+| 5169 | Render: informe trimestral |
+| 5338 | **MAIN RENDER** |
+| 5594 | Panel del Creador: alta y edición de clubes |
+| 5718 | Recordatorios para el profesor |
+| 5921 | Instalar como app (PWA) |
+| 5999 | Política de datos (`PRIV_HTML`, `#/privacidad`) — actualizarla si se piden datos nuevos |
+| 6023 | Acceso staff (`#/staff`) |
+| 6155 | Página de inicio: clubes y jugadores de la fecha |
+| 6610 | Valoración con barra de progreso |
+| 6680 | Trimestre y grupos por posición (`GRUPOS_POS`, `GRUPOS_VOLEY`, `gruposDe`) |
+| 6755 | Fotos de jugadores |
+| 6795 | **Ficha personal** (solo admin): `FICHA_BASE`, `openFicha(p)`, `deleteFicha` |
+| 6931 | Render: plantel y categorías — `setCategorySport` (7038), `renderPlantel` (7073) |
 
-## Estructura de datos en Firestore (multi-club)
+## Deportes
+Cada categoría es de un deporte: `state.categorySports[cat]` (se guarda como `deportes` en
+`datos/general`; sin valor = fútbol). Posiciones, características, formaciones y grupos se
+eligen con `sportOf(cat)`. Para cambiar el deporte de una categoría se usa `setCategorySport`.
 
-Todo cuelga de `clubes/{clubId}/...` (ver `clubPath()` en línea 2139):
+## Datos en Firestore (todo bajo `clubes/{club}/...`)
+- `clubes/{club}` — nombre, colores, estado, cupos. Solo el **Creador**.
+- `datos/general` — categorías, deportes y perfil del club. Lo lee el club; lo edita el admin.
+- `categorias/{cat}` — lo privado de la categoría (admin o profe de esa categoría).
+- `publico/{cat}` — lo que muestran las cartas públicas.
+- `fichas/{jugador}` y `fichas/_campos` — ficha personal: **solo el admin**.
+- `accesos/{codigo}` — el código del jugador es la dirección; nunca se lista.
+- `familias/{token}` — celular del papá; solo lo lee la tarea automática.
+- `mensajes/{id}` (máx. 280 caracteres) · `fotos/{jugador}` (base64, < 400 KB).
+- `staff/{email}` — `role` (`creador` | `admin` | `profesor`), `club`, `categoria`, `modo`.
 
-- `clubes/{club}` — doc del club (nombre, colores, estado, cupos). Solo lo crea/edita el **Creador**.
-- `clubes/{club}/datos/general` — perfil y categorías del club.
-- `clubes/{club}/categorias/{cat}` — todo lo privado de esa categoría (solo admin del club o profe de esa categoría).
-- `clubes/{club}/publico/{cat}` — lo que ven las cartas públicas (sin comentarios privados).
-- `clubes/{club}/accesos/{codigo}` — el código del jugador ES la dirección del documento; nunca se lista, solo se abre si ya se conoce.
-- `clubes/{club}/familias/{token}` — celular del papá amarrado a su jugador; nadie la lee desde la página, solo la tarea automática (`enviar-avisos.js`).
-- `clubes/{club}/mensajes/{id}` — mensajes del profe, máx 280 caracteres, los marca "enviado" la tarea automática.
-- `clubes/{club}/fotos/{jugador}` — foto en base64, límite 400 KB.
-- `staff/{email}` — cuentas de staff: `role` (`creador` | `admin` | `profesor`), `club`, `categoria`, `modo` (método de login).
-
-Roles: **creador** (por encima de todos los clubes) → **admin** de un club → **profesor** de una categoría. La jerarquía está espejada en `firestore.rules`; ver la skill `editar-firestore-rules` antes de tocarla.
-
-## Antes de agregar una fuente externa (script, fuente, API)
-
-`vercel.json` tiene una Content-Security-Policy estricta (`script-src`, `connect-src`,
-`font-src`, etc. con dominios exactos). Si agregas un script o llamada a un dominio
-nuevo y no está en esa lista, el navegador lo bloquea en silencio — no da error visible
-en consola a veces, solo no carga. Revisar/actualizar `vercel.json` es parte del cambio.
+Roles: creador > admin de un club > profesor de una categoría. Visitante: solo lectura.
+Rutas: `#/<club-id>`, `#/staff`, `#/privacidad`.

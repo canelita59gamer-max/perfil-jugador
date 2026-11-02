@@ -1,32 +1,34 @@
 ---
 name: deploy
-description: Qué pasa realmente cuando se hace push a este repo — qué es automático y qué no. Úsalo cuando el usuario pregunte "ya quedó publicado", "cómo subo esto", o antes de decir que un cambio "ya está en producción".
+description: Cómo se publica Perfil de Jugador (Vercel + Firebase + GitHub Actions) y qué es automático y qué no. Úsalo al hacer commit/push, al tocar vercel.json, .vercelignore o firestore.rules, o antes de decir que un cambio "ya está en producción".
 ---
 
 # Deploy de Perfil de Jugador
 
-## Automático (no requiere nada manual)
+## Automático
+- **Vercel** publica `main` en `https://perfil-jugador-wheat.vercel.app` unos minutos después
+  de cada push. `/__/auth/*` se reescribe a `perfil-jugadores.firebaseapp.com` (login con Google).
+- **Vercel sirve todo el repo como archivos públicos**, menos lo que está en `.vercelignore`
+  (`.claude/`, `.github/`, `CLAUDE.md`, `README.md`, `enviar-avisos.js`, `firestore.rules`,
+  `contenido-videos/`). Cualquier archivo interno nuevo (notas, scripts, material) va ahí.
+- **Recordatorios**: `.github/workflows/avisos.yml` corre `enviar-avisos.js` cada 5 min con el
+  secreto `FIREBASE_SERVICE_ACCOUNT` (nunca en el repo).
 
-- **Vercel** redeploya solo con cada push a `main` (sitio independiente del de
-  arena-sports). Unos minutos después del push ya está en producción.
-- **`enviar-avisos.js`** corre solo cada 30 min vía GitHub Actions
-  (`.github/workflows/avisos.yml`) — manda recordatorios de entreno/partido por
-  push notification (FCM), usando el service account de Firebase guardado como
-  secret del repo (`FIREBASE_SERVICE_ACCOUNT`). No se toca a mano salvo que se
-  cambie la lógica de avisos.
+## Manual — avisar siempre
+- **`firestore.rules` no se publica con el push.** Hay que publicarlo en Firebase Console →
+  Firestore → Reglas → Publicar (ver `editar-firestore-rules`). Si el navegador integrado ya
+  tiene la sesión de Firebase abierta, se puede hacer desde ahí con permiso del usuario.
+- Un dominio externo nuevo (script, fuente, API) debe estar en la CSP de `vercel.json`; si no,
+  el navegador lo bloquea en silencio.
 
-## Manual — SIEMPRE avisar al usuario cuando aplique
-
-- **`firestore.rules`** no se despliega con el push. Hay que pegarlo completo en
-  Firebase Console → Firestore Database → Reglas → Publicar. Ver skill
-  `editar-firestore-rules`.
-- Un script o dominio externo nuevo puede quedar bloqueado por la
-  Content-Security-Policy de `vercel.json` aunque el deploy "funcione" sin error
-  — ver skill `mapa-del-codigo`, sección CSP.
+## Commits
+- Solo commitear/pushear cuando el usuario lo pida. Mensajes cortos en español.
+- Antes del push: `git fetch`. A veces hay commits hechos desde otro chat o desde VS Code /
+  GitHub Desktop; traerlos sin pisar cambios locales del usuario.
+- Archivos grandes (videos, .MOV) no van al repo.
 
 ## Checklist antes de decir "ya quedó"
-
-1. ¿Tocó solo `index.html` / `enviar-avisos.js` / `sw.js` / assets? → con el push
-   a `main` ya está, nada más que hacer.
-2. ¿Tocó `firestore.rules`? → falta el paso manual en Firebase Console.
-3. ¿Agregó un dominio/script nuevo? → revisar que esté en el CSP de `vercel.json`.
+1. ¿Se hizo push a `main`? Verificar en la página real (por ejemplo con `curl`) que el cambio llegó.
+2. ¿Cambió `index.html`? → `VERSION` de `sw.js` subida, para que los celulares actualicen.
+3. ¿Cambió `firestore.rules`? → falta publicarlo en Firebase.
+4. ¿Dominio nuevo? → CSP de `vercel.json`.
