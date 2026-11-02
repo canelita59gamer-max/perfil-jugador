@@ -353,6 +353,17 @@
     padding:9px 14px;border-radius:var(--radius-s);font-weight:600;font-size:13px;cursor:pointer;
   }
   .staff-google-btn:hover{box-shadow:0 1px 3px rgba(0,0,0,.35);}
+  /* secciones del club: Fútbol | Voleibol */
+  .dep-switch{display:flex;gap:4px;padding:4px;margin-bottom:12px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid var(--border);}
+  .dep-switch button{flex:1;min-width:0;border:none;background:transparent;color:var(--ink-muted);font:700 13px var(--font-body);
+    padding:9px 10px;border-radius:9px;cursor:pointer;letter-spacing:.02em;}
+  .dep-switch button.on{background:var(--orange-500);color:#fff;}
+  .chrome-mobile .dep-switch{width:100%;margin:0;box-sizing:border-box;}
+  .cm-deps{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;font-size:12.5px;color:var(--ink-muted);font-weight:600;}
+  .cm-deps > span{width:100%;}
+  .cm-deps label{flex-direction:row !important;align-items:center;gap:6px !important;color:var(--ink);}
+  .cm-deps input{width:16px;height:16px;accent-color:var(--orange-500);}
+  .cm-deps small{width:100%;font-weight:400;color:var(--ink-faint);}
   .cat-select-wrap{margin-bottom:16px;}
   .cat-select-wrap select.cat-select{width:100%;}
   .cat-locked{
@@ -2076,6 +2087,38 @@ var VOLEY_ATTRS = [
 var DEPORTES = {futbol:'Fútbol', voleibol:'Voleibol'};
 function sportOf(cat){ var d = state && state.categorySports && state.categorySports[cat]; return DEPORTES[d] ? d : 'futbol'; }
 function baseAttrs(sport){ return sport==='voleibol' ? VOLEY_ATTRS : BASE_ATTRS; }
+// Secciones del club: el Creador decide qué deportes tiene cada club (clubes/{club}.deportes).
+// Cada deporte es un panel aparte: sus propias categorías y, por tanto, sus propios jugadores.
+var deporteActivo = null; // la sección que se está mirando; se recuerda por club en este navegador
+function deportesDelClub(){
+  var c = currentClub(), cats = (state && state.categories) || [];
+  var lista = (c && Array.isArray(c.deportes) && c.deportes.length) ? c.deportes : ['futbol'];
+  return Object.keys(DEPORTES).filter(function(d){ // si quedan categorías de un deporte quitado, no se esconden
+    return lista.indexOf(d)!==-1 || cats.some(function(cat){ return sportOf(cat)===d; });
+  });
+}
+function catsDeporte(d){ d = d || deporteActivo || 'futbol'; return ((state && state.categories) || []).filter(function(c){ return sportOf(c)===d; }); }
+function variosDeportes(){ return deportesDelClub().length > 1; }
+// En la sección de voleibol las categorías nuevas se llaman "Sub-13 Voleibol", para no chocar con las de fútbol
+function nombreCatDeporte(n){ return n && deporteActivo==='voleibol' && !/vole/i.test(n) ? n + ' Voleibol' : n; }
+function elegirDeporte(d){
+  deporteActivo = d;
+  try{ localStorage.setItem('arena_dep_' + sessionEnteredClub, d); }catch(e){}
+  ajustarDeporte();
+}
+function ajustarDeporte(){
+  var ds = deportesDelClub();
+  if(state.role==='profesor' && state.profesorCategoria) deporteActivo = sportOf(state.profesorCategoria);
+  if(!deporteActivo || ds.indexOf(deporteActivo)===-1){
+    var g = ''; try{ g = localStorage.getItem('arena_dep_' + sessionEnteredClub) || ''; }catch(e){}
+    var mc = miCategoria();
+    deporteActivo = ds.indexOf(g)!==-1 ? g : (mc && state.categories.indexOf(mc)!==-1 ? sportOf(mc) : ds[0]);
+  }
+  var cs = catsDeporte();
+  if(!cs.length) return;
+  if(state.role==='visitante'){ if(cs.indexOf(visitorCategoria)===-1){ visitorCategoria = cs[0]; attachPhotos(); } }
+  else if(state.role!=='profesor' && cs.indexOf(state.selectedCategoria)===-1) state.selectedCategoria = cs[0];
+}
 // Características: las de base + las que agregue el club (administrador) o cada categoría (su profesor).
 // Cada uno también les puede cambiar el nombre. 'club' = solo lo del club (predeterminado).
 function cleanLabel(s){ return String(s||'').replace(/[<>&"]/g,'').replace(/\s+/g,' ').trim().slice(0,40); }
@@ -2792,6 +2835,23 @@ function renderChrome(){
     target.appendChild(box);
   });
 
+  // --- secciones del club (Fútbol / Voleibol): solo si el club tiene más de un deporte ---
+  if(variosDeportes() && state.role!=='profesor'){
+    [desktop, mobile].forEach(function(target){
+      var sw = document.createElement('div');
+      sw.className = 'dep-switch';
+      deportesDelClub().forEach(function(d){
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = d===deporteActivo ? 'on' : '';
+        b.textContent = DEPORTES[d];
+        b.onclick = function(){ if(d===deporteActivo) return; elegirDeporte(d); persist(); render(); };
+        sw.appendChild(b);
+      });
+      target.appendChild(sw);
+    });
+  }
+
   // --- selector de categoría ---
   if(state.role==='profesor'){
     var locked = document.createElement('div');
@@ -2803,7 +2863,9 @@ function renderChrome(){
       var wrap = idx===0 ? document.createElement('div') : null;
       var sel = document.createElement('select');
       sel.className = 'cat-select';
-      CATEGORIES.forEach(function(cat){
+      var opciones = catsDeporte();
+      if(!opciones.length){ var o0 = document.createElement('option'); o0.textContent = 'Sin categorías'; sel.appendChild(o0); sel.disabled = true; }
+      opciones.forEach(function(cat){
         var o = document.createElement('option');
         o.value = cat; o.textContent = cat;
         if(activeCategoria()===cat) o.selected = true;
@@ -2818,7 +2880,7 @@ function renderChrome(){
     });
   }
 
-  document.getElementById('brandTag').textContent = activeCategoria() + ' · ' + ROLE_LABELS[state.role];
+  document.getElementById('brandTag').textContent = (variosDeportes() ? DEPORTES[deporteActivo] + ' · ' : '') + (catsDeporte().length ? activeCategoria() + ' · ' : '') + ROLE_LABELS[state.role];
 }
 
 /* ============ RENDER: NAV ============ */
@@ -3737,8 +3799,8 @@ function renderClubHome(){
   var el = document.createElement('div');
   el.className = 'ch';
   var club = currentClub();
-  var todos = (state.players||[]).slice();
-  var cats = (state.categories||[]).filter(function(c){ return todos.some(function(p){ return p.categoria===c; }); });
+  var todos = (state.players||[]).filter(function(p){ return sportOf(p.categoria)===deporteActivo; });
+  var cats = catsDeporte().filter(function(c){ return todos.some(function(p){ return p.categoria===c; }); });
   var staff = !!clubRole(); // solo el cuerpo técnico califica al grupo
   var nombreClub = club ? club.nombre : 'El club';
   var CORTO = {ata:'ATA', med:'CEN', def:'DEF', por:'POR', vat:'ATQ', vre:'RED', 'var':'ARM', vli:'LIB'};
@@ -4998,8 +5060,8 @@ function renderPerfil(){
   var editable = isAdmin ? scope==='club' : true;
   function overrides(){ return scope==='club' ? {} : ((state.categoryProfiles||{})[scope] || {}); }
   // el predeterminado del club tiene un juego de posiciones por deporte; cada categoría usa el suyo
-  var hayVoley = state.categories.some(function(c){ return sportOf(c)==='voleibol'; });
-  var dep = scope==='club' ? (hayVoley && perfilUi.dep==='voleibol' ? 'voleibol' : 'futbol') : sportOf(scope);
+  if(isAdmin && scope!=='club' && sportOf(scope)!==deporteActivo) scope = perfilUi.scope = 'club';
+  var dep = scope==='club' ? deporteActivo : sportOf(scope);
   var POS_LIST = positionsFor(dep);
   if(!POS_LIST.some(function(x){ return x.code===state.activePos; })) state.activePos = POS_LIST[0].code;
   el.innerHTML =
@@ -5012,12 +5074,10 @@ function renderPerfil(){
         : 'Este es el perfil de ' + escHtml(scope) + '. Arranca igual al del club y lo puedes ajustar posición por posición: tus cambios solo afectan a tu categoría.') + '</p>' +
     '</div>' +
     (isAdmin ? '<div><select class="cat-select" id="perfilScope"><option value="club"' + (scope==='club'?' selected':'') + '>Predeterminado del club</option>' +
-      state.categories.map(function(c){
+      catsDeporte().map(function(c){
         var n = Object.keys((state.categoryProfiles||{})[c] || {}).length;
         return '<option value="' + escHtml(c) + '"' + (c===scope?' selected':'') + '>' + escHtml(c) + (n ? ' · ' + n + (n===1?' posición personalizada':' posiciones personalizadas') : ' · igual al club') + '</option>';
-      }).join('') + '</select>' +
-      (scope==='club' && hayVoley ? ' <select class="cat-select" id="perfilDep">' + Object.keys(DEPORTES).map(function(k){ return '<option value="' + k + '"' + (k===dep?' selected':'') + '>' + DEPORTES[k] + '</option>'; }).join('') + '</select>' : '') +
-      '</div>' : '') +
+      }).join('') + '</select></div>' : '') +
     '</div>' +
     '<div class="perfil-layout">' +
       '<div class="pos-list" id="posList"></div>' +
@@ -5025,8 +5085,6 @@ function renderPerfil(){
     '</div>';
   var scopeSel = el.querySelector('#perfilScope');
   if(scopeSel) scopeSel.onchange = function(){ perfilUi.scope = scopeSel.value; render(); };
-  var depSel = el.querySelector('#perfilDep');
-  if(depSel) depSel.onchange = function(){ perfilUi.dep = depSel.value; render(); };
 
   var posList = el.querySelector('#posList');
   POS_LIST.forEach(function(pos){
@@ -5345,6 +5403,7 @@ function goToLanding(){
 }
 function enterClub(clubId){
   sessionEnteredClub = clubId;
+  deporteActivo = null;
   // todos entran por la portada del club
   currentView = 'club';
   applyClubTheme(currentClub());
@@ -5640,6 +5699,10 @@ function openClubModal(club){
       '<div class="cm-preview"><img id="cmImg" alt="" src="' + (escudo || clubLogo(club)) + '" />' +
         '<label>Color de detalles<input type="color" id="cmAcento" value="' + col.acento + '" /></label>' +
         '<label>Color de fondo<input type="color" id="cmBase" value="' + col.base + '" /></label></div>' +
+      '<div class="cm-deps"><span>Deportes del club</span>' + Object.keys(DEPORTES).map(function(d){
+        var on = club && Array.isArray(club.deportes) && club.deportes.length ? club.deportes.indexOf(d)!==-1 : d==='futbol';
+        return '<label><input type="checkbox" data-dep="' + d + '"' + (on?' checked':'') + ' /> ' + DEPORTES[d] + '</label>'; }).join('') +
+        '<small>Con más de uno, el club se divide en secciones: cada deporte con sus propias categorías y jugadores.</small></div>' +
       '<label>Cupos de jugadores<input type="number" min="0" id="cmCupos" value="' + (club ? (club.cupos||0) : 60) + '" /></label>' +
       '<label>Estado<select id="cmEstado">' + ['activo','prueba','suspendido'].map(function(e){ return '<option value="' + e + '"' + ((club ? club.estado||'activo' : 'prueba')===e?' selected':'') + '>' + {activo:'Activo', prueba:'En prueba', suspendido:'Suspendido (nadie lo ve ni lo edita)'}[e] + '</option>'; }).join('') + '</select></label>' +
       (isNew ?
@@ -5678,8 +5741,10 @@ function openClubModal(club){
       colores: {acento: body.querySelector('#cmAcento').value, base: body.querySelector('#cmBase').value},
       cupos: Math.max(0, parseInt(body.querySelector('#cmCupos').value, 10) || 0),
       estado: body.querySelector('#cmEstado').value,
+      deportes: [].slice.call(body.querySelectorAll('[data-dep]')).filter(function(x){ return x.checked; }).map(function(x){ return x.getAttribute('data-dep'); }),
       actualizado: Date.now()
     };
+    if(!data.deportes.length) return fail('Elige al menos un deporte.');
     if(escudo) data.escudo = escudo;
     if(isNew) data.creado = Date.now();
     var adminEmail = isNew ? body.querySelector('#cmAdmin').value.trim().toLowerCase() : '';
@@ -6577,6 +6642,7 @@ function render(){
   document.getElementById('landingRoot').style.display = 'none';
   document.getElementById('appRoot').style.display = '';
   syncRoleFromUser();
+  ajustarDeporte();
 
   var vv = visibleViews();
   if(!vv.some(function(v){return v.id===currentView;})) currentView = vv[0].id;
@@ -6589,7 +6655,8 @@ function render(){
   main.appendChild(inner);
   var view;
   f2Memo = {};
-  if(currentView==='club') view = renderClubHome();
+  if(!catsDeporte().length && ['club','plantel','perfil'].indexOf(currentView)===-1) view = renderSinCategorias();
+  else if(currentView==='club') view = renderClubHome();
   else if(currentView==='entrenamiento') view = renderEntrenamiento();
   else if(currentView==='partido') view = renderPartido();
   else if(currentView==='mio') view = renderMiJugador();
@@ -6607,6 +6674,18 @@ function render(){
   if(backSidebar) backSidebar.onclick = goToLanding;
 }
 
+// Un deporte recién agregado al club todavía no tiene categorías
+function renderSinCategorias(){
+  var el = document.createElement('div');
+  var dep = DEPORTES[deporteActivo] || 'este deporte';
+  el.innerHTML = '<div class="view-head"><div><h1>' + dep + '</h1><p>Todavía no hay categorías de ' + dep.toLowerCase() + ' en este club.' +
+    (state.role==='admin' ? ' Créalas en <b>Plantel</b> y agrega a sus jugadores: son distintos a los de las otras secciones.' : ' Cuando el club las cree, aparecen aquí.') + '</p></div></div>' +
+    (state.role==='admin' ? '<button class="pl-btn" id="scIr">Ir a Plantel</button>' : '');
+  var b = el.querySelector('#scIr');
+  if(b) b.onclick = function(){ currentView = 'plantel'; render(); };
+  return el;
+}
+
 /* ============ VALORACIÓN CON BARRA DE PROGRESO ============ */
 // Todos arrancan en 50 y el máximo es 99. Cada sesión da progreso (asistir ya suma algo, jugar bien suma más);
 // llenar la barra sube 1 punto y cada tramo de 10 cuesta más. La exigencia depende de la categoría.
@@ -6621,7 +6700,7 @@ var LEVELS = {
   maxima:      {label:'Máxima',      mult:1.8}
 };
 function defaultLevel(cat){
-  var m = String(cat||'').match(/^sub-(\d+)$/i);
+  var m = String(cat||'').match(/^sub-(\d+)\b/i);
   if(!m) return 'medio';
   var n = +m[1];
   return n<=8 ? 'infantil' : (n<=12 ? 'medio' : 'competitivo');
@@ -6699,6 +6778,7 @@ var GRUPOS_VOLEY = [
 ];
 // Las líneas de cada deporte que tenga jugadores en la lista (fútbol si no hay ninguno)
 function gruposDe(list){
+  if(!list.length) return deporteActivo==='voleibol' ? GRUPOS_VOLEY : GRUPOS_POS;
   var v = list.some(function(p){ return posSport(p.pos)==='voleibol'; });
   var f = !v || list.some(function(p){ return posSport(p.pos)==='futbol'; });
   return (f ? GRUPOS_POS : []).concat(v ? GRUPOS_VOLEY : []);
@@ -7058,7 +7138,7 @@ function deleteCategory(name){
   if(state.profesorCategoria===name) state.profesorCategoria = state.categories[0];
 }
 function sortCategories(list){
-  function num(c){ var m = String(c).match(/^sub-(\d+)$/i); return m ? +m[1] : 999; }
+  function num(c){ var m = String(c).match(/^sub-(\d+)\b/i); return m ? +m[1] : 999; }
   return list.slice().sort(function(a,b){ return num(a)-num(b) || a.localeCompare(b); });
 }
 function commitPlantel(){ state.categories = sortCategories(state.categories); syncCategories(state.categories); persist(); render(); }
@@ -7075,12 +7155,12 @@ function renderPlantel(){
   var isAdmin = state.role==='admin';
   // el profesor solo ve y edita su propia categoría; el administrador ve todas
   if(!isAdmin) plantelUi.cat = state.profesorCategoria;
-  else if(!plantelUi.cat || state.categories.indexOf(plantelUi.cat)===-1) plantelUi.cat = state.categories[0] || null;
-  var myCats = isAdmin ? state.categories : [state.profesorCategoria];
+  else if(!plantelUi.cat || catsDeporte().indexOf(plantelUi.cat)===-1) plantelUi.cat = catsDeporte()[0] || null;
+  var myCats = isAdmin ? catsDeporte() : [state.profesorCategoria];
   var testCount = isAdmin ? state.players.filter(function(p){ return /^Jugador \d+$/.test(p.name); }).length : 0;
 
   el.innerHTML =
-    '<div class="view-head"><div><h1>' + (isAdmin ? 'Plantel y categorías' : 'Plantel · ' + escHtml(plantelUi.cat)) + '</h1>' +
+    '<div class="view-head"><div><h1>' + (isAdmin ? 'Plantel y categorías' + (variosDeportes() ? ' · ' + DEPORTES[deporteActivo] : '') : 'Plantel · ' + escHtml(plantelUi.cat)) + '</h1>' +
       '<p>' + (isAdmin ? 'Crea las categorías del club, importa la lista de cada profesor y corrige nombres o posiciones.' + (currentClub() && currentClub().cupos ? ' <b>Cupos: ' + state.players.length + ' de ' + currentClub().cupos + ' usados.</b>' : '') : 'Importa o agrega a tus jugadores, corrige nombres y posiciones, sube sus fotos y ajusta la exigencia de tu categoría.') + '</p></div></div>' +
 
     '<section class="pl-card"><h3>Importar jugadores</h3>' +
@@ -7098,7 +7178,7 @@ function renderPlantel(){
     '<section class="pl-card"><h3>' + (isAdmin ? 'Categorías' : 'Exigencia de mi categoría') + '</h3>' +
       '<div id="plCats"></div>' +
       '<p class="pl-help" style="margin-top:10px;">Exigencia de la barra de progreso: <b>Infantil</b> sube más fácil, <b>Medio</b> es el punto intermedio, <b>Competitivo</b> pide más y <b>Máxima</b> es para grupos de alto nivel. Por defecto se asigna por edad (hasta Sub-8 Infantil, Sub-9 a Sub-12 Medio, Sub-13 en adelante Competitivo), pero ' + (isAdmin ? 'el administrador o el profesor de cada categoría la pueden cambiar' : 'la puedes cambiar cuando quieras') + '; la valoración de todos se recalcula al instante. Al lado, cada categoría elige si suben más los entrenamientos, los partidos o los dos por igual. Ninguna sesión sola puede mover demasiado la valoración.</p>' +
-      (isAdmin ? '<div class="pl-inline"><input id="plNewCat" placeholder="Nueva categoría, ej. Sub-11" /><select id="plNewDep" title="Deporte">' + Object.keys(DEPORTES).map(function(k){ return '<option value="' + k + '">' + DEPORTES[k] + '</option>'; }).join('') + '</select><button class="pl-btn" id="plAddCat">Agregar categoría</button></div>' : '') +
+      (isAdmin ? '<div class="pl-inline"><input id="plNewCat" placeholder="Nueva categoría, ej. Sub-11" /><button class="pl-btn" id="plAddCat">Agregar categoría</button></div>' : '') +
       (testCount ? '<div class="pl-inline"><button class="pl-btn danger" id="plDelTest">Eliminar los ' + testCount + ' jugadores de prueba</button><span class="pl-count">Los “Jugador 01, 02…” que venían de ejemplo.</span></div>' : '') +
     '</section>' +
 
@@ -7121,21 +7201,12 @@ function renderPlantel(){
     var row = document.createElement('div');
     row.className = 'pl-cat-row';
     row.innerHTML = '<span class="nm">' + escHtml(cat) + '</span><span class="ct">' + n + ' jugador' + (n===1?'':'es') + '</span>' +
-      (isAdmin ? '<select data-a="dep" title="Deporte de la categoría">' + Object.keys(DEPORTES).map(function(k){ return '<option value="' + k + '"' + (sportOf(cat)===k?' selected':'') + '>' + DEPORTES[k] + '</option>'; }).join('') + '</select>'
-        : '<span class="ct">' + DEPORTES[sportOf(cat)] + '</span>') +
       '<select data-a="lvl" title="Exigencia de la barra de progreso">' + Object.keys(LEVELS).map(function(k){ return '<option value="' + k + '"' + (categoryLevel(cat)===k?' selected':'') + '>' + LEVELS[k].label + (k===defaultLevel(cat)?' (por edad)':'') + '</option>'; }).join('') + '</select>' +
       '<select data-a="wgt" title="Qué hace subir más la valoración">' + Object.keys(WEIGHT_MODES).map(function(k){ return '<option value="' + k + '"' + (weightMode(cat)===k?' selected':'') + '>' + WEIGHT_MODES[k].label + '</option>'; }).join('') + '</select>' +
       (isAdmin ? '<button class="pl-btn ghost small" data-a="ren">Renombrar</button><button class="pl-btn danger small" data-a="del">Eliminar</button>' : '');
     row.querySelector('[data-a="wgt"]').onchange = function(e){
       state.categoryWeights = state.categoryWeights || {};
       state.categoryWeights[cat] = e.target.value;
-      commitPlantel();
-    };
-    var depSel = row.querySelector('[data-a="dep"]');
-    if(depSel) depSel.onchange = function(e){
-      var nuevo = e.target.value;
-      if(n && !window.confirm('¿Pasar ' + cat + ' a ' + DEPORTES[nuevo] + '? Las posiciones de sus ' + n + ' jugadores cambian a las de ' + DEPORTES[nuevo] + ' y tendrás que revisarlas. Su historial se conserva.')){ e.target.value = sportOf(cat); return; }
-      setCategorySport(cat, nuevo);
       commitPlantel();
     };
     row.querySelector('[data-a="lvl"]').onchange = function(e){
@@ -7166,11 +7237,11 @@ function renderPlantel(){
   });
   var addCatBtn = el.querySelector('#plAddCat');
   if(addCatBtn) addCatBtn.onclick = function(){
-    var nv = normalizeCategoryName(el.querySelector('#plNewCat').value);
+    var nv = nombreCatDeporte(normalizeCategoryName(el.querySelector('#plNewCat').value));
     if(!nv) return;
     if(state.categories.indexOf(nv)!==-1){ window.alert('Esa categoría ya existe.'); return; }
     state.categories.push(nv);
-    setCategorySport(nv, el.querySelector('#plNewDep').value);
+    setCategorySport(nv, deporteActivo);
     plantelUi.cat = nv;
     commitPlantel();
   };
@@ -7186,8 +7257,9 @@ function renderPlantel(){
   function showPreview(parsed){
     plantelUi.msg = null;
     if(!isAdmin) parsed.rows.forEach(function(r){ r.categoria = null; }); // el profesor siempre importa a su categoría
-    var detected = isAdmin ? parsed.categoria : null;
-    var target = detected || plantelUi.cat || state.categories[0] || 'Sub-11';
+    if(isAdmin) parsed.rows.forEach(function(r){ r.categoria = nombreCatDeporte(r.categoria); });
+    var detected = isAdmin ? nombreCatDeporte(parsed.categoria) : null;
+    var target = detected || plantelUi.cat || catsDeporte()[0] || nombreCatDeporte('Sub-11');
     var rows = parsed.rows.map(function(r){
       var cat = r.categoria || target;
       var dup = state.players.some(function(p){ return p.categoria===cat && nameKey(p.name)===nameKey(r.name); });
@@ -7201,7 +7273,7 @@ function renderPlantel(){
     var pv = plantelUi.preview;
     if(!pv){ previewBox.innerHTML = ''; return; }
     if(!pv.rows.length){ previewBox.innerHTML = '<div class="pl-msg err">No encontré jugadores en ese texto o archivo.</div>'; return; }
-    var catChoices = isAdmin ? state.categories.slice() : [plantelUi.cat];
+    var catChoices = isAdmin ? catsDeporte() : [plantelUi.cat];
     if(catChoices.indexOf(pv.target)===-1) catChoices.push(pv.target);
     var html =
       (pv.perRowCat ? '<div class="pl-summary">El archivo trae la categoría de cada jugador; las que no existan se crean automáticamente.</div>' :
@@ -7259,7 +7331,7 @@ function renderPlantel(){
         if(!r.include || !r.pos || !nm) return;
         if(added >= libres){ skipped++; return; } // sin cupos disponibles
         var cat = r.categoria || pv.target;
-        if(state.categories.indexOf(cat)===-1) state.categories.push(cat);
+        if(state.categories.indexOf(cat)===-1){ state.categories.push(cat); setCategorySport(cat, deporteActivo); }
         var np = makePlayer(nm, r.pos, cat);
         np.posExtra = (r.posExtra||[]).filter(function(c){ return c!==r.pos; });
         state.players.push(np);
