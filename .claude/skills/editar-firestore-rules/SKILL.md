@@ -57,3 +57,8 @@ hacer desde ahí:
 2. Aplicar solo el cambio en el editor (CodeMirror: `view.dispatch`), comprobar que el texto
    quedó igual a `firestore.rules`, tocar **Publicar** y recargar para confirmar.
 Si no hay sesión, pasarle el archivo al usuario (por ejemplo copiado al portapapeles).
+
+## Lectura de datos del club (desde noviembre de 2026)
+Ninguna colección del club se lee sin permiso: usar `puedeVer(club)` (cuerpo técnico del club, familia con
+pase válido o Creador). No volver a poner `allow read: if clubActivo(club)`. Toda regla nueva lleva su
+comprobación en `tests/reglas.test.js`.

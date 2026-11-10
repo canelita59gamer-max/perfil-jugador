@@ -32,3 +32,8 @@ description: Cómo se publica Perfil de Jugador (Vercel + Firebase + GitHub Acti
 2. ¿Cambió `index.html`? → `VERSION` de `sw.js` subida, para que los celulares actualicen.
 3. ¿Cambió `firestore.rules`? → falta publicarlo en Firebase.
 4. ¿Dominio nuevo? → CSP de `vercel.json`.
+
+## Orden cuando cambian reglas y código a la vez
+1. Publicar `firestore.rules` en Firebase. 2. Hacer push enseguida. Entre un paso y otro la página vieja
+puede fallarle a las familias, así que van seguidos. Las copias de seguridad corren solas cada madrugada
+(`respaldo.yml`); restaurar se hace desde la pestaña Actions → "Copia de seguridad".

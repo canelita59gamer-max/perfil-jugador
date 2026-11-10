@@ -79,3 +79,15 @@ eligen con `sportOf(cat)`. Para cambiar el deporte de una categoría se usa `set
 
 Roles: creador > admin de un club > profesor de una categoría. Visitante: solo lectura.
 Rutas: `#/<club-id>`, `#/staff`, `#/privacidad`.
+
+## Cambios de noviembre de 2026 (leer antes de tocar datos)
+- **Un documento por jugador.** Los jugadores ya NO van dentro de `categorias/{cat}`. Viven en
+  `jugadores/{id}` (privado: comentarios, código) y `cartas/{id}` (lo que ve la familia). `categorias/{cat}`
+  y `publico/{cat}` solo guardan lo de la categoría y llevan `v:3`. Si un documento de categoría todavía
+  trae `players`, es el formato viejo: la app lo migra sola (`migrarV3`) y deja copia en `respaldos/`.
+- **Borrados explícitos.** Un jugador solo se borra de la base si pasó por `marcarBorrado(p)`. Nunca
+  borrar por diferencia entre el estado y la base.
+- **Nada del club es público.** `attachClub()` primero confirma el acceso (`prepararAcceso`) y después
+  escucha. La familia entra con sesión anónima y registra `pases/{uid}` con su código.
+- **Temporadas:** `cerrarTemporada()` guarda un resumen en `p.temporadas`; no borra historial.
+- **Emulador:** `http://localhost:5173/index.html?emulador` habla con el Firebase local, no con el real.

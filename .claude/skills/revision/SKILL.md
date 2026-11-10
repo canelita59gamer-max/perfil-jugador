@@ -21,3 +21,11 @@ description: Checklist para verificar que Perfil de Jugador sigue funcionando tr
 9. Informar qué se verificó y qué no (Firebase y push no se pueden probar sin la sesión real).
 
 No eliminar CSS ni funciones por heurística: muchas clases (`t-oro`, `mc-*`, `f2*`) se arman dinámicamente.
+
+## Pruebas automáticas (están en `tests/` y corren solas en GitHub con cada subida)
+- `node tests/sintaxis.js` y `node tests/logica.test.js` — sin instalar nada.
+- Reglas: con Java instalado, `npx firebase-tools emulators:exec --only firestore,auth --project perfil-jugadores "node tests/reglas.test.js"`.
+- Probar en pantalla sin tocar datos reales: encender el emulador, `node tests/sembrar.js`, abrir
+  `http://localhost:5173/index.html?emulador#/club-prueba` y revisar con `node tests/ver.js`.
+- Si se agrega una función de lógica o una regla, agregar su prueba en el mismo cambio.
+- El navegador guarda la versión anterior (service worker): al probar en local, borrar caché o recargar dos veces.
