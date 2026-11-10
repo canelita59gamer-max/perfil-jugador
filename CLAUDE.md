@@ -21,12 +21,6 @@ App de hojas de vida / cards de jugadores y entrenamientos para clubes de fútbo
 - Si un cambio es grande o toca un archivo crítico, avisar antes de tocarlo y no modificar nada fuera del alcance pedido.
 - Working flow: Claude trabaja directo sobre el repo clonado aquí, hace commit y push; Juanpa sigue viendo/depurando desde su VS Code local y GitHub Desktop (solo necesita hacer "Fetch/Pull" para traer los cambios).
 
-## Producto — decisiones y dirección
-- El panel de administrador lo maneja Juanpa mismo: staff (admins/profesores con login por correo o Google), categorías y jugadores — sin depender de que Claude lo haga por él.
-- Landing page debe usar branding de Arena Sports (logo, colores) + enlaces a sus redes + opción "Escríbenos".
-- Plan de escalar a varios clubes como servicio, con un rol "creador" por encima del admin de cada club. Modelo de cobro aún sin decidir (pago inicial + suscripción, vs. cobro anual por jugador + mensualidad al club).
-- A futuro (no prioridad ahora): sistema automatizado para contactar prospectos de jugadores en EE. UU./extranjero, adaptando un sistema similar ya hecho (parecido a Radar de Talento).
-- Pendiente: videos guía de la app (cómo entrar, qué se puede hacer) una vez esté más estable.
-
-## Clubes activos
-- Jogo Bonito (Bucaramanga) ya mandando listas reales de jugadores por categoría.
+## Este repositorio es público
+- No escribir aquí ni en ningún archivo versionado decisiones de negocio, precios, clientes, contactos ni planes. Eso va en `CLAUDE.local.md` (ignorado por git, solo en el computador de Juanpa).
+- Se mantiene público a propósito: así las tareas automáticas de GitHub (avisos cada 5 minutos, copias, pruebas) son gratis.
