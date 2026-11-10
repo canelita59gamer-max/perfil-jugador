@@ -1,0 +1,29 @@
+# Pruebas automáticas: corren solas en cada subida y en cada pull request.
+# Si algo falla, GitHub lo marca con una X roja en el commit.
+name: Pruebas
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Sintaxis
+        run: node tests/sintaxis.js
+      - name: Lógica de la app
+        run: node tests/logica.test.js
+      - name: Reglas de seguridad (emulador de Firebase)
+        run: npx -y firebase-tools@13.29.1 emulators:exec --only firestore,auth --project perfil-jugadores "node tests/reglas.test.js"

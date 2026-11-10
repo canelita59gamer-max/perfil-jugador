@@ -6,3 +6,6 @@ README.md
 enviar-avisos.js
 firestore.rules
 contenido-videos/
+tests/
+firebase.json
+respaldo.js

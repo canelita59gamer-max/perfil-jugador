@@ -44,6 +44,15 @@ const en12 = (hhmm) => {
   return (n % 12 || 12) + ':' + m + ' ' + s;
 };
 
+// Jugadores de una categoría. Formato nuevo: un documento por jugador en "jugadores".
+// Si el club aún no pasó a ese formato, siguen dentro del documento de la categoría.
+async function jugadoresDeCategoria(club, categoria, docCategoria) {
+  const snap = await db.collection(`clubes/${club}/jugadores`).where('categoria', '==', categoria).get();
+  if (!snap.empty) return snap.docs.map((d) => d.data());
+  const d = docCategoria || (await db.doc(`clubes/${club}/categorias/${categoria}`).get().catch(() => null));
+  return d && d.exists ? (d.data().players || []) : [];
+}
+
 // ¿el profesor ya guardó algo hoy en su categoría?
 async function registroDeHoy(club, categoria, fecha) {
   try {
@@ -52,7 +61,7 @@ async function registroDeHoy(club, categoria, fecha) {
     const v = d.data() || {};
     const dia = (v.trainingDays || {})[fecha];
     const entreno = !!(dia && (dia.held !== null || Object.keys(dia.attendance || {}).length));
-    const partido = (v.players || []).some((p) =>
+    const partido = (await jugadoresDeCategoria(club, categoria, d)).some((p) =>
       (p.historial || []).some((h) => h.type === 'partido' && h.date === fecha)
     );
     const hayAlineacion = !!(v.lineups || {})[fecha];
@@ -164,8 +173,7 @@ async function avisarFamilias() {
       if (!v.token || !v.jugador || !v.categoria) continue;
       vistos++;
       if (!(v.categoria in jugadoresDe)) {
-        const d = await db.doc(`clubes/${club.id}/categorias/${v.categoria}`).get().catch(() => null);
-        jugadoresDe[v.categoria] = d && d.exists ? (d.data().players || []) : [];
+        jugadoresDe[v.categoria] = await jugadoresDeCategoria(club.id, v.categoria).catch(() => []);
       }
       const p = jugadoresDe[v.categoria].find((x) => x.id === v.jugador);
       if (!p) continue;

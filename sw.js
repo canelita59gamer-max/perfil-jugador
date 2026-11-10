@@ -1,7 +1,7 @@
 /* Arena Sports — service worker
    Guarda la app en el celular para que abra al instante.
    Los datos (Firebase) NUNCA se guardan aquí: siempre van por la red, para que nadie vea cartas viejas. */
-var VERSION = 'arena-v5';
+var VERSION = 'arena-v6';
 var SHELL = [
   './',
   './index.html',

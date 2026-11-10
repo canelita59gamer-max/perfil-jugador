@@ -245,6 +245,9 @@
   .fi-up input[type=text], .fi-up input:not([type]){flex:1;min-width:160px;background:var(--navy-950);border:1px solid var(--border-strong);color:var(--ink);border-radius:var(--radius-s);padding:7px 9px;font-size:13px;font-family:var(--font-body);}
   .fi-up label input{display:none;}
   .fi-up label{cursor:pointer;}
+  .tempo{margin:0 0 12px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-s);font-size:12.5px;color:var(--ink-muted);}
+  .tempo span{display:block;font-weight:700;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:4px;}
+  .tempo b{color:var(--ink);margin-right:6px;}
   @media (max-width:520px){ .fi-grid{grid-template-columns:1fr;} }
   .pl-cat-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;}
   .pl-cat-row .nm{font-weight:600;flex:1;min-width:90px;}
@@ -2434,7 +2437,15 @@ function bootFromLocalOrFresh(){
 //   categorias/{categoría}  todo lo privado de una categoría (comentarios, asistencia, horario, exigencia, perfil propio)
 //                           — solo lo leen y editan el administrador y el profesor de esa categoría
 //   publico/{categoría}     lo que muestran las cartas públicas, sin comentarios privados — lo lee cualquiera
-var remote = {general:null, generalMissing:false, pub:{}, priv:{}, privReady:false, privUnsub:null};
+var remote = {general:null, generalMissing:false, pub:{}, priv:{}, privReady:false, privUnsub:null,
+  jug:{}, cartas:{}, catListo:false, jugListo:false, jugUnsub:null};
+// Jugadores quitados a propósito (plantel, categoría eliminada). SOLO esos se borran de la base:
+// así un error de carga nunca puede borrar jugadores por accidente.
+var jugBorrados = {};
+function marcarBorrado(p){ if(p && p.id) jugBorrados[p.id] = {cat:p.categoria, cod:p.cod || ''}; }
+function jugDe(mapa, cat){
+  return Object.keys(mapa).filter(function(id){ return mapa[id] && mapa[id].categoria===cat; }).sort().map(function(id){ return mapa[id]; });
+}
 var syncedJson = {};      // lo que creemos que ya está guardado, para escribir solo lo que cambió
 var pendingRebuild = false, migrating = false;
 function cleanJson(o){ return JSON.parse(JSON.stringify(o)); }
@@ -2445,7 +2456,7 @@ function publicPlayer(p){
       return {type:h.type, date:h.date, delta:h.delta, rating:h.rating, asistio:h.asistio, pos:h.pos||p.pos, quickValues:h.quickValues||{},
         attrsHit:h.attrsHit||[], goles:h.goles||0, asistencias:h.asistencias||0,
         feedback: h===hl ? (h.feedback||'') : '', comment: h===hl ? (h.comment||'') : ''};
-    }), dadas:p.dadas||{}};
+    }), dadas:p.dadas||{}, temporadas:p.temporadas||[]};
 }
 function buildDocs(s){
   var docs = {};
@@ -2459,21 +2470,29 @@ function buildDocs(s){
     Object.keys(s.lineups||{}).forEach(function(k){ if(k.indexOf(cat+'::')===0) lu[k.slice(cat.length+2)] = s.lineups[k]; });
     var level = (s.categoryLevels||{})[cat] || null;
     var weights = (s.categoryWeights||{})[cat] || null;
-    docs['categorias/'+cat] = cleanJson({nombre:cat, players:players, trainingDays:td, level:level, weights:weights,
+    docs['categorias/'+cat] = cleanJson({nombre:cat, v:3, trainingDays:td, level:level, weights:weights,
       lineups:lu, formaciones:(s.formacionesCat||{})[cat] || {}, formato:(s.formatoCat||{})[cat] || null,
       profile:(s.categoryProfiles||{})[cat] || {}, schedule:(s.trainingSchedules||{})[cat] || null,
       attrs:(s.categoryAttrs||{})[cat] || {extra:[], labels:{}}, evals:(s.evalsCat||{})[cat] || [],
       insignias:(s.catBadges||{})[cat] || [], destacados:(s.destacadosCat||{})[cat] || {}});
-    docs['publico/'+cat] = cleanJson({nombre:cat, level:level, weights:weights, attrs:(s.categoryAttrs||{})[cat] || {extra:[], labels:{}}, players:players.map(publicPlayer),
+    docs['publico/'+cat] = cleanJson({nombre:cat, level:level, weights:weights, attrs:(s.categoryAttrs||{})[cat] || {extra:[], labels:{}}, v:3,
       insignias:(s.catBadges||{})[cat] || [], destacados:(s.destacadosCat||{})[cat] || {}, formato:(s.formatoCat||{})[cat] || null});
+  });
+  // Cada jugador en su propio documento: "jugadores" (privado, con comentarios y código) y "cartas" (lo que ve la familia).
+  // Antes iban todos dentro del documento de la categoría, que tiene un tope de 1 MB y se reescribía entero.
+  s.players.forEach(function(p){
+    if(!p.id || docs['jugadores/'+p.id]) return;
+    docs['jugadores/'+p.id] = cleanJson(p);
+    docs['cartas/'+p.id] = cleanJson(publicPlayer(p));
   });
   return docs;
 }
-function canWriteDoc(path){
+function canWriteDoc(path, cat){ // cat: la categoría del jugador, para "jugadores/..." y "cartas/..."
   var role = clubRole();
   if(!role) return false;
   if(role==='admin') return path==='datos/general' || remote.privReady;
   if(role==='profesor' && currentUser.categoria){
+    if(/^(jugadores|cartas)\//.test(path)) return remote.privReady && cat===currentUser.categoria;
     return remote.privReady && (path==='categorias/'+currentUser.categoria || path==='publico/'+currentUser.categoria);
   }
   return false;
@@ -2486,28 +2505,61 @@ function ponerCodigos(){
     if(!p.cod && canWriteDoc('categorias/' + p.categoria)) p.cod = codigoJugador();
   });
 }
-function syncToFirestore(){
+// primero: escrituras que deben ir en el mismo paquete (los respaldos de una migración)
+function syncToFirestore(primero){
   if(!window.db || !state || !sessionEnteredClub) return;
   ponerCodigos();
   var docs = buildDocs(state);
-  var batch = db.batch(), n = 0;
+  var ops = (primero || []).slice();
   Object.keys(docs).forEach(function(path){
     var js = JSON.stringify(docs[path]);
-    if(syncedJson[path]===js || !canWriteDoc(path)) return;
-    batch.set(db.doc(clubPath(path)), docs[path]); syncedJson[path] = js; n++;
+    if(syncedJson[path]===js || !canWriteDoc(path, docs[path].categoria)) return;
+    ops.push({path:path, data:docs[path]}); syncedJson[path] = js;
   });
   if(clubRole()==='admin' && remote.privReady){
     Object.keys(syncedJson).forEach(function(path){ // categorías borradas o renombradas
-      if(!docs[path] && /^(categorias|publico)\//.test(path)){ batch.delete(db.doc(clubPath(path))); delete syncedJson[path]; n++; }
+      if(!docs[path] && /^(categorias|publico)\//.test(path)){ ops.push({path:path, borrar:true}); delete syncedJson[path]; }
     });
   }
+  Object.keys(jugBorrados).forEach(function(id){ // jugadores quitados a propósito
+    var b = jugBorrados[id];
+    if(state.players.some(function(x){ return x.id===id; })){ delete jugBorrados[id]; return; }
+    if(!canWriteDoc('jugadores/' + id, b.cat)) return;
+    ['jugadores/', 'cartas/'].forEach(function(pre){ ops.push({path:pre + id, borrar:true}); delete syncedJson[pre + id]; });
+    if(b.cod) ops.push({path:'accesos/' + codigoLimpio(b.cod), borrar:true}); // su código deja de servir
+    delete jugBorrados[id];
+  });
   state.players.forEach(function(p){
     if(!p.cod || accesosPuestos[p.cod] || !canWriteDoc('categorias/' + p.categoria)) return;
-    batch.set(db.doc(clubPath('accesos/' + codigoLimpio(p.cod))), {jugador:p.id, categoria:p.categoria, actualizado:Date.now()});
-    accesosPuestos[p.cod] = 1; n++;
+    ops.push({path:'accesos/' + codigoLimpio(p.cod), data:{jugador:p.id, categoria:p.categoria, actualizado:Date.now()}});
+    accesosPuestos[p.cod] = 1;
   });
-  if(n && !navigator.onLine){ senal.pend++; senalPintar(); }
-  if(n) batch.commit().catch(function(err){ console.error('No se pudo guardar', err); showToast('No se pudo guardar el último cambio (sin permiso o sin conexión). Recarga la página.'); });
+  if(!ops.length) return;
+  if(!navigator.onLine){ senal.pend++; senalPintar(); }
+  var fallo = function(err){ console.error('No se pudo guardar', err); showToast('No se pudo guardar el último cambio (sin permiso o sin conexión). Recarga la página.'); };
+  for(var i=0;i<ops.length;i+=400){ // Firebase acepta hasta 500 escrituras por paquete
+    var batch = db.batch();
+    ops.slice(i, i+400).forEach(function(o){
+      if(o.borrar) batch.delete(db.doc(clubPath(o.path))); else batch.set(db.doc(clubPath(o.path)), o.data);
+    });
+    batch.commit().catch(fallo);
+  }
+}
+// Paso al formato nuevo (un documento por jugador). Antes de tocar nada se guarda una copia tal cual
+// estaba la categoría en "respaldos"; la copia y los documentos nuevos van en el mismo paquete.
+var migrandoV3 = false;
+function migrarV3(cats){
+  if(migrandoV3) return;
+  var antes = [];
+  cats.forEach(function(cat){
+    if(!canWriteDoc('categorias/' + cat) || !remote.priv[cat]) return;
+    antes.push({path:'respaldos/migracion-v3-' + cat.replace(/[^A-Za-z0-9\-]+/g, '_') + '-' + Date.now(),
+      data:{cat:cat, creado:Date.now(), motivo:'antes de separar los jugadores en documentos propios', datos:JSON.stringify(remote.priv[cat])}});
+  });
+  if(!antes.length) return;
+  migrandoV3 = true;
+  syncToFirestore(antes);
+  setTimeout(function(){ migrandoV3 = false; }, 15000);
 }
 function showToast(msg){
   var t = document.createElement('div');
@@ -2535,10 +2587,15 @@ function rebuildFromRemote(){
     clubAttrs:cleanJson(g.attrs || {extra:[], labels:{}}), categoryAttrs:{}, evalsCat:{},
     clubBadges:cleanJson(g.insignias || []), rachaMetas:cleanJson(g.racha || []), catBadges:{}, destacadosCat:{}, categorySports:cleanJson(g.deportes || {}),
     activePos:old.activePos, selectedCategoria:old.selectedCategoria, profesorCategoria:old.profesorCategoria, role:old.role, enteredClub:null};
+  var porMigrar = [], visto = {};
   s.categories.forEach(function(cat){
     var priv = remote.priv[cat], src = priv || remote.pub[cat];
     if(!src) return;
-    s.players = s.players.concat(cleanJson(src.players||[]));
+    var jugs = jugDe(priv ? remote.jug : remote.cartas, cat);
+    // Formato anterior (todos los jugadores dentro de la categoría): solo se usa si todavía no hay documentos por jugador
+    if(!jugs.length && Array.isArray(src.players) && src.players.length){ jugs = src.players; if(priv) porMigrar.push(cat); }
+    jugs = jugs.filter(function(j){ if(!j || !j.id || visto[j.id]) return false; visto[j.id] = 1; return true; });
+    s.players = s.players.concat(cleanJson(jugs));
     if(src.level) s.categoryLevels[cat] = src.level;
     if(src.weights) s.categoryWeights[cat] = src.weights;
     if(src.attrs) s.categoryAttrs[cat] = cleanJson(src.attrs);
@@ -2561,10 +2618,16 @@ function rebuildFromRemote(){
   var docs = buildDocs(state);
   syncedJson = {};
   Object.keys(docs).forEach(function(path){
-    var cat = path.split('/')[1];
-    var exists = path==='datos/general' || (path.indexOf('categorias/')===0 ? !!remote.priv[cat] : !!remote.pub[cat]);
+    var k = path.split('/')[1], col = path.split('/')[0];
+    // un documento de categoría que todavía trae "players" está en el formato anterior: hay que reescribirlo
+    var exists = path==='datos/general' ? true
+      : col==='categorias' ? !!remote.priv[k] && !('players' in remote.priv[k])
+      : col==='publico' ? !!remote.pub[k] && !('players' in remote.pub[k])
+      : col==='jugadores' ? !!remote.jug[k]
+      : !!remote.cartas[k];
     if(exists) syncedJson[path] = JSON.stringify(docs[path]);
   });
+  if(remote.privReady && porMigrar.length) setTimeout(function(){ migrarV3(porMigrar); }, 0);
   if(!clubRole() && photoCat !== visitorCategoria) attachPhotos(); // el visitante ve las fotos de la categoría correcta
   safeRender();
 }
@@ -2576,28 +2639,48 @@ function tryMigrate(){
 }
 function detachPrivate(){
   if(remote.privUnsub) remote.privUnsub();
-  remote.privUnsub = null; remote.priv = {}; remote.privReady = false;
+  if(remote.jugUnsub) remote.jugUnsub();
+  remote.privUnsub = null; remote.jugUnsub = null; remote.priv = {}; remote.jug = {};
+  remote.privReady = false; remote.catListo = false; remote.jugListo = false;
   fichaCampos = null;
+}
+// Lo privado está listo cuando llegaron las categorías Y los jugadores
+function privLlego(pendiente){
+  var primera = !remote.privReady && remote.catListo && remote.jugListo;
+  if(primera) remote.privReady = true;
+  if(primera || (remote.privReady && !pendiente)) scheduleRebuild();
 }
 function attachPrivate(){
   detachPrivate();
   var role = clubRole();
   if(!role || !window.db || !sessionEnteredClub) return;
-  var onErr = function(err){ console.error('Sin acceso a los datos privados', err); showToast('Tu cuenta no tiene acceso a estos datos. Pide al administrador que revise tu registro.'); };
+  var onErr = function(err){
+    console.error('Sin acceso a los datos privados', err);
+    if(!(window.auth && auth.currentUser && auth.currentUser.email)) return; // está cerrando sesión: es normal que se corte
+    showToast('Tu cuenta no tiene acceso a estos datos. Pide al administrador que revise tu registro.');
+  };
   if(role==='admin'){
     remote.privUnsub = db.collection(clubPath('categorias')).onSnapshot(function(snap){
       remote.priv = {};
       snap.forEach(function(d){ remote.priv[d.id] = d.data(); });
-      var first = !remote.privReady; remote.privReady = true;
-      if(first || !snap.metadata.hasPendingWrites) scheduleRebuild();
+      remote.catListo = true; privLlego(snap.metadata.hasPendingWrites);
+    }, onErr);
+    remote.jugUnsub = db.collection(clubPath('jugadores')).onSnapshot(function(snap){
+      remote.jug = {};
+      snap.forEach(function(d){ remote.jug[d.id] = d.data(); });
+      remote.jugListo = true; privLlego(snap.metadata.hasPendingWrites);
     }, onErr);
   } else if(role==='profesor' && currentUser.categoria){
     var cat = currentUser.categoria;
     remote.privUnsub = db.collection(clubPath('categorias')).doc(cat).onSnapshot(function(d){
       remote.priv = {};
       if(d.exists) remote.priv[cat] = d.data();
-      var first = !remote.privReady; remote.privReady = true;
-      if(first || !d.metadata.hasPendingWrites) scheduleRebuild();
+      remote.catListo = true; privLlego(d.metadata.hasPendingWrites);
+    }, onErr);
+    remote.jugUnsub = db.collection(clubPath('jugadores')).where('categoria','==',cat).onSnapshot(function(snap){
+      remote.jug = {};
+      snap.forEach(function(d){ remote.jug[d.id] = d.data(); });
+      remote.jugListo = true; privLlego(snap.metadata.hasPendingWrites);
     }, onErr);
   }
 }
@@ -2624,12 +2707,51 @@ function detachClub(){
   clubUnsubs.forEach(function(u){ try{ u(); }catch(e){} });
   clubUnsubs = [];
   detachPrivate(); detachPhotos();
-  remote.general = null; remote.generalMissing = false; remote.pub = {}; remote.msgs = [];
-  syncedJson = {}; photoMap = {}; state = null;
+  remote.general = null; remote.generalMissing = false; remote.pub = {}; remote.cartas = {}; remote.msgs = [];
+  syncedJson = {}; photoMap = {}; state = null; jugBorrados = {};
+}
+// Los datos de un club solo los puede leer su cuerpo técnico o una familia con código (lo exigen las reglas).
+// Por eso, antes de pedir nada, se confirma quién entra. La familia entra con una sesión sin correo y
+// registra su "pase": el código de su jugador. Sin pase válido, la base no entrega nada.
+var attachSeq = 0, authListoOk = null, authListo = new Promise(function(ok){ authListoOk = ok; });
+function prepararAcceso(club){
+  return authListo.then(function(){
+    if(clubRole() || isCreador()) return true;
+    var cod = ''; try{ cod = localStorage.getItem('arena_cod_' + club) || ''; }catch(e){}
+    if(!cod || !clubAbierto(club)) return false;
+    var entra = auth.currentUser ? Promise.resolve() : auth.signInAnonymously();
+    return entra.then(function(){
+      var ref = db.doc('clubes/' + club + '/pases/' + auth.currentUser.uid);
+      return ref.get().then(function(d){
+        if(d.exists && d.data().codigo===cod) return true;
+        return ref.set({codigo:cod, creado:Date.now()}).then(function(){ return true; });
+      });
+    }).catch(function(err){
+      console.error('No se pudo validar el acceso de la familia', err);
+      // código que ya no existe (el jugador salió del club): se vuelve a pedir. Sin señal: se usa lo guardado en el celular.
+      return !(err && err.code==='permission-denied');
+    });
+  });
 }
 function attachClub(){
   detachClub();
   if(!window.db || !sessionEnteredClub) return;
+  var club = sessionEnteredClub, seq = ++attachSeq;
+  prepararAcceso(club).then(function(ok){
+    if(seq!==attachSeq || sessionEnteredClub!==club) return;
+    if(!ok){
+      try{ localStorage.removeItem('arena_club_' + club); }catch(e){} // vuelve a la puerta del club
+      safeRender(); return;
+    }
+    escucharClub();
+  });
+}
+function escucharClub(){
+  clubUnsubs.push(db.collection(clubPath('cartas')).onSnapshot(function(snap){
+    remote.cartas = {};
+    snap.forEach(function(d){ remote.cartas[d.id] = d.data(); });
+    if(!snap.metadata.hasPendingWrites) scheduleRebuild();
+  }, function(err){ console.error('No se pudieron leer las cartas', err); }));
   clubUnsubs.push(db.doc(clubPath('datos/general')).onSnapshot(function(d){
     if(d.exists){ remote.general = d.data(); remote.generalMissing = false; }
     else { remote.general = null; remote.generalMissing = true; }
@@ -4921,7 +5043,9 @@ function renderMiJugador(){
     if(tokFam && window.db) db.doc('clubes/' + c + '/familias/' + tokFam).delete().catch(function(){});
     try{ ['arena_jug_','arena_cat_','arena_club_','arena_cod_','arena_fam_'].forEach(function(k){ localStorage.removeItem(k + c); });
          if(localStorage.getItem('arena_fam_club')===c) localStorage.removeItem('arena_fam_club'); }catch(e){}
+    if(window.db && auth.currentUser) db.doc('clubes/' + c + '/pases/' + auth.currentUser.uid).delete().catch(function(){});
     currentView = 'club';
+    attachClub(); // sin código ya no hay permiso: se cierra el club en este celular
     render();
   };
   return el;
@@ -4991,6 +5115,7 @@ function openPublicModal(p){
     '<button class="modal-close" id="closeModal">✕</button>' +
     '<div class="modal-head"><div class="modal-photo">' + avatarInner(p) + '</div><div><h2>' + escHtml(p.name) + '</h2>' +
     '<div class="sub">' + posName(p.pos) + ' · ' + p.categoria + ' · ' + escHtml(f2Club().nombre || '') + '</div></div></div>' + xpBar(p) + f2MedRow(p) +
+    temporadasHtml(p) +
     '<div class="modal-stats">' +
       '<div><b>' + p.valoracion + '</b>Valoración</div>' +
       '<div><b>' + p.goles + '</b>Goles</div>' +
@@ -5019,6 +5144,7 @@ function openPlayerModal(p){
     '<button class="modal-close" id="closeModal">✕</button>' +
     '<div class="modal-head"><div class="modal-photo">' + avatarInner(p) + '</div><div><h2>' + escHtml(p.name) + '</h2>' +
     '<div class="sub">' + posName(p.pos) + ' · ' + p.categoria + ' · ' + escHtml(f2Club().nombre || '') + '</div></div></div>' + xpBar(p) + f2MedRow(p) +
+    temporadasHtml(p) +
     '<div class="modal-stats">' +
       '<div><b>' + p.valoracion + '</b>Valoración</div>' +
       '<div><b>' + p.goles + '</b>Goles</div>' +
@@ -5050,6 +5176,24 @@ function openPlayerModal(p){
   overlay.classList.add('show');
   body.querySelector('#closeModal').onclick = function(){ overlay.classList.remove('show'); };
   overlay.onclick = function(e){ if(e.target===overlay) overlay.classList.remove('show'); };
+}
+
+// Temporadas cerradas: el resumen de cada año queda guardado en el jugador, para ver su historia
+function temporadasHtml(p){
+  var t = (p.temporadas || []).slice().reverse();
+  if(!t.length) return '';
+  return '<div class="tempo"><span>Temporadas</span>' + t.map(function(x){
+    return '<div><b>' + escHtml(x.nombre) + '</b> valoración ' + x.valoracion + ' · ' + x.sesiones + ' sesiones' +
+      (x.partidos ? ' · ' + x.partidos + ' partidos' : '') + (x.goles ? ' · ' + x.goles + ' goles' : '') + '</div>';
+  }).join('') + '</div>';
+}
+function cerrarTemporada(nombre, lista){
+  lista.forEach(function(p){
+    var h = p.historial || [];
+    var res = {nombre:nombre, fecha:todayStr(), categoria:p.categoria, pos:p.pos, valoracion:p.valoracion, goles:p.goles||0, asistencias:p.asistencias||0,
+      sesiones:h.length, asistio:h.filter(function(x){ return x.asistio; }).length, partidos:h.filter(function(x){ return x.type==='partido'; }).length};
+    p.temporadas = (p.temporadas || []).filter(function(x){ return x.nombre!==nombre; }).concat([res]); // cerrar dos veces la misma no duplica
+  });
 }
 
 /* ============ RENDER: PERFIL DE EXIGENCIA ============ */
@@ -5534,6 +5678,7 @@ function renderClubCerrado(club){
       }catch(e){}
       if(dat.categoria) visitorCategoria = dat.categoria;
       currentView = 'mio';
+      attachClub(); // saca el pase y, con él, carga el club
       render();
     }).catch(function(){
       btn.style.pointerEvents = '';
@@ -5683,8 +5828,9 @@ function renderCreadorPanel(box){
     var usoEl = row.querySelector('[data-uso]');
     var cached = clubUsage[c.id];
     if(cached && Date.now() - cached.t < 60000) usoEl.textContent = cached.n + ' jugadores';
-    else db.collection('clubes/' + c.id + '/publico').get().then(function(snap){
-      var n = 0; snap.forEach(function(d){ n += ((d.data().players) || []).length; });
+    else Promise.all([db.collection('clubes/' + c.id + '/cartas').get(), db.collection('clubes/' + c.id + '/publico').get()]).then(function(r){
+      var n = r[0].size;
+      if(!n) r[1].forEach(function(d){ n += ((d.data().players) || []).length; }); // club que aún no pasó al formato nuevo
       clubUsage[c.id] = {n:n, t:Date.now()};
       usoEl.textContent = n + ' jugadores';
     }).catch(function(){ usoEl.textContent = '?'; });
@@ -6071,7 +6217,7 @@ if('serviceWorker' in navigator && (location.protocol==='https:' || location.hos
 // Privacidad lista pero apagada: cambiar a true cuando se decida publicarla
 var PRIV_ON = false;
 var privMode = false;
-var PRIV_HTML = '<span class="pv-kick">Privacidad</span>  <h1><span class="pv-X">Tratamiento de</span> <em class="pv-X">datos</em></h1>  <p class="pv-upd">Política de Tratamiento de Datos Personales · Ley 1581 de 2012 · Última actualización: noviembre de 2026</p>  <div class="pv-sum">    <div><b>Qué guardamos</b>Nombre, categoría, posición, foto y evaluaciones deportivas de cada jugador, su ficha personal si el club la usa, y el correo del staff.</div>    <div><b>Quién lo ve</b>Lo público: la carta del jugador. Los comentarios del profesor solo los ve el staff de su club, y la ficha personal solo el administrador del club.</div>    <div><b>Sin publicidad</b>No vendemos datos, no hay anuncios ni cookies de rastreo.</div>  </div>  <section><h2><span>1</span>Responsable</h2>    <p><b>Arena Sports</b> (C.C. 52.910.702), con domicilio en Bucaramanga, Santander, Colombia. Contacto para temas de datos: <a href="mailto:arenasports.eventos@gmail.com">arenasports.eventos@gmail.com</a> · WhatsApp 322 246 2392.</p>    <p>Cada club que usa la plataforma es responsable de los datos de sus jugadores y de pedir la autorización de los padres. Arena Sports actúa como <b>encargado</b>: guarda y procesa los datos por cuenta del club.</p>  </section>  <section><h2><span>2</span>Datos que tratamos</h2>    <ul>      <li><b>Jugadores:</b> nombre, categoría, posición, foto, asistencia, goles, asistencias y evaluaciones de entrenamientos y partidos.</li>      <li><b>Ficha personal del jugador (opcional, la llena el club):</b> tipo y número de documento, fecha de nacimiento, EPS, tipo de sangre, alergias o condiciones de salud, dirección y barrio, colegio y nombre, parentesco y teléfono del acudiente, más los campos que el club agregue y las fotos o copias de documentos que adjunte (por ejemplo la tarjeta de identidad, el carné de la EPS o la autorización firmada).</li>      <li><b>Staff (profesores y administradores):</b> correo electrónico y club o categoría asignados.</li>    </ul>    <p>La EPS, el tipo de sangre y las condiciones de salud son <b>datos sensibles</b>: entregarlos es voluntario, solo se registran con autorización expresa del padre, madre o representante y sirven únicamente para atender al jugador en una emergencia o lesión durante la actividad deportiva. No pedimos datos de pago de los jugadores.</p>  </section>  <section><h2><span>3</span>Menores de edad</h2>    <p>La mayoría de jugadores son niños, niñas y adolescentes. Por eso sus datos solo se cargan con la <b>autorización previa de su padre, madre o representante legal</b>, que el club recoge al inscribirlo. Siempre se respeta el interés superior del menor: lo público es solo su carta deportiva, nunca comentarios negativos ni datos de contacto.</p>  </section>  <section><h2><span>4</span>Para qué los usamos</h2>    <ul>      <li>Mostrar la carta deportiva de cada jugador y su progreso.</li>      <li>Que los profesores registren entrenamientos, partidos y evaluaciones.</li>      <li>Generar los informes del trimestre para el club y las familias.</li>      <li>Destacar en la portada a los jugadores que más avanzaron cada semana.</li>      <li>Con la ficha personal: identificar al jugador en inscripciones a torneos, contactar a su acudiente y atenderlo en caso de emergencia.</li>    </ul>  </section>  <section><h2><span>5</span>Tus derechos</h2>    <p>Como titular, o como padre o representante del menor, puedes:</p>    <ul>      <li>Conocer, actualizar y corregir los datos.</li>      <li>Pedir prueba de la autorización que se dio.</li>      <li>Saber cómo se han usado los datos.</li>      <li>Revocar la autorización o pedir que se borren los datos, incluida la foto.</li>      <li>Presentar quejas ante la Superintendencia de Industria y Comercio.</li>    </ul>  </section>  <section><h2><span>6</span>Cómo pedirlo</h2>    <p>Escribe a <a href="mailto:arenasports.eventos@gmail.com">arenasports.eventos@gmail.com</a> o al WhatsApp 322 246 2392 con el nombre del jugador, su club y lo que pides. Las consultas se responden en máximo 10 días hábiles y los reclamos en máximo 15 días hábiles, como dice la ley. También puedes hacerlo a través del club.</p>  </section>  <section><h2><span>7</span>Seguridad</h2>    <ul>      <li>La página funciona siempre con conexión cifrada (HTTPS).</li>      <li>Solo el staff con cuenta autorizada puede editar. Cada profesor accede únicamente a su categoría.</li>      <li>Los comentarios privados del profesor nunca se publican.</li>      <li>La ficha personal solo la puede abrir el administrador del club: no la ven los profesores, las familias ni el público.</li>      <li>Los datos se guardan en Google Firebase, con reglas de acceso que impiden que un club vea los datos de otro.</li>    </ul>  </section>  <section><h2><span>8</span>Cookies y almacenamiento</h2>    <p>No usamos cookies de publicidad, analítica ni rastreo. Solo se guarda en el navegador lo necesario para que el staff no pierda su sesión y para recordar que ya viste este aviso.</p>  </section>  <section><h2><span>9</span>Cuánto tiempo y cambios</h2>    <p>Los datos se conservan solo mientras el jugador esté activo en el club. Cuando sale del club, sus datos y su foto se eliminan; también se pueden borrar antes si el padre, madre o representante lo pide. Si esta política cambia, se publicará aquí con su nueva fecha.</p>  </section>  ';
+var PRIV_HTML = '<span class="pv-kick">Privacidad</span>  <h1><span class="pv-X">Tratamiento de</span> <em class="pv-X">datos</em></h1>  <p class="pv-upd">Política de Tratamiento de Datos Personales · Ley 1581 de 2012 · Última actualización: noviembre de 2026</p>  <div class="pv-sum">    <div><b>Qué guardamos</b>Nombre, categoría, posición, foto y evaluaciones deportivas de cada jugador, su ficha personal si el club la usa, y el correo del staff.</div>    <div><b>Quién lo ve</b>La carta del jugador la ven solo su club y las familias que tienen el código. Los comentarios del profesor solo los ve el staff de su club, y la ficha personal solo el administrador.</div>    <div><b>Sin publicidad</b>No vendemos datos, no hay anuncios ni cookies de rastreo.</div>  </div>  <section><h2><span>1</span>Responsable</h2>    <p><b>Arena Sports</b> (C.C. 52.910.702), con domicilio en Bucaramanga, Santander, Colombia. Contacto para temas de datos: <a href="mailto:arenasports.eventos@gmail.com">arenasports.eventos@gmail.com</a> · WhatsApp 322 246 2392.</p>    <p>Cada club que usa la plataforma es responsable de los datos de sus jugadores y de pedir la autorización de los padres. Arena Sports actúa como <b>encargado</b>: guarda y procesa los datos por cuenta del club.</p>  </section>  <section><h2><span>2</span>Datos que tratamos</h2>    <ul>      <li><b>Jugadores:</b> nombre, categoría, posición, foto, asistencia, goles, asistencias y evaluaciones de entrenamientos y partidos.</li>      <li><b>Ficha personal del jugador (opcional, la llena el club):</b> tipo y número de documento, fecha de nacimiento, EPS, tipo de sangre, alergias o condiciones de salud, dirección y barrio, colegio y nombre, parentesco y teléfono del acudiente, más los campos que el club agregue y las fotos o copias de documentos que adjunte (por ejemplo la tarjeta de identidad, el carné de la EPS o la autorización firmada).</li>      <li><b>Staff (profesores y administradores):</b> correo electrónico y club o categoría asignados.</li>    </ul>    <p>La EPS, el tipo de sangre y las condiciones de salud son <b>datos sensibles</b>: entregarlos es voluntario, solo se registran con autorización expresa del padre, madre o representante y sirven únicamente para atender al jugador en una emergencia o lesión durante la actividad deportiva. No pedimos datos de pago de los jugadores.</p>  </section>  <section><h2><span>3</span>Menores de edad</h2>    <p>La mayoría de jugadores son niños, niñas y adolescentes. Por eso sus datos solo se cargan con la <b>autorización previa de su padre, madre o representante legal</b>, que el club recoge al inscribirlo. Siempre se respeta el interés superior del menor: las familias ven solo la carta deportiva, nunca comentarios negativos ni datos de contacto.</p>  </section>  <section><h2><span>4</span>Para qué los usamos</h2>    <ul>      <li>Mostrar la carta deportiva de cada jugador y su progreso.</li>      <li>Que los profesores registren entrenamientos, partidos y evaluaciones.</li>      <li>Generar los informes del trimestre para el club y las familias.</li>      <li>Destacar en la portada a los jugadores que más avanzaron cada semana.</li>      <li>Con la ficha personal: identificar al jugador en inscripciones a torneos, contactar a su acudiente y atenderlo en caso de emergencia.</li>    </ul>  </section>  <section><h2><span>5</span>Tus derechos</h2>    <p>Como titular, o como padre o representante del menor, puedes:</p>    <ul>      <li>Conocer, actualizar y corregir los datos.</li>      <li>Pedir prueba de la autorización que se dio.</li>      <li>Saber cómo se han usado los datos.</li>      <li>Revocar la autorización o pedir que se borren los datos, incluida la foto.</li>      <li>Presentar quejas ante la Superintendencia de Industria y Comercio.</li>    </ul>  </section>  <section><h2><span>6</span>Cómo pedirlo</h2>    <p>Escribe a <a href="mailto:arenasports.eventos@gmail.com">arenasports.eventos@gmail.com</a> o al WhatsApp 322 246 2392 con el nombre del jugador, su club y lo que pides. Las consultas se responden en máximo 10 días hábiles y los reclamos en máximo 15 días hábiles, como dice la ley. También puedes hacerlo a través del club.</p>  </section>  <section><h2><span>7</span>Seguridad</h2>    <ul>      <li>La página funciona siempre con conexión cifrada (HTTPS).</li>      <li>Solo el staff con cuenta autorizada puede editar. Cada profesor accede únicamente a su categoría.</li>      <li>Los comentarios privados del profesor nunca se publican.</li>      <li>La ficha personal solo la puede abrir el administrador del club: no la ven los profesores, las familias ni el público.</li>      <li>Los datos de un club no son públicos: la base de datos solo los entrega a su cuerpo técnico y a las familias que entran con el código de su jugador. Si el jugador sale del club, su código deja de servir.</li>      <li>Cada madrugada se guarda una copia de seguridad de cada club, que se conserva 14 días.</li>      <li>Los datos se guardan en Google Firebase, con reglas de acceso que impiden que un club vea los datos de otro.</li>    </ul>  </section>  <section><h2><span>8</span>Cookies y almacenamiento</h2>    <p>No usamos cookies de publicidad, analítica ni rastreo. Solo se guarda en el navegador lo necesario para que el staff no pierda su sesión y para recordar que ya viste este aviso.</p>  </section>  <section><h2><span>9</span>Cuánto tiempo y cambios</h2>    <p>Los datos se conservan solo mientras el jugador esté activo en el club. Cuando sale del club, sus datos y su foto se eliminan; también se pueden borrar antes si el padre, madre o representante lo pide. Si esta política cambia, se publicará aquí con su nueva fecha.</p>  </section>  ';
 function renderPrivacidad(){
   var root = document.getElementById('landingRoot');
   root.innerHTML = '<div class="pv"><div class="pv-wrap">' +
@@ -6631,6 +6777,14 @@ function render(){
     return;
   }
   var blocked = window.db && clubsLoaded && (!club || ((club.estado||'activo')==='suspendido' && !clubRole()));
+  // Los jugadores de un club solo los ve su gente. Sin cuenta ni código no se entra (y la base tampoco entrega nada).
+  if(!blocked && window.db && clubsLoaded && club && !clubRole() && !isCreador() && !clubAbierto(club.id)){
+    document.getElementById('appRoot').style.display = 'none';
+    var lrc = document.getElementById('landingRoot');
+    lrc.style.display = 'block';
+    renderClubCerrado(club);
+    return;
+  }
   if(blocked || !state){
     document.getElementById('appRoot').style.display = 'none';
     var lr = document.getElementById('landingRoot');
@@ -6639,14 +6793,6 @@ function render(){
       '<p>' + (blocked ? (club ? 'Este club no está disponible en este momento.' : 'No encontramos este club.') : 'Cargando…') + '</p>' +
       '<p><a href="#" id="backHome" style="color:var(--lime);">Volver al inicio</a></p></div></div>';
     lr.querySelector('#backHome').onclick = function(e){ e.preventDefault(); goToLanding(); };
-    return;
-  }
-  // Los jugadores de un club solo los ve su gente. Sin cuenta no se entra.
-  if(window.db && clubsLoaded && club && !clubRole() && !isCreador() && !clubAbierto(club.id)){
-    document.getElementById('appRoot').style.display = 'none';
-    var lrc = document.getElementById('landingRoot');
-    lrc.style.display = 'block';
-    renderClubCerrado(club);
     return;
   }
   document.getElementById('landingRoot').style.display = 'none';
@@ -7234,7 +7380,7 @@ function deleteCategory(name){
   if(state.categoryLevels) delete state.categoryLevels[name];
   if(state.categoryWeights) delete state.categoryWeights[name];
   if(state.categorySports) delete state.categorySports[name];
-  state.players.forEach(function(p){ if(p.categoria===name){ deletePhoto(p.id); deleteFicha(p.id); } });
+  state.players.forEach(function(p){ if(p.categoria===name){ marcarBorrado(p); deletePhoto(p.id); deleteFicha(p.id); } });
   state.categories = state.categories.filter(function(c){ return c!==name; });
   state.players = state.players.filter(function(p){ return p.categoria!==name; });
   Object.keys(state.trainingDays).forEach(function(k){ if(k.indexOf(name+'::')===0) delete state.trainingDays[k]; });
@@ -7285,6 +7431,13 @@ function renderPlantel(){
       (isAdmin ? '<div class="pl-inline"><input id="plNewCat" placeholder="Nueva categoría, ej. Sub-11" /><button class="pl-btn" id="plAddCat">Agregar categoría</button></div>' : '') +
       (testCount ? '<div class="pl-inline"><button class="pl-btn danger" id="plDelTest">Eliminar los ' + testCount + ' jugadores de prueba</button><span class="pl-count">Los “Jugador 01, 02…” que venían de ejemplo.</span></div>' : '') +
     '</section>' +
+
+    (isAdmin ? '<section class="pl-card"><h3>Temporada y copias de seguridad</h3>' +
+      '<p class="pl-help">Al <b>cerrar la temporada</b> se guarda en cada jugador el resumen del año (valoración, sesiones, partidos y goles) y queda visible en su perfil. No borra nada: el historial sigue igual.</p>' +
+      '<div class="pl-inline"><input id="plTempNom" placeholder="Nombre, ej. 2026" maxlength="20" value="' + new Date().getFullYear() + '" /><button class="pl-btn" id="plTempCerrar">Cerrar temporada' + (variosDeportes() ? ' de ' + DEPORTES[deporteActivo].toLowerCase() : '') + '</button></div>' +
+      '<p class="pl-help" style="margin-top:14px;">Cada madrugada se guarda sola una copia de todo el club (se conservan 14 días). Además puedes descargar una copia a tu computador cuando quieras.</p>' +
+      '<div class="pl-inline"><button class="pl-btn ghost" id="plCopia">Descargar copia del club</button><span class="pl-count" id="plCopiaMsg"></span></div>' +
+    '</section>' : '') +
 
     '<section class="pl-card"><h3>Jugadores por categoría</h3>' +
       '<div class="pl-inline" style="margin-top:0;"><select id="plCatSel"></select><span class="pl-count" id="plCount"></span></div>' +
@@ -7349,9 +7502,34 @@ function renderPlantel(){
     plantelUi.cat = nv;
     commitPlantel();
   };
+  var tempBtn = el.querySelector('#plTempCerrar');
+  if(tempBtn) tempBtn.onclick = function(){
+    var nom = cleanLabel(el.querySelector('#plTempNom').value);
+    var lista = state.players.filter(function(p){ return sportOf(p.categoria)===deporteActivo; });
+    if(!nom){ window.alert('Escribe el nombre de la temporada, por ejemplo 2026.'); return; }
+    if(!lista.length){ window.alert('No hay jugadores en esta sección.'); return; }
+    var ya = lista.some(function(p){ return (p.temporadas||[]).some(function(x){ return x.nombre===nom; }); });
+    if(!window.confirm((ya ? 'La temporada "' + nom + '" ya estaba cerrada: se actualiza con los datos de hoy. ' : '') +
+      '¿Guardar el resumen de la temporada "' + nom + '" en los ' + lista.length + ' jugadores? No se borra nada.')) return;
+    cerrarTemporada(nom, lista);
+    plantelUi.msg = 'Temporada "' + nom + '" guardada en ' + lista.length + ' jugadores.'; plantelUi.msgErr = false;
+    commitPlantel();
+  };
+  var copiaBtn = el.querySelector('#plCopia');
+  if(copiaBtn) copiaBtn.onclick = function(){
+    var club = currentClub() || {};
+    var blob = new Blob([JSON.stringify({club:sessionEnteredClub, nombre:club.nombre || '', fecha:new Date().toISOString(), documentos:buildDocs(state)})], {type:'application/json'});
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'copia-' + sessionEnteredClub + '-' + todayStr() + '.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 5000);
+    el.querySelector('#plCopiaMsg').textContent = 'Copia descargada. Guárdala en un lugar seguro: trae datos de los jugadores.';
+  };
   var delTest = el.querySelector('#plDelTest');
   if(delTest) delTest.onclick = function(){
     if(!window.confirm('¿Eliminar los ' + testCount + ' jugadores de ejemplo (“Jugador 01, 02…”) de todas las categorías? Los jugadores reales no se tocan.')) return;
+    state.players.forEach(function(p){ if(/^Jugador \d+$/.test(p.name)) marcarBorrado(p); });
     state.players = state.players.filter(function(p){ return !/^Jugador \d+$/.test(p.name); });
     commitPlantel();
   };
@@ -7538,6 +7716,7 @@ function renderPlantel(){
       if(fiB) fiB.onclick = function(){ openFicha(p); };
       tr.querySelector('[data-f="del"]').onclick = function(){
         if(!window.confirm('¿Quitar a ' + p.name + ' del plantel?' + (p.historial.length ? ' Se borran también sus ' + p.historial.length + ' registros.' : ''))) return;
+        marcarBorrado(p);
         state.players = state.players.filter(function(x){ return x.id!==id; });
         deletePhoto(id); deleteFicha(id);
         persist(); drawRoster();
@@ -7827,6 +8006,9 @@ if(window.firebase && window.FIREBASE_CONFIG){
   try{
     firebase.initializeApp(window.FIREBASE_CONFIG);
     window.db = firebase.firestore();
+    // Pruebas en el computador: con ?emulador la app habla con el Firebase falso local, nunca con los datos reales
+    var EMULADOR = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) && /[?&]emulador\b/.test(location.search);
+    if(EMULADOR) db.useEmulator('127.0.0.1', 8080);
     // Sin señal en la cancha: el profesor sigue viendo su categoría y lo que registre se guarda
     // en el celular; apenas vuelve el internet, se sube solo. synchronizeTabs permite varias pestañas.
     try{
@@ -7835,6 +8017,7 @@ if(window.firebase && window.FIREBASE_CONFIG){
       });
     }catch(e){ console.warn('Sin modo sin conexión', e); }
     window.auth = firebase.auth();
+    if(EMULADOR) auth.useEmulator('http://127.0.0.1:9099', {disableWarnings:true});
     try{ localStorage.removeItem(STORAGE_KEY); }catch(e){} // con Firebase no se guardan copias locales de datos privados
     // App Check: bloquea pedidos que no vengan de esta página (se activa al pegar la clave de reCAPTCHA arriba)
     if(window.APPCHECK_SITE_KEY && firebase.appCheck){
@@ -7859,15 +8042,16 @@ if(window.firebase && window.FIREBASE_CONFIG){
 
     function afterAuthChange(){
       authReady = true;
+      if(authListoOk){ authListoOk(); authListoOk = null; }
       ntAlEntrar();
       if(staffMode && staffRedirect()) return;
       if(isCreador() && clubsLoaded && !CLUBS.some(function(c){ return c.id===DEFAULT_CLUB_ID; })) migrateToMultiClub();
-      if(sessionEnteredClub){ attachPrivate(); attachPhotos(); scheduleRebuild(); }
+      if(sessionEnteredClub) attachClub(); // cambió quién está conectado: se vuelve a pedir el club con ese permiso
       safeRender();
     }
     auth.onAuthStateChanged(function(user){
       detachPrivate();
-      if(user){
+      if(user && user.email){ // sin correo = sesión de una familia: no es cuerpo técnico
         var prov = (user.providerData && user.providerData[0] && user.providerData[0].providerId) || 'password';
         db.collection('staff').doc(user.email.toLowerCase()).get().then(function(doc){
           var d = doc.exists ? doc.data() : null;

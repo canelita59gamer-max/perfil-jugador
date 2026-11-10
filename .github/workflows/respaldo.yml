@@ -1,0 +1,51 @@
+# Copia de seguridad diaria de todos los clubes (3:00 a. m. hora Colombia). Guarda 14 días.
+# A mano, desde la pestaña Actions, también sirve para mirar o restaurar una copia.
+name: Copia de seguridad
+
+on:
+  schedule:
+    - cron: '0 8 * * *'
+  workflow_dispatch:
+    inputs:
+      accion:
+        description: 'respaldar (copia de hoy) o restaurar'
+        type: choice
+        options: [respaldar, restaurar]
+        default: respaldar
+      club:
+        description: 'Para restaurar: id del club (ej. jogo-bonito)'
+        required: false
+      fecha:
+        description: 'Para restaurar: fecha de la copia (AAAA-MM-DD)'
+        required: false
+      aplicar:
+        description: 'Para restaurar: escribir de verdad (sin marcar, solo muestra qué haría)'
+        type: boolean
+        default: false
+
+concurrency:
+  group: respaldo
+  cancel-in-progress: false
+
+jobs:
+  respaldo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install firebase-admin@12 --no-save --silent
+      - name: Copiar
+        if: github.event_name == 'schedule' || inputs.accion != 'restaurar'
+        run: node respaldo.js
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - name: Restaurar
+        if: github.event_name == 'workflow_dispatch' && inputs.accion == 'restaurar'
+        run: node respaldo.js restaurar "$CLUB" "$FECHA" ${{ inputs.aplicar && '--aplicar' || '' }}
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          CLUB: ${{ inputs.club }}
+          FECHA: ${{ inputs.fecha }}

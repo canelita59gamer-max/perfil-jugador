@@ -6,7 +6,8 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // ---------- quién es quién ----------
-    function signedIn() { return request.auth != null && request.auth.token.email != null; }
+    // (una familia entra con sesión anónima, que no trae correo: por eso se pregunta si el campo existe)
+    function signedIn() { return request.auth != null && 'email' in request.auth.token && request.auth.token.email != null; }
     function myEmail() { return request.auth.token.email.lower(); }
     function provider() { return request.auth.token.firebase.sign_in_provider; }
     function staffPath() { return /databases/$(database)/documents/staff/$(myEmail()); }
@@ -26,6 +27,15 @@ service cloud.firestore {
     function isAdminOf(club) { return isCreador() || (esDelClub(club) && staff().role == 'admin' && clubActivo(club)); }
     function isProfeDe(club, cat) { return esDelClub(club) && staff().role == 'profesor' && staff().get('categoria', '') == cat && clubActivo(club); }
     function miClub() { return staff().get('club', '-'); }
+    // Familias: entran sin correo (sesión anónima) y registran un "pase" con el código de su jugador.
+    // El pase vale mientras ese código siga existiendo; si el club quita al jugador, deja de servir.
+    function pase(club) { return /databases/$(database)/documents/clubes/$(club)/pases/$(request.auth.uid); }
+    function esFamilia(club) {
+      return request.auth != null && exists(pase(club))
+        && exists(/databases/$(database)/documents/clubes/$(club)/accesos/$(get(pase(club)).data.codigo));
+    }
+    // Quién puede VER los datos de un club: su cuerpo técnico y sus familias. Nadie más, ni con el enlace.
+    function puedeVer(club) { return isCreador() || (clubActivo(club) && (esDelClub(club) || esFamilia(club))); }
     function staffKeysOk() { return request.resource.data.keys().hasOnly(['role', 'club', 'categoria', 'modo']); }
 
     // ---------- clubes ----------
@@ -36,12 +46,46 @@ service cloud.firestore {
 
       // categorías y perfil predeterminado del club
       match /datos/general {
-        allow read: if clubActivo(club) || isCreador();
+        allow read: if puedeVer(club);
         allow write: if isAdminOf(club);
       }
-      // todo lo privado de una categoría: solo el administrador del club y el profesor de ESA categoría
+      // lo privado de una categoría (horario, alineaciones, exigencia): el administrador y el profesor de ESA categoría
       match /categorias/{cat} {
         allow read, write: if isAdminOf(club) || isProfeDe(club, cat);
+      }
+      // Un documento por jugador, con todo su historial y los comentarios privados del profesor.
+      // (Antes iban todos dentro de la categoría y ese documento tiene un tope de 1 MB.)
+      match /jugadores/{j} {
+        allow read, delete: if isAdminOf(club) || isProfeDe(club, resource.data.get('categoria', ''));
+        allow create: if isAdminOf(club) || isProfeDe(club, request.resource.data.get('categoria', ''));
+        allow update: if isAdminOf(club)
+          || (isProfeDe(club, resource.data.get('categoria', '')) && request.resource.data.get('categoria', '') == resource.data.get('categoria', ''));
+      }
+      // La carta de cada jugador: lo mismo, sin comentarios privados. La ven el club y sus familias.
+      match /cartas/{j} {
+        allow read: if puedeVer(club);
+        allow delete: if isAdminOf(club) || isProfeDe(club, resource.data.get('categoria', ''));
+        allow create: if isAdminOf(club) || isProfeDe(club, request.resource.data.get('categoria', ''));
+        allow update: if isAdminOf(club)
+          || (isProfeDe(club, resource.data.get('categoria', '')) && request.resource.data.get('categoria', '') == resource.data.get('categoria', ''));
+      }
+      // El pase de cada familia: lo crea ella misma con un código que exista en este club.
+      match /pases/{uid} {
+        allow get: if request.auth != null && request.auth.uid == uid;
+        allow list: if false;
+        allow create, update: if request.auth != null && request.auth.uid == uid && clubActivo(club)
+          && request.resource.data.keys().hasOnly(['codigo', 'creado'])
+          && request.resource.data.codigo is string
+          && exists(/databases/$(database)/documents/clubes/$(club)/accesos/$(request.resource.data.codigo));
+        allow delete: if (request.auth != null && request.auth.uid == uid) || isAdminOf(club);
+      }
+      // Copias de seguridad: las escribe el cuerpo técnico (antes de una migración) o la tarea automática.
+      // Solo el administrador las lee; nadie las edita ni las borra desde la página.
+      match /respaldos/{r} {
+        allow read: if isAdminOf(club);
+        allow create: if isAdminOf(club) || (esDelClub(club) && clubActivo(club));
+        allow update, delete: if false;
+        match /docs/{d} { allow read: if isAdminOf(club); allow write: if false; }
       }
       // Ficha personal del jugador (documento, salud, vivienda, acudiente): SOLO el administrador del club.
       // Ni los profesores ni las familias la pueden leer. "_campos" guarda qué campos usa el club.
@@ -64,7 +108,7 @@ service cloud.firestore {
       }
       // lo que muestran las cartas públicas (sin comentarios privados); un club suspendido no se ve
       match /publico/{cat} {
-        allow read: if clubActivo(club) || isCreador();
+        allow read: if puedeVer(club);
         allow write: if isAdminOf(club) || isProfeDe(club, cat);
       }
       // Puerta de las familias: el código del jugador ES la dirección del documento.
@@ -91,7 +135,7 @@ service cloud.firestore {
       // Mensajes del profe a su categoría. Los lee el club; los escribe el profe de esa categoría
       // o el administrador. Nadie los edita desde la página: la tarea automática marca "enviado".
       match /mensajes/{id} {
-        allow read: if clubActivo(club) || isCreador();
+        allow read: if puedeVer(club);
         allow create: if (isAdminOf(club) || isProfeDe(club, request.resource.data.get('categoria', '')))
           && request.resource.data.keys().hasOnly(['categoria', 'texto', 'autor', 'creado', 'enviado'])
           && request.resource.data.texto is string
@@ -102,7 +146,7 @@ service cloud.firestore {
       }
       // fotos de los jugadores
       match /fotos/{jugador} {
-        allow read: if clubActivo(club) || isCreador();
+        allow read: if puedeVer(club);
         allow create, update: if (isAdminOf(club) || isProfeDe(club, request.resource.data.get('categoria', '')))
           && request.resource.data.keys().hasOnly(['data', 'categoria', 'actualizada'])
           && request.resource.data.data is string
