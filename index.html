@@ -5706,10 +5706,12 @@ function applyClubTheme(club){
   } else {
     THEME_VARS.forEach(function(v){ st.removeProperty(v); });
   }
-  var img = document.querySelector('.brand img');
-  if(img){ if(!img.dataset.defaultSrc) img.dataset.defaultSrc = img.src; img.src = clubLogo(club); }
-  var nm = document.querySelector('.brand .club');
-  if(nm && club) nm.textContent = club.nombre;
+  // escudo y nombre en la barra lateral (escritorio) y en la barra de arriba (celular)
+  document.querySelectorAll('.brand img, .topbar-mobile img').forEach(function(img){
+    if(!img.dataset.defaultSrc) img.dataset.defaultSrc = img.src;
+    img.src = clubLogo(club);
+  });
+  if(club) document.querySelectorAll('.brand .club, .topbar-mobile .club').forEach(function(nm){ nm.textContent = club.nombre; });
   if(club) document.title = club.nombre + ' — Cartas y entrenamientos';
 }
 function resetClubTheme(){
