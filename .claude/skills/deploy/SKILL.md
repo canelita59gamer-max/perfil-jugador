@@ -37,3 +37,10 @@ description: Cómo se publica Perfil de Jugador (Vercel + Firebase + GitHub Acti
 1. Publicar `firestore.rules` en Firebase. 2. Hacer push enseguida. Entre un paso y otro la página vieja
 puede fallarle a las familias, así que van seguidos. Las copias de seguridad corren solas cada madrugada
 (`respaldo.yml`); restaurar se hace desde la pestaña Actions → "Copia de seguridad".
+
+## App Check (activo desde noviembre de 2026, solo midiendo)
+- Proveedor: reCAPTCHA Enterprise ("Fraud Defense"), clave de sitio en `APPCHECK_SITE_KEY` de `index.html`
+  (pública; solo vale en perfil-jugador-wheat.vercel.app). Registrada en Firebase → App Check → Apps.
+- Firestore está en "No se aplica". NO pasarlo a "Aplicar" sin revisar antes en App Check → APIs que casi
+  todas las solicitudes lleguen verificadas; si se aplica y algo falla, la app deja de cargar para todos.
+- En local con `?emulador` App Check se apaga solo.
