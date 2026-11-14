@@ -1016,7 +1016,7 @@
     }
     .chrome-mobile{
       display:flex;gap:8px;padding:11px 18px;border-bottom:1px solid rgba(255,255,255,.06);
-      position:sticky;top:64px;z-index:19;flex-wrap:wrap;
+      flex-wrap:wrap; /* no se queda pegada: al bajar, solo las pestañas siguen arriba */
       background:rgba(8,11,25,.82);backdrop-filter:blur(18px) saturate(140%);
     }
     .chrome-mobile select{flex:1;min-width:120px;}
@@ -1025,7 +1025,7 @@
     .chrome-mobile .back-btn{width:auto;margin:0;padding:8px 13px;font-size:12.5px;flex-shrink:0;}
     .tabs-mobile{
       display:flex;gap:7px;overflow-x:auto;padding:12px 18px 13px;
-      border-bottom:1px solid rgba(255,255,255,.06);position:sticky;top:64px;z-index:19;
+      border-bottom:1px solid rgba(255,255,255,.06);position:sticky;top:calc(64px + env(safe-area-inset-top,0px));z-index:19;
       background:rgba(8,11,25,.82);backdrop-filter:blur(18px) saturate(140%);
       scrollbar-width:none;
     }
